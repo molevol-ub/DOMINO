@@ -1,11 +1,10 @@
-=====================================================================
-== DOMINO: Development Of Molecular markers In Non-model Organisms ==
-=====================================================================
+=
+DOMINO: Development Of Molecular markers In Non-model Organisms 
+=
 
-------------------------------
-0. INTRODUCTION
-------------------------------
-
+=
+1. INTRODUCTION
+=
 DOMINO is a new software application specifically designed for improving the development of
 DNA markers in non-model organisms using either NGS data or pre-computed multiple sequence 
 alignments (MSA) in various formats (including MSA from RAD data). 
@@ -49,12 +48,10 @@ and the user asks for highly conserved regions flanking to be included in the de
 markers, these markers should be suitable for further surveys of variation in an extended 
 set of phylogenetically related taxa, i.e. “focal taxa”. 
 
-------------------------------
-1. INSTALLATION
-------------------------------
-
-1.1. Supported Operating Systems
-================================
+=
+2. INSTALLATION
+=
+2.1. Supported Operating Systems
 
 DOMINO is developed and maintained under GNU/Unix using ANSI/ISO C and standard 
 development tools (GCC, Autotools).
@@ -62,8 +59,7 @@ development tools (GCC, Autotools).
 It can be compiled and run in Linux (it has been tested in Ubuntu 14.04 LTS) and 
 Mac OSX systems (version > 10.10)
 
-1.2. Requirements
-==================
+2.2. Requirements
 
 - Perl Programming Language version v5.2+
 
@@ -87,13 +83,11 @@ Mac OSX systems (version > 10.10)
 		sudo apt-get install xterm
 
 
-1.3. Installation
-==================
+2.3. Installation
 
 Two possible installation options:
 
-1.3.1. DOMINO GUI plus Command-line version:
-=================================
+2.3.1. DOMINO GUI plus Command-line version:
 
 All necessary installation files and folders are available form the domino git directory 
 or the website. The installer will guide user through the complete installation process.
@@ -102,8 +96,7 @@ The bin directory will contain the DOMINO perl scripts, the directories with the
 of the external software included in the DOMINO pipeline and some mandatory Perl modules. 
 In addition, a shortcut Desktop DOMINO icon will be generated.
 
-1.3.2. Command-line:
-====================
+2.3.2. Command-line:
 
 In the git directory, the user can find a pre-configured shell script (install.sh) written
 to handle the installation of command-line version (please, notice that only the 
