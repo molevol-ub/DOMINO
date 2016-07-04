@@ -1,0 +1,60 @@
+
+=====================================================================
+== DOMINO: Development Of Molecular markers In Non-model Organisms ==
+=====================================================================
+
+This folder "domino/files" contains the necessary scripts for generating the installers.
+- Linux_libs.tar.gz
+- db_default.tar.gz
+- fonts.tar.gz
+- get_files_installer_Linux.sh
+- get_files_installer_Mac.sh
+- installerRock-builder
+- starter_Linux.sh
+- starter_Mac.command
+- tarGZ_modules_Perl.tar.gz
+- tarGZ_modules_Perl_NGSQCToolkit.tar.gz
+- third_party_binaries-src.tar-Linux.gz
+- third_party_binaries-src.tar-Mac.gz
+- uninstaller.command
+- uninstaller.sh
+- unzip_install_NGSQCtoolkit_modules.pl
+- unzip_install_perl_modules.pl
+
+Dependencies:
+- Qt static,
+- BitRock InstallBuilder fot Qt Enterprise 15.1.0
+
+This folder and files are not intended for the user, just for DOMINO developers. 
+
+
+
+
+If you encounter bugs that are not listed here, please send a
+report to the main authors.
+  	
+   	J.F.Sanchez: jfsanchezherrero@ub.edu
+	A.Sanchez-Gracia: elsanchez@ub.edu
+   	J.Rozas: jrozas@ub.edu 
+   	
+   	
+   	
+------------------------------
+	COPYRIGHT AND LICENSE
+------------------------------
+
+Copyright (C) 2016 Evolutionary Genomics and Bioinformatics Group, University of Barcelona.
+
+DOMINO is licensed under the GPLv3 license.  See `LICENSE' file for details. 
+
+This program is free software: you can redistribute it and/or modify it under the terms of 
+the GNU General Public License as published by the Free Software Foundation, either version
+3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program.  
+If not, see <http://www.gnu.org/licenses/>

@@ -1,0 +1,35 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>GUI_icons/installersby_BitRock.png</file>
+        <file>GUI_icons/gplv3-127x51.png</file>
+        <file>GUI_icons/logo_qt.png</file>
+        <file>GUI_icons/Perl.gif</file>
+        <file>GUI_icons/bug.png</file>
+        <file>GUI_icons/check.png</file>
+        <file>GUI_icons/close_delete.png</file>
+        <file>GUI_icons/document_file.png</file>
+        <file>GUI_icons/folder.png</file>
+        <file>GUI_icons/forward.png</file>
+        <file>GUI_icons/help.png</file>
+        <file>GUI_icons/home.png</file>
+        <file>GUI_icons/information.png</file>
+        <file>GUI_icons/lock.png</file>
+        <file>GUI_icons/start.png</file>
+        <file>GUI_icons/plus.png</file>
+        <file>GUI_icons/search_lense.png</file>
+        <file>GUI_icons/refresh.png</file>
+        <file>GUI_icons/options.png</file>
+        <file>GUI_icons/delete.png</file>
+        <file>GUI_icons/DOMINO_logo.png</file>
+        <file>GUI_icons/logo.png</file>
+        <file>GUI_icons/logo_transparent.png</file>
+        <file>GUI_icons/logo_transparent_2.png</file>
+        <file>GUI_icons/marker_discovery.jpg</file>
+        <file>GUI_icons/mapping_alignment.jpg</file>
+        <file>GUI_icons/clean.jpg</file>
+        <file>GUI_icons/assembly.jpg</file>
+    </qresource>
+    <qresource prefix="/icon">
+        <file>GUI_icons/domino_pieza.ico</file>
+    </qresource>
+</RCC>

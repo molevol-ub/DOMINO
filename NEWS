@@ -1,0 +1,42 @@
+ DOMINO News:
+====================================
+
+DOMINO is now available for downloading from the project website
+http://www.ub.edu/softevol/domino/
+
+Find the latest news and files on our website and the git directory at github.
+
+License:
+====================================
+DOMINO is licensed under the GPLv3 license.  See `LICENSE' file for details.
+
+
+AUTHOR:
+====================================
+Cristina Frias-Lopez, Jose F. Sanchez-Herrero, Miquel A. Arnedo, Alejandro Sanchez-Gracia 
+and Julio Rozas.
+	
+Evolutionary Genomics and Bioinformatics Group, Departament de Genètica, Microbiologia i 
+Estadística and Institut de Recerca de la Biodiversitat (IRBio), Universitat de Barcelona, 
+Av. Diagonal 643, Barcelona 08028, Spain
+
+	
+COPYRIGHT
+====================================
+Copyright (C) 2016 Evolutionary Genomics and Bioinformatics Group, Universitat Barcelona.
+
+
+Reporting Issues
+====================================
+If you encounter bugs that are not listed here, please send a
+report to the main authors.
+  	
+   	J.F.Sanchez: jfsanchezherrero@ub.edu
+	A.Sanchez-Gracia: elsanchez@ub.edu
+   	J.Rozas: jrozas@ub.edu 
+
+	
+
+Version Release History
+====================================
+v0.9.8.2: Initial Github release

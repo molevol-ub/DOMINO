@@ -1,0 +1,13 @@
+## TODOs
+DM_Assembly_v1.0.0.pl
+	Write a debug message if importing any module fails
+	use debugger_print for printing Debugging messages
+	
+DM_Clean_v1.0.0.pl
+	Write a debug message if importing any module fails
+	implements threads when copying files
+	Print contaminants ($array[0]) to a file (cat | uniq ) to show user not the reads but the contaminants found
+
+DM_MarkerScan_v1.0.0.pl
+	Write a debug message if importing any module fails
+	use debugger_print for printing Debugging messages
