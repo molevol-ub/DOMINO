@@ -1,0 +1,17 @@
+commit 35f4f2b8d68b69aad5f2d87640d57fbdb95e723f
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Jul 4 18:05:43 2016 +0200
+
+    Initial commit for DOMINO files
+
+commit f62611e9ebf5fdca669f52792a0f1475bc3a7c1c
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Mon Jul 4 17:22:47 2016 +0200
+
+    Updated the README
+
+commit 1cb7cc6aa3bc939058b1c622c09e105beab4b1b6
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Jul 4 17:14:53 2016 +0200
+
+    Initial commit into Github for DOMINO software
