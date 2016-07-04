@@ -219,8 +219,8 @@ echo "+ Removing temporary files...\n"
 rm -rf $tmp_dir_path
 
 ## Copy DOMINO perl code
-ls "$current_dir/src/DOMINO_perl_code/" | while read files
+ls "$current_dir/src/perl/" | while read files
 do
-	cp "$current_dir/src/DOMINO_perl_code/$files" $install_dir"/bin"
+	cp "$current_dir/src/perl/$files" $install_dir"/bin"
 done
 ) 2>>DOMINO_error.log
