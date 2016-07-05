@@ -2,11 +2,11 @@
     <shortName>DOMINO</shortName>
     <fullName>DOMINO</fullName>
     <version>1.0</version>
-    <readmeFile>/Users/jfsh/DATA/Pipeline_app/Anonymous_Molecular_marker_pipe/DOMINO_scripts/DOMINO_scripts/DOMINO_scripts/git_domino/domino/README</readmeFile>
-    <licenseFile>/Users/jfsh/DATA/Pipeline_app/Anonymous_Molecular_marker_pipe/DOMINO_scripts/DOMINO_scripts/DOMINO_scripts/git_domino/domino/LICENSE.txt</licenseFile>
-    <leftImage>/Users/jfsh/DATA/Pipeline_app/Anonymous_Molecular_marker_pipe/DOMINO_scripts/DOMINO_scripts/DOMINO_scripts/release/DOMINO_installer_folder/DOMINO_icon-small.png</leftImage>
-    <logoImage>/Users/jfsh/DATA/Pipeline_app/Anonymous_Molecular_marker_pipe/DOMINO_scripts/DOMINO_scripts/DOMINO_scripts/release/DOMINO_installer_folder/logo.png</logoImage>
-    <splashImage>/Users/jfsh/DATA/Pipeline_app/Anonymous_Molecular_marker_pipe/DOMINO_scripts/DOMINO_scripts/DOMINO_scripts/release/DOMINO_installer_folder/DOMINO_logo.png</splashImage>
+    <readmeFile>/Users/jfsh/GIT_REPOS/domino_github/README.md</readmeFile>
+    <licenseFile>/Users/jfsh/GIT_REPOS/domino_github/LICENSE</licenseFile>
+    <leftImage>/Users/jfsh/GIT_REPOS/developers/DOMINO_installer_folder/DOMINO_icon-small.png</leftImage>
+    <logoImage>/Users/jfsh/GIT_REPOS/developers/DOMINO_installer_folder/logo.png</logoImage>
+    <splashImage>/Users/jfsh/GIT_REPOS/developers/DOMINO_installer_folder/DOMINO_logo.png</splashImage>
     <allowLanguageSelection>1</allowLanguageSelection>
     <componentList>
         <component>
@@ -39,7 +39,7 @@
                     <platforms>all</platforms>
                     <distributionFileList>
                         <distributionDirectory>
-                            <origin>/Users/jfsh/DATA/Pipeline_app/Anonymous_Molecular_marker_pipe/DOMINO_scripts/DOMINO_scripts/DOMINO_scripts/release/DOMINO_installer_folder</origin>
+                            <origin>/Users/jfsh/GIT_REPOS/developers/DOMINO_installer_folder</origin>
                         </distributionDirectory>
                     </distributionFileList>
                     <shortcutList>
