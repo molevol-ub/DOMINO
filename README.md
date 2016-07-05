@@ -65,10 +65,10 @@ Two possible installation options:
 
 3.3.1. DOMINO GUI:
 
-All necessary installation files and folders are available at the domino git repository but the user may need to compile and retrieve some Qt libraries. 
+Under the DOMINO oficial website, user can obtain installers that will guide the user through the complete installation process for Linux and Mac distributions. 
 
-On the other hand, under the DOMINO oficial website, user can obtain installers that will guide the user through the complete installation process.
-		
+Also, all the necessary installation files and folders are available at the domino git repository but the user may need to compile and retrieve some Qt libraries. 
+
 Once installed, the bin directory will contain the DOMINO perl scripts, the directories with the binaries of the external software included in the DOMINO pipeline and some mandatory Perl modules. In addition, a shortcut Desktop DOMINO icon will be generated.
 
 3.3.2. Command-line:
