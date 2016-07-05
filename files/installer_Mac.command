@@ -163,8 +163,8 @@ cd $install_dir"/"bin
 tar -zxvf fonts.tar.gz
 rm fonts.tar.gz
 cd $current_dir
-mv $current_dir"/"DOMINO_Qt_code"/"DOMINO.app $install_dir"/"bin
-mv $current_dir"/"DOMINO_Qt_code"/"* $qt_code
+mv $current_dir"/Qt-c++/"DOMINO.app $install_dir"/"bin
+mv $current_dir"/Qt-c++/"* $qt_code
 mv $current_dir"/"starter_Mac.command $install_dir"/"bin
 mv $install_dir"/"scripts $install_dir"/"bin
 ln -s $install_dir"/"bin"/"DOMINO.app ~/Desktop/
@@ -175,19 +175,16 @@ echo "+ Copying necessary files..."
 mkdir $install_dir"/"logo
 mv $current_dir"/"*png $install_dir"/"logo
 mv $current_dir"/"*ico $install_dir"/"logo
-mv $current_dir"/"README $install_dir"/"
+mv $current_dir"/"README.md $install_dir"/"
 mv $current_dir"/"NEWS $install_dir"/"
 mv $current_dir"/"TUTORIAL $install_dir"/"
 mv $current_dir"/"VERSION $install_dir"/"
 mv $current_dir"/"Change.log $install_dir"/"
 mv $current_dir"/"LICENSE.txt $install_dir"/"
-mv $current_dir"/"example.tar.gz $install_dir"/"
+mv $current_dir"/"example $install_dir"/"
 cd $install_dir
 
 echo "+ Removing temporary files..."
-rm -r $current_dir
-tar -zxvf example.tar.gz
-rm example.tar.gz
 cd $install_dir
 rm -r $current_dir
 
