@@ -1,0 +1,4 @@
+barcode, ACACGACGACT, MID1, Nemesia_sp043
+barcode, ACACGTAGTAT, MID2, N_raripilia061
+barcode, ACACTACTCGT, MID3, N_raripilia079
+barcode, ACGACACGTAT, MID4, I_brauni098

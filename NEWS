@@ -39,4 +39,8 @@ report to the main authors.
 
 Version Release History
 ====================================
-v0.9.8.2: Initial Github release
+v0.982
+- Initial commit into github repository
+v0.983
+- Small bug solved in the input of some type of files for the cleaning phase
+- Bug when copying perl src files in the git repository when using install.sh script
