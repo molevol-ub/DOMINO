@@ -162,8 +162,8 @@ tar -zxvf Linux_libs.tar.gz > DOMINO_Error.log
 rm -r Linux_libs.tar.gz
 mv Linux_libs lib
 cd $current_dir
-mv $current_dir"/"DOMINO_Qt_code"/"DOMINO $install_dir"/"bin
-mv $current_dir"/DOMINO_Qt_code/"* $qt_code
+mv $current_dir"/Qt-c++/"DOMINO $install_dir"/"bin
+mv $current_dir"/Qt-c++/"* $qt_code
 mv $current_dir"/"starter_Linux.sh $install_dir"/"bin
 cp uninstaller.sh $install_dir"/"
 
