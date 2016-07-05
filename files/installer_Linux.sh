@@ -171,17 +171,15 @@ echo "+ Removing temporary files..."
 mkdir $install_dir"/"logo
 mv $current_dir"/"*png $install_dir"/"logo
 mv $current_dir"/"*ico $install_dir"/"logo
-mv $current_dir"/"README $install_dir"/"
+mv $current_dir"/"README.md $install_dir"/"
 mv $current_dir"/"NEWS $install_dir"/"
 mv $current_dir"/"TUTORIAL $install_dir"/"
 mv $current_dir"/"VERSION $install_dir"/"
 mv $current_dir"/"Change.log $install_dir"/"
 mv $current_dir"/"LICENSE.txt $install_dir"/"
-mv $current_dir"/"example.tar.gz $install_dir"/"
+mv $current_dir"/"example $install_dir"/"
 cd $install_dir
 rm -r $current_dir
-tar -zxvf example.tar.gz > DOMINO_Error.log
-rm example.tar.gz
 
 #import variables
 export LD_LIBRARY_PATH=$current_dir"/"lib
