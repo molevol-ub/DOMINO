@@ -1,3 +1,45 @@
+commit 94febb5d8ecbf8206996d27ba2eb87ae86d0fcbf
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 16:44:09 2016 +0200
+
+    Examples added and installers modified
+
+commit 34fec4e75cd20170573b2a9a6ec23e3b9afeb2ef
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 16:18:52 2016 +0200
+
+    Input file bug solved
+
+commit 84b63bdcd7b5772dd4505f4af183dde91e4d58a9
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 12:14:01 2016 +0200
+
+    Update README.md
+
+commit 570442e23a0b5b080e880341074df27b8e6035a6
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 12:08:02 2016 +0200
+
+    Update README.md
+
+commit 523b4f4c13e12c326e56931adf48c4ed0f4495ce
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Jul 4 18:56:15 2016 +0200
+
+    Updated the path for perl src files
+
+commit 48e9c29fae67563832311a53fa20676c897c5966
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Mon Jul 4 18:09:02 2016 +0200
+
+    Update and rename TUTORIAL to TUTORIAL.md
+
+commit 3312549ff3d49f0e45821f8e8e629dbac4155ed1
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Jul 4 18:07:48 2016 +0200
+
+    Added a Change.log file
+
 commit 35f4f2b8d68b69aad5f2d87640d57fbdb95e723f
 Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
 Date:   Mon Jul 4 18:05:43 2016 +0200
