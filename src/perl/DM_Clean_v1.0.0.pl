@@ -949,8 +949,7 @@ if ($onlyTagging_files) {
 		
 } else {
 	
-	## Maybe copying big files could take a while
-	## TODO: implement threads here
+	## Maybe copying big files could take a while ## TODO: implement threads here
 	if ($file_type eq "454_multiple_fastq" || $file_type eq "Illumina_multiple_fastq" || $file_type eq "Illumina_pair_end_multiple_fastq") {
 		## Copy files and get ready for QC
 		foreach my $keys (keys %{ $domino_files{'original'} }) {
@@ -962,7 +961,12 @@ if ($onlyTagging_files) {
 			}			
 			for (my $i=0; $i < scalar @{ $domino_files{'original'}{$keys} }; $i++) {
 				my @path_name = split("/", $domino_files{'original'}{$keys}[$i]);
-				my $copy_name = $taxa_dir{$keys}."/".$path_name[-1];
+				my $copy_name;
+				if ($path_name[-1] =~ /.*\_id\-.*/) {
+					$copy_name = $taxa_dir{$keys}."/".$path_name[-1];
+				} else {
+					$copy_name = $taxa_dir{$keys}."/reads_id-".$path_name[-1];
+				}
 				File::Copy::copy($domino_files{'original'}{$keys}[$i], $copy_name);
 				push (@{ $domino_files{$keys}{"EXTRACTED"} }, $copy_name);
 	}}}
@@ -986,8 +990,7 @@ unless ($skipping_BLAST) {
     		next unless ($sequence && $titleline);
     		print DB ">".$titleline."\n".$sequence;
     	} close(FILE); $/ = "\n";
-	}
-} close (DB);
+}} close (DB);
 
 ## Send threads for each taxa
 my $int_taxa = 0;
