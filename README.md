@@ -79,9 +79,9 @@ In a Unix-based bash console, change the directory to fit the desired installati
 	
 The bin directory will contain the DOMINO perl scripts, the directories with the binaries of the external software included in the DOMINO pipeline and some mandatory Perl modules.
 
-------------------------------
+=
 4. BUG REPORTS
-------------------------------
+=
 
 If you encounter bugs that are not listed here, please send a report to the main authors.
   	
@@ -90,38 +90,37 @@ If you encounter bugs that are not listed here, please send a report to the main
    	J.Rozas: jrozas@ub.edu 
 
 
-------------------------------
+=
 5. COMMUNITY
-------------------------------
+=
 
 If you would like to see a new feature implemented, send suggestions to the main authors (See AUTHORS). Our aim is to have an "asked features" framework soon.
 
-------------------------------
+=
 6. THANKS
-------------------------------
+=
 
 The authors would like to thank all people who contributed (and are still contributing) in the creation and testing of this software. 
 
-------------------------------
+=
 7. AUTHORS:
-------------------------------
+=
 Cristina Frias-Lopez, Jose F. Sanchez-Herrero, Miquel A. Arnedo, Alejandro Sanchez-Gracia and Julio Rozas.
 	
 Evolutionary Genomics and Bioinformatics Group, Departament de Genètica, Microbiologia i Estadística and Institut de Recerca de la Biodiversitat (IRBio), Universitat de Barcelona, Av. Diagonal 643, Barcelona 08028, Spain
 
 
-------------------------------
+=
 8. CITATION
-------------------------------
+=
 *To add citation when available*
 
 *Current status: under review*
 
 
-------------------------------
+=
 9. COPYRIGHT AND LICENSE
-------------------------------
-
+=
 Copyright (C) 2016 Evolutionary Genomics and Bioinformatics Group, University of Barcelona.
 
 DOMINO is licensed under the GPLv3 license.  See `LICENSE' file for details. 
