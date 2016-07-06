@@ -63,7 +63,7 @@ BEGIN {
 ##################################
 my ($helpAsked, $job, $type_job, $reference_fasta_file, $hirep, @fastq_files, 
 $avoidDelTMPfiles, $file_type, $cap3flag, %cap3files, %MID_species_hash, @user_files, 
-$noOfProcesses, $version, %files_used, $manual, $noClip, $abs_folder, $mrs, $debugger,
+$noOfProcesses, $version, %files_used, $manual, $noClip, $abs_folder, $mrs, $debugger, $flagSpades,
 @CAP3_directories, $DOMINO_files, $overlap_CAP3, $similar_CAP3, $user_files, $further_information,
 @file_abs_path, @file_names, $step_time, %nucleotides, $total_Contigs_all_sets);
 
@@ -96,6 +96,8 @@ GetOptions(
 	
 	"TempFiles" => \$avoidDelTMPfiles,
 	"p|number_cpu=i" => \$noOfProcesses,
+	
+	"SPAdes" => \$flagSpades,
 	
 	"Debug" => \$debugger,	
 );
@@ -385,6 +387,10 @@ Number of threads/cores to be used. [Default: 2]
 
 =item B<>
 
+=item B<--SPAdes>
+
+Use SPAdes Genome Assembler for a better assembly. It is necessary at least 30GiB of free Memory RAM.
+
 =item B<>
 
 =item B<#####################################>
@@ -556,11 +562,18 @@ my $start_time = $step_time = time;
 &print_Header(" Input File and Parameter Preprocessing ","#");
 &print_DOMINO_details("\n+ Output Directory: ".$dirname." ....OK\n");
 
-my $MIRA_directory = "MIRA_assemblies"; mkdir $MIRA_directory, 0755;
-my $CAP3_directory = "CAP3_assemblies"; mkdir $CAP3_directory, 0755; 
-my $MIRA_directory_abs_path = abs_path($MIRA_directory);
-my $CAP3_directory_abs_path = abs_path($CAP3_directory); 
-chdir $MIRA_directory;
+## If using SPADES for assembly instead of MIRA
+my ($assembly_directory, $assembly_directory_abs_path, $CAP3_directory, $CAP3_directory_abs_path);
+if ($flagSpades) {
+	$assembly_directory = "spades_assemblies";
+} else {
+	my $assembly_directory = "MIRA_assemblies"; 
+	if ($cap3flag) {
+		$CAP3_directory = "CAP3_assemblies"; mkdir $CAP3_directory, 0755;
+		$CAP3_directory_abs_path = abs_path($CAP3_directory); 
+}}
+$assembly_directory_abs_path = abs_path($assembly_directory);
+mkdir $assembly_directory_abs_path, 0755; chdir $assembly_directory_abs_path;
 
 ##########################################################################################
 ##				Checking files															##
@@ -671,124 +684,170 @@ unless ($avoidDelTMPfiles) {
 &print_DOMINO_details("\n+ Parameters details would be print into file: $param_Detail_file...\n");
 &print_DOMINO_details("+ Errors occurred during the process would be print into file: $error_log...\n\n");
 
-#########################################################################
-#			MIRA ASSEMBLY STEP OF THE READS OF EACH TAXA				#
-#########################################################################
-print "\n"; &print_Header("","#"); &print_Header(" MIRA Assembly Step for each taxa ","#"); &print_Header("","#"); print "\n";
-print "\n"; &print_Header(" Generating an assembly for each taxa ", "%"); print "\n";
-for (my $i = 0; $i < scalar @fastq_files; $i++) {
-	my ($MIRA_manifest_file, @fastq_files_this_taxa, $name_of_project);
-	if ($file_type == 7) {
-		if ($files_used{$fastq_files[$i]}) { next; }	
-		my $file_to_find;
-		my $file1_pair = &check_paired_file($fastq_files[$i]);
-		if ($file1_pair == 1) {
-			$file_to_find = $fastq_files[$i];
-			$file_to_find =~ s/left/right/g; 
-			$file_to_find =~ s/R1/R2/g;
-		} else {
-			$file_to_find = $fastq_files[$i];
-			$file_to_find =~ s/right/left/g; 
-			$file_to_find =~ s/R2/R1/g;
-		}
-		
-		for (my $j = 0; $j < scalar @fastq_files; $j++) {
-			if ($fastq_files[$j] eq $file_to_find) {
-				push (@fastq_files_this_taxa, $fastq_files[$i]);
-				push (@fastq_files_this_taxa, $fastq_files[$j]);
-				($MIRA_manifest_file, $name_of_project)  = &Generate_manifest_file_pair_end($fastq_files[$i], $fastq_files[$j]);
-				$files_used{$fastq_files[$j]}++; $files_used{$fastq_files[$i]}++;
-	}}} elsif ($file_type == 5) {		
-		$MIRA_manifest_file = &Generate_manifest_file($fastq_files[$i], "Illumina");
-		push (@fastq_files_this_taxa, $fastq_files[$i]);
-	} elsif ($file_type == 3) {
-		$MIRA_manifest_file = &Generate_manifest_file($fastq_files[$i], "454");		
-		push (@fastq_files_this_taxa, $fastq_files[$i]);
-	} 
-		
-	my $abs_path_manifest_file = $MIRA_directory_abs_path."/".$MIRA_manifest_file;
-	print $abs_path_manifest_file."\n- Calling MIRA now for $fastq_files[$i]...\n- It might take a while...\n";
-	my $mira_exe = $MIRA_exec." -t $noOfProcesses ".$abs_path_manifest_file;
-	if ($debugger) {
-		$mira_exe .= " 2> $error_log"; ## show on screen or maybe print to a file
-	} else {
-		$mira_exe .= " > /dev/null 2> $error_log"; ## discarding MIRA output		
-	}
 
-	print $mira_exe."\n\n";
-	my $system_call = system($mira_exe);
-	if ($system_call != 0) {
-		&printError("Something happened when calling MIRA for assembly reads..."); &dieNicely();
-	}print "\n"; &time_stamp();
+if ($flagSpades) {
+
+	## If user provides Spades flag, we will assume, right now, he is using a Linux server 
 	
-	unless ($file_type == 7) {
-		my @tmp = split ("\.fastq", $fastq_files_this_taxa[0]);
-		$name_of_project = $tmp[0];
-	}
-	my $folder = $name_of_project."_assembly";
-	my $MID_identifier;
-	if ($folder =~ /.*id\-(.*)\_assembly/) { $MID_identifier = $1; }
-	my $fasta_file = $MIRA_directory_abs_path."/".$folder."/".$name_of_project."_d_results/".$name_of_project."_out.unpadded.fasta";
-	my $qual_file = $MIRA_directory_abs_path."/".$folder."/".$name_of_project."_d_results/".$name_of_project."_out.unpadded.fasta.qual";
-	my $contigs_file = $MIRA_directory_abs_path."/assembly_id-".$MID_identifier.".contigs-MIRA.fasta";
-	my $contigs_file_name = "assembly_id-".$MID_identifier.".contigs-MIRA.fasta";
-	my $read_tag_list_file = $MIRA_directory_abs_path."/".$folder."/".$name_of_project."_d_info/".$name_of_project."_info_readtaglist.txt";
+	## We would use "cat /proc/meminfo " in order to check the available memory, if greater than 30GiB
+	## we would split in a reasonable amount of processes to proceed in parallel with the assembly 
+	
+	# Get memory
+	system("cat /proc/meminfo > memory_server.txt");	
+	my $memory_server_file = $assembly_directory_abs_path."/memory_server.txt";
+	if (-e -r -s $memory_server_file) {
+		&print_Header(" Memory RAM Usage retrieval ","#");
+		my %memory_hash;
+		open (MEM, $memory_server_file);
+		while (<MEM>) {
+			my $line = $_;
+			chomp $line;
+			$line =~ s/\s/\t/;
+			my @array = split("\t", $line);
+			if ($array[0] eq "Cached") { last; }
+			push (@{ $memory_hash{$array[0]} }, $array[1]);
+			push (@{ $memory_hash{$array[0]} }, $array[2]);
+		}
+		close (MEM)
+		&debugger_print("Ref", \%memory_hash;)
+		if ($memory_hash{"MemTotal:"}[1] eq 'kB') {
+			$memory_hash{"MemTotal:"}[0] = $memory_hash{"MemTotal:"}[0]/1000000;
+		}
+		if ($memory_hash{"MemFree:"}[1] eq 'kB') {
+			$memory_hash{"MemFree:"}[0] = $memory_hash{"MemFree:"}[0]/1000000;
+		}		
+		print "+ Total Memory: ".$memory_hash{"MemTotal:"}[0]." GiB\n";
+		print "+ Free Memory: ".$memory_hash{"MemFree:"}[0]." GiB\n";
+		my $p = ($memory_hash{"MemFree:"}[0]/$memory_hash{"MemTotal:"}[0])*100;
+		my $string = sprintf("%2d%%", $p);
+		print "+ Percentage of Free memory: $string %\n";
 
-	# Get path for qual and contigs files for CAP3 scaffolding if specified
-	$cap3files{$contigs_file_name} = $qual_file;	
-
-	## Obtain reads/contigs identified as repeats
-	my $array_ref = \@fastq_files_this_taxa;
-	&extractReadRepeats($read_tag_list_file, $array_ref, $fasta_file, $contigs_file, $MIRA_directory_abs_path."/".$folder);
-	chdir $MIRA_directory_abs_path;
-}
-print "\n\n";
-&print_Header("","#"); &print_Header(" MIRA Assembly Step finished ","#");  &print_Header("","#"); print "\n\n";
-
-if ($cap3flag) { print "\n\nGetting ready for scaffolding step using CAP3...\n"; }
-## Generates folders and generates link for files of each taxa into them
-
-opendir(DIR, $MIRA_directory_abs_path);
-my @files = readdir(DIR);
-for (my $i = 0; $i < scalar @files; $i++) {
-	if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-	unless (-d $files[$i]) { ## if a directory
-		if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-		my $MID_identifier;                     
-		if ($files[$i] =~ /(.*)id\-(.*)\.contigs\-MIRA\.fasta/) {
-			$MID_identifier = $2; 
-			my $fasta_file = $MIRA_directory_abs_path."/".$files[$i];
-			my $new_fasta_file = $dirname."/".$1."id\-".$2.".contigs.fasta";
 				
-			if ($cap3flag) { # If cap3 is used for scaffolding move files and generate folders
-				my $qual_tmp_file = $cap3files{$files[$i]};
-				my $qual_file = $fasta_file.".qual";
-				print "Fetching qual values for $fasta_file\n";
-				my $hash_identifiers_ref = &read_FASTA_hash_length($fasta_file);
-				my %hash_identifiers = %{$hash_identifiers_ref};
-				$/ = ">"; ## Telling perl where a new line starts
-				open (QUAL, $qual_tmp_file);
-				open (OUT, ">$qual_file"); while (<QUAL>) {
-				next if /^#/ || /^\s*$/;
-				chomp;
-				my ($seq_id, $sequence) = split(/\n/,$_,2);
-				next unless ($sequence && $seq_id);
-				if ($hash_identifiers{$seq_id}) {
-					$seq_id = ">".$seq_id;
-				print OUT $seq_id."\n".$sequence."\n";                  
-				}} $/ = "\n";	close (QUAL); close (OUT);
-																
-				## Generate directories
-				my $MID_directory = $CAP3_directory_abs_path."/".$MID_identifier;
-				unless (-d $MID_directory) {
-					mkdir $MID_directory, 0755;
-					push (@CAP3_directories, $MID_directory);
-				}                                               
-				system("ln -s $fasta_file $MID_directory/");
-				system("ln -s $qual_file $MID_directory/");                             
+	} else {
+		&printError("There was an error when retrieving Memory RAM information...\n\nAre you sure this is a linux sever?...") and &dieNicely();	
+	}
+} else {
+	
+	#########################################################################
+	#			MIRA ASSEMBLY STEP OF THE READS OF EACH TAXA				#
+	#########################################################################
+	print "\n"; &print_Header("","#"); &print_Header(" MIRA Assembly Step for each taxa ","#"); &print_Header("","#"); print "\n";
+	print "\n"; &print_Header(" Generating an assembly for each taxa ", "%"); print "\n";
+	for (my $i = 0; $i < scalar @fastq_files; $i++) {
+		my ($MIRA_manifest_file, @fastq_files_this_taxa, $name_of_project);
+		if ($file_type == 7) {
+			if ($files_used{$fastq_files[$i]}) { next; }	
+			my $file_to_find;
+			my $file1_pair = &check_paired_file($fastq_files[$i]);
+			if ($file1_pair == 1) {
+				$file_to_find = $fastq_files[$i];
+				$file_to_find =~ s/left/right/g; 
+				$file_to_find =~ s/R1/R2/g;
 			} else {
-				&change_seq_names($fasta_file, $new_fasta_file, $MID_identifier);
-}}}}
+				$file_to_find = $fastq_files[$i];
+				$file_to_find =~ s/right/left/g; 
+				$file_to_find =~ s/R2/R1/g;
+			}
+			
+			for (my $j = 0; $j < scalar @fastq_files; $j++) {
+				if ($fastq_files[$j] eq $file_to_find) {
+					push (@fastq_files_this_taxa, $fastq_files[$i]);
+					push (@fastq_files_this_taxa, $fastq_files[$j]);
+					($MIRA_manifest_file, $name_of_project)  = &Generate_manifest_file_pair_end($fastq_files[$i], $fastq_files[$j]);
+					$files_used{$fastq_files[$j]}++; $files_used{$fastq_files[$i]}++;
+		}}} elsif ($file_type == 5) {		
+			$MIRA_manifest_file = &Generate_manifest_file($fastq_files[$i], "Illumina");
+			push (@fastq_files_this_taxa, $fastq_files[$i]);
+		} elsif ($file_type == 3) {
+			$MIRA_manifest_file = &Generate_manifest_file($fastq_files[$i], "454");		
+			push (@fastq_files_this_taxa, $fastq_files[$i]);
+		} 
+			
+		my $abs_path_manifest_file = $assembly_directory_abs_path."/".$MIRA_manifest_file;
+		print $abs_path_manifest_file."\n- Calling MIRA now for $fastq_files[$i]...\n- It might take a while...\n";
+		my $mira_exe = $MIRA_exec." -t $noOfProcesses ".$abs_path_manifest_file;
+		if ($debugger) {
+			$mira_exe .= " 2> $error_log"; ## show on screen or maybe print to a file
+		} else {
+			$mira_exe .= " > /dev/null 2> $error_log"; ## discarding MIRA output		
+		}
+	
+		print $mira_exe."\n\n";
+		my $system_call = system($mira_exe);
+		if ($system_call != 0) {
+			&printError("Something happened when calling MIRA for assembly reads..."); &dieNicely();
+		}print "\n"; &time_stamp();
+		
+		unless ($file_type == 7) {
+			my @tmp = split ("\.fastq", $fastq_files_this_taxa[0]);
+			$name_of_project = $tmp[0];
+		}
+		my $folder = $name_of_project."_assembly";
+		my $MID_identifier;
+		if ($folder =~ /.*id\-(.*)\_assembly/) { $MID_identifier = $1; }
+		my $fasta_file = $assembly_directory_abs_path."/".$folder."/".$name_of_project."_d_results/".$name_of_project."_out.unpadded.fasta";
+		my $qual_file = $assembly_directory_abs_path."/".$folder."/".$name_of_project."_d_results/".$name_of_project."_out.unpadded.fasta.qual";
+		my $contigs_file = $assembly_directory_abs_path."/assembly_id-".$MID_identifier.".contigs-MIRA.fasta";
+		my $contigs_file_name = "assembly_id-".$MID_identifier.".contigs-MIRA.fasta";
+		my $read_tag_list_file = $assembly_directory_abs_path."/".$folder."/".$name_of_project."_d_info/".$name_of_project."_info_readtaglist.txt";
+	
+		# Get path for qual and contigs files for CAP3 scaffolding if specified
+		$cap3files{$contigs_file_name} = $qual_file;	
+	
+		## Obtain reads/contigs identified as repeats
+		my $array_ref = \@fastq_files_this_taxa;
+		&extractReadRepeats($read_tag_list_file, $array_ref, $fasta_file, $contigs_file, $assembly_directory_abs_path."/".$folder);
+		chdir $assembly_directory_abs_path;
+	}
+	print "\n\n";
+	&print_Header("","#"); &print_Header(" MIRA Assembly Step finished ","#");  &print_Header("","#"); print "\n\n";
+	
+	if ($cap3flag) { print "\n\nGetting ready for scaffolding step using CAP3...\n"; }
+	## Generates folders and generates link for files of each taxa into them
+	
+	opendir(DIR, $assembly_directory_abs_path);
+	my @files = readdir(DIR);
+	for (my $i = 0; $i < scalar @files; $i++) {
+		if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
+		unless (-d $files[$i]) { ## if a directory
+			if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
+			my $MID_identifier;                     
+			if ($files[$i] =~ /(.*)id\-(.*)\.contigs\-MIRA\.fasta/) {
+				$MID_identifier = $2; 
+				my $fasta_file = $assembly_directory_abs_path."/".$files[$i];
+				my $new_fasta_file = $dirname."/".$1."id\-".$2.".contigs.fasta";
+					
+				if ($cap3flag) { # If cap3 is used for scaffolding move files and generate folders
+					my $qual_tmp_file = $cap3files{$files[$i]};
+					my $qual_file = $fasta_file.".qual";
+					print "Fetching qual values for $fasta_file\n";
+					my $hash_identifiers_ref = &read_FASTA_hash_length($fasta_file);
+					my %hash_identifiers = %{$hash_identifiers_ref};
+					$/ = ">"; ## Telling perl where a new line starts
+					open (QUAL, $qual_tmp_file);
+					open (OUT, ">$qual_file"); while (<QUAL>) {
+					next if /^#/ || /^\s*$/;
+					chomp;
+					my ($seq_id, $sequence) = split(/\n/,$_,2);
+					next unless ($sequence && $seq_id);
+					if ($hash_identifiers{$seq_id}) {
+						$seq_id = ">".$seq_id;
+					print OUT $seq_id."\n".$sequence."\n";                  
+					}} $/ = "\n";	close (QUAL); close (OUT);
+																	
+					## Generate directories
+					my $MID_directory = $CAP3_directory_abs_path."/".$MID_identifier;
+					unless (-d $MID_directory) {
+						mkdir $MID_directory, 0755;
+						push (@CAP3_directories, $MID_directory);
+					}                                               
+					system("ln -s $fasta_file $MID_directory/");
+					system("ln -s $qual_file $MID_directory/");                             
+				} else { &change_seq_names($fasta_file, $new_fasta_file, $MID_identifier);
+}}}}}
+
+
+
 
 ###############################################################################
 ###		cap3 Scaffolding of the contigs MIRA generated for each taxa		###
@@ -1185,9 +1244,7 @@ sub Contig_Stats {
 	close(OUT);
 }
 
-sub dieNicely {
-	Pod::Usage::pod2usage( -exitstatus => 1, -verbose => 0 );
-}
+sub dieNicely { pod2usage(-exitstatus => 1, -verbose => 0); }
 
 sub debugger_print {
 	my $string = $_[0];
@@ -1471,7 +1528,7 @@ sub Generate_manifest_file {
 	}
 	print OUT $parameter."\n";
 	print OUT "readgroup = ".$individual_fastq_file."_reads\n";
-	print OUT "data = ".$MIRA_directory_abs_path."/".$individual_fastq_file."\n";
+	print OUT "data = ".$assembly_directory_abs_path."/".$individual_fastq_file."\n";
 	if ($technology eq "454") { print OUT "technology = 454\n";
 	} else { print OUT "technology = solexa\n"; }
 	close (OUT);
@@ -1503,7 +1560,7 @@ sub Generate_manifest_file_pair_end {
 	$parameter .= "\tSOLEXA_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
 	print OUT $parameter."\n";
 	print OUT "readgroup = ".$name_of_project."_reads\nautopairing\n";
-	print OUT "data = ".$MIRA_directory_abs_path."/".$left_pair_fastq_file." ".$MIRA_directory_abs_path."/".$right_pair_fastq_file."\n";
+	print OUT "data = ".$assembly_directory_abs_path."/".$left_pair_fastq_file." ".$assembly_directory_abs_path."/".$right_pair_fastq_file."\n";
 	print OUT "technology = solexa\n";
 	close (OUT);
 	return ($manifest_file, $name_of_project);	
@@ -1668,7 +1725,7 @@ sub printError_log {
 	open (ERR, ">>$error_log");
 	print ERR $message."\n";
 	close (ERR);
-	print STDERR $message."\n";
+	#print STDERR $message."\n";
 }
 
 sub printFormat_message {
