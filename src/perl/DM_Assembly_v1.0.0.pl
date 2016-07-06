@@ -1,12 +1,12 @@
 #!/usr/bin/perl
-#######################################################################################
-###	DOMINO: Development of molecular markers in non-model organisms using NGS data 	###
-###																					###
-###	Authors:																		###
-###	Cristina Frías-López, José F. Sánchez-Herrero, Miquel A. Arnedo, Alejandro 		###
-###	Sánchez-Gracia, and Julio Rozas.					     						###
-###																					###
-#######################################################################################
+###########################################################################################
+### DOMINO: Development of molecular markers in non-model organisms using NGS data 	###
+###											###
+### Authors:										###
+### Cristina Frías-López, José F. Sánchez-Herrero, Miquel A. Arnedo, Alejandro 		###
+### Sánchez-Gracia, and Julio Rozas.					     		###
+###											###
+###########################################################################################
 ##	Usage:
 ##      perl DM_Assembly_v1.0.0.pl
 ##
@@ -73,7 +73,7 @@ my %input_options = (1 =>'454_sff', 2 =>'454_fastq', 3=>'454_multiple_fastq',
 	7 => 'Illumina_pair_end_multiple_fastq');
 
 ######################
-## Get user options	##
+## Get user options ##
 ######################
 GetOptions(
 	"h|help" => \$helpAsked,
@@ -495,9 +495,9 @@ To add Reference when available
 =back
 =cut
 
-##########################################################################################
-##					Checking user options												##
-##########################################################################################
+###########################
+## Checking user options ##
+###########################
 pod2usage( -exitstatus => 0, -verbose => 1 ) if ($helpAsked);
 pod2usage( -exitstatus => 0, -verbose => 2 ) if ($manual);
 if (!$abs_folder || !$file_type) {
@@ -575,9 +575,9 @@ if ($flagSpades) {
 $assembly_directory_abs_path = abs_path($assembly_directory);
 mkdir $assembly_directory_abs_path, 0755; chdir $assembly_directory_abs_path;
 
-##########################################################################################
-##				Checking files															##
-##########################################################################################
+##################################
+##	Checking files 		##
+##################################
 if ($input_options{$file_type}) {
 	if ($file_type == 1 || $file_type == 2 || $file_type == 4|| $file_type == 6) {
 		&printError("Input file type provided not supported, please read the documentation..."); &dieNicely();	
@@ -665,9 +665,9 @@ if ($file_type == 7) {
 		if ($sum_pairs ne 3) { &printError("Wrong pair of FASTQ files provided. Please check pair of files corresponding to $keys:\n$files\n"); &dieNicely(); }
 }}
 
-##########################################################################################
-##					Printing user options												##
-##########################################################################################
+###########################
+## Printing user options ##
+###########################
 ## Print information of the input parameters
 &print_DOMINO_details("+ Threads: ".$noOfProcesses." ...OK\n");
 &print_DOMINO_details("+ Minimum relative Score (mrs) to use in MIRA assembly: $mrs ...OK\n");
@@ -675,7 +675,10 @@ if ($cap3flag) {
 	&print_DOMINO_details("+ CAP3 would be used in a second round of assembly ...OK\n");
 	&print_DOMINO_details("+ Similarity between reads for CAP3 assembly: $similar_CAP3 ...OK\n");
 	&print_DOMINO_details("+ Overlapping between reads for CAP3 assembly: $overlap_CAP3 ...OK\n");
-} else { &print_DOMINO_details("+ CAP3 has been disabled, only MIRA would perform the assembly ...OK\n"); }
+} else { 
+if ($flagSpades) { &print_DOMINO_details("+ MIRA has been disabled, SPAdes would perform the assembly ...OK\n");	
+} else { &print_DOMINO_details("+ CAP3 has been disabled, only MIRA would perform the assembly ...OK\n");
+}}
 unless ($avoidDelTMPfiles) {
 	&print_DOMINO_details("+ Deleting of temporary files would be done ...OK\n");
 } else { &print_DOMINO_details("+ Deleting temporary files would be avoid ...OK\n"); }
@@ -684,11 +687,11 @@ unless ($avoidDelTMPfiles) {
 &print_DOMINO_details("\n+ Parameters details would be print into file: $param_Detail_file...\n");
 &print_DOMINO_details("+ Errors occurred during the process would be print into file: $error_log...\n\n");
 
-
+## Assembly
 if ($flagSpades) {
 
-	## If user provides Spades flag, we will assume, right now, he is using a Linux server 
-	
+	## If user provides Spades flag, we will assume, in this version, he is using a Linux server with
+	## enough CPUs and RAM for assembly	
 	## We would use "cat /proc/meminfo " in order to check the available memory, if greater than 30GiB
 	## we would split in a reasonable amount of processes to proceed in parallel with the assembly 
 	
@@ -702,34 +705,137 @@ if ($flagSpades) {
 		while (<MEM>) {
 			my $line = $_;
 			chomp $line;
-			$line =~ s/\s/\t/;
-			my @array = split("\t", $line);
+			$line =~ s/\s*//g;			
+			&debugger_print($line);			
+			my @array = split("\:", $line);
+			if ($array[1] =~ /(\d+)(.*)/) {
+				push (@{ $memory_hash{$array[0]} }, $1);
+				push (@{ $memory_hash{$array[0]} }, $2);
+			}
 			if ($array[0] eq "Cached") { last; }
-			push (@{ $memory_hash{$array[0]} }, $array[1]);
-			push (@{ $memory_hash{$array[0]} }, $array[2]);
 		}
-		close (MEM)
-		&debugger_print("Ref", \%memory_hash;)
-		if ($memory_hash{"MemTotal:"}[1] eq 'kB') {
-			$memory_hash{"MemTotal:"}[0] = $memory_hash{"MemTotal:"}[0]/1000000;
+		close (MEM);
+		&debugger_print("Ref", \%memory_hash);
+		foreach my $keys (keys %memory_hash) {
+			if ($memory_hash{$keys}[1] eq 'kB') {
+				$memory_hash{$keys}[0] = $memory_hash{$keys}[0]/1000000;
+			}
 		}
-		if ($memory_hash{"MemFree:"}[1] eq 'kB') {
-			$memory_hash{"MemFree:"}[0] = $memory_hash{"MemFree:"}[0]/1000000;
-		}		
-		print "+ Total Memory: ".$memory_hash{"MemTotal:"}[0]." GiB\n";
-		print "+ Free Memory: ".$memory_hash{"MemFree:"}[0]." GiB\n";
-		my $p = ($memory_hash{"MemFree:"}[0]/$memory_hash{"MemTotal:"}[0])*100;
-		my $string = sprintf("%2d%%", $p);
-		print "+ Percentage of Free memory: $string %\n";
+		print "+ Total Memory: ".$memory_hash{"MemTotal"}[0]." GiB\n";
+		print "+ Free Memory: ".$memory_hash{"MemFree"}[0]." GiB\n";
+		print "+ Available Memory: ".$memory_hash{"MemAvailable"}[0]." GiB\n";
+		print "+ Cached Memory: ".$memory_hash{"Cached"}[0]." GiB\n";
+		print "+ Buffers Memory: ".$memory_hash{"Buffers"}[0]." GiB\n";
+		
+		my $total_available = $memory_hash{"MemFree"}[0]+$memory_hash{"MemAvailable"}[0];
+		my $p = ($total_available/$memory_hash{"MemTotal"}[0])*100;
+		print "+ Percentage of Free memory: $p %\n";
+		
+		## Optimize CPUs/taxa
+		my $noOfProcesses_SPAdes;
+		if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
+			
+			# Get number of taxa to assembly
+			my $amount_file = scalar @file_abs_path;
+			my $amount_taxa;
+			if ($file_type == 7) { $amount_taxa = $amount_file/2;
+			} else { $amount_taxa = $amount_file; }
 
-				
-	} else {
-		&printError("There was an error when retrieving Memory RAM information...\n\nAre you sure this is a linux sever?...") and &dieNicely();	
-	}
+			if ($noOfProcesses > 20) {
+				if ($total_available > 500) {
+					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
+				} elsif ($total_available > 200) {
+					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa+3);
+				} elsif ($total_available > 50) {
+					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa+$amount_taxa);
+				} else { $noOfProcesses_SPAdes = $noOfProcesses;}
+			} elsif ($noOfProcesses > 8) {
+				if ($total_available > 500) {
+					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
+				} elsif ($total_available > 200) {
+					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa+3);
+				} elsif ($total_available > 50) {
+					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa+$amount_taxa);
+				} else {
+					$noOfProcesses_SPAdes = $noOfProcesses;
+				}
+			} else { &printError("To make the most of your server and SPAdes please select more CPUs using -p option") and &dieNicely();}
+			
+print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa into different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
+			
+			&print_Header(" SPAdes Assembly of each taxa ","#");
+			## Call spades for the assembly and send threads for each taxa
+
+			my $int_taxa = 0;
+			my $pm =  new Parallel::ForkManager($noOfProcesses); 			## Sent child process
+			$pm->run_on_finish( 
+			sub { my ($pid, $exit_code, $ident) = @_; 
+				print "\n\n** Child process finished with PID $pid and exit code: $exit_code\n\n"; 
+			} );
+			$pm->run_on_start( sub { my ($pid,$ident)=@_; print "\n\n** SPAdes assembly started with PID $pid\n\n"; } );
+			&debugger_print("Ref", \%MID_species_hash);
+			foreach my $keys (keys %MID_species_hash) {
+				my $pid = $pm->start($int_taxa) and next; print "\nSending child process for SPAdes assembling $keys\n\n";
+				$int_taxa++;
+				my @files = ("", "");
+				if ($file_type == 7) { ## illumina_PE
+					for (my $i=0; $i < scalar @{ $MID_species_hash{$keys} }; $i++) {
+						my $string2split = $MID_species_hash{$keys}[$i];
+						my @array = split("----", $string2split);
+						if ($array[0] == 1) { $files[0] = $array[1];
+						} else { $files[1] = $array[1]; }  
+				}}
+
+				## Send SPAdes command				
+				my $assembly_dir = $keys."_assembly";
+				my $spades_path = $scripts_path."SPAdes-3.8.1-Linux/bin/spades.py -o ".$assembly_dir." ";
+				if ($file_type == 7) { ## illumina_PE
+					$spades_path .= "-1 $files[0] -2 $files[1] ";				
+				} else { $spades_path .= "-s $MID_species_hash{$keys} ";}
+				$spades_path .= "-t $noOfProcesses_SPAdes";
+				print "Sending command:\n".$spades_path."\n";
+				unless ($debugger) {
+					$spades_path .= " > /dev/null"; ## discarding SPAdes output		
+				}
+				my $system_call = system($spades_path);
+				if ($system_call != 0) {
+					&printError("Something happened when calling SPAdes for assembly reads..."); &dieNicely();
+				} print "\n"; &time_stamp();
+
+				## Get contig file
+				my $contigs_file = $assembly_dir."/contigs.fasta";
+				my $new_contigs_file = $dirname."/assembly_id-".$keys.".contigs.fasta";
+				File::Copy::move($contigs_file, $new_contigs_file);
+
+				## Finish assembly and generate statistics
+				&Contig_Stats($new_contigs_file);
+				$pm->finish($int_taxa); # pass an exit code to finish
+			}
+			$pm->wait_all_children; print "\n** All Assembly child processes have finished...\n\n";		
+			
+
+			###########################################
+			### Cleaning or renaming some files	###
+			###########################################
+			print "\n\n";
+			unless ($avoidDelTMPfiles) {
+				&print_Header(" Cleaning all the intermediary files generated ","#"); 
+				&clean_assembling_folders(); print "\n\n";
+			}
+
+			###########################
+			### 	Finish the job	###
+			###########################
+			&finish_time_stamp(); print "\n Job done succesfully, exiting the script\n"; exit();
+
+
+		} else { &printError("Only $total_available GiB available of memory RAM, please bear in mind SPAdes would not complete the task...") and &dieNicely();}	
+	} else { &printError("There was an error when retrieving Memory RAM information...\n\nAre you sure this is a linux sever?...") and &dieNicely();}
+
 } else {
 	
 	#########################################################################
-	#			MIRA ASSEMBLY STEP OF THE READS OF EACH TAXA				#
+	# 	MIRA ASSEMBLY STEP OF THE READS OF EACH TAXA			#
 	#########################################################################
 	print "\n"; &print_Header("","#"); &print_Header(" MIRA Assembly Step for each taxa ","#"); &print_Header("","#"); print "\n";
 	print "\n"; &print_Header(" Generating an assembly for each taxa ", "%"); print "\n";
@@ -849,9 +955,9 @@ if ($flagSpades) {
 
 
 
-###############################################################################
-###		cap3 Scaffolding of the contigs MIRA generated for each taxa		###
-###############################################################################
+###########################################################################
+###	cap3 Scaffolding of the contigs MIRA generated for each taxa	###
+###########################################################################
 if ($cap3flag) { 
 
 	print "\n\n"; &print_Header("","#"); 
@@ -911,16 +1017,14 @@ for (my $i = 0; $i < scalar @dirname_files; $i++) {
 		print "\n\n";
 }}
 
-###############################
-###		Finish the job		###
-###############################
+###########################
+### 	Finish the job	###
+###########################
 &finish_time_stamp(); print "\n Job done succesfully, exiting the script\n"; exit();
 
-######################################################################################
-##																					##	
-##									SUBROUTINES										##
-##																					##
-######################################################################################
+##########################
+##	SUBROUTINES	##
+##########################
 
 sub baseCount {
 	my $seq = $_[0];
@@ -935,11 +1039,9 @@ sub baseCount {
 sub blastn {
 
 	##########################################################################################
-	##	 																					##
-	##  This function uses BLASTN to check for the putative contaminants					##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 20/02/2014 	jfsanchezherrero@ub.edu						##
-	## 		        																		##
+	##											##
+	##  This function uses BLASTN to check for the putative contaminants			##
+	##	Jose Fco. Sanchez Herrero, 20/02/2014 	jfsanchezherrero@ub.edu			##
 	##########################################################################################
 
 	my $file = $_[0];
@@ -1066,7 +1168,7 @@ sub check_file {
 				my $string2push = $pair_int."----".$file_to_check;
 				push (@{ $MID_species_hash{$name} }, $string2push);
 			} else { 
-				$MID_species_hash{$file_to_check} = $name;
+				$MID_species_hash{$name} = $file_to_check;
 		}} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); &printFormat_message(); &dieNicely();
 	}} else { &printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); &printFormat_message(); &dieNicely();
 	}
@@ -1122,14 +1224,12 @@ sub check_paired_file {
 
 sub clean_assembling_folders {
 		
-	##########################################################################################
-	##	 																					##
-	##  This function generates a cleaning of all the temporary files 						##
-	##	generated during the assembly														##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 30/09/2014 jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
+	##########################################################################
+	##									##
+	##  This function generates a cleaning of all the temporary files 	##
+	##	generated during the assembly					##
+	## 		       							##
+	##########################################################################
 	
 	chdir $dirname;
 	my $files_ref = &read_dir($dirname);
@@ -1155,10 +1255,9 @@ sub Contig_Stats {
 	my (@len, %contig_length, $all_bases);
 	if(!defined($fasta_file)) { print "ERROR: No input files are provided\nDOMINO would not die here but not perform any statistics on for the assembly contigs\n"; return; }
 	my @name = split("\.fasta", $fasta_file);
-	my $outFile = "Assembly_statistics-".$name[0].".txt";
+	my $outFile = $name[0]."-statistics.txt";
 	open(OUT, ">$outFile");
 	my @parts = (500, 1000, 2000, 5000, 10000, 50000); my %parts_array;
-	
 	open(FILE, $fasta_file) or &printError("Could not open the $fasta_file ...\n") and &dieNicely();
 	$/ = ">"; ## Telling perl where a new line starts
 	while (<FILE>) {		

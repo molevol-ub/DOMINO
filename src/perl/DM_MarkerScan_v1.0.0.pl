@@ -3569,7 +3569,7 @@ sub get_parameters {
 				my @files_assembly = @$files_assembly_ref;
 				for (my $j=0; $j < scalar @files_assembly; $j++) {
 					if ($files_assembly[$j] eq "." || $files_assembly[$j] eq ".." || $files_assembly[$j] eq ".DS_Store") { next; }
-					if ($files_assembly[$j] =~ /Assembly\_statistics\-assembly\_id\-(.*)\.contigs.*/) {
+					if ($files_assembly[$j] =~ /.*id\-(.*)\.contigs-statistics.txt/) {
 						$parameters{$dir}{"stats"}{$1} = $dirs{$dir}{$last}."/".$files_assembly[$j];
 				}}
 		} elsif ($dir eq "clean_data") {

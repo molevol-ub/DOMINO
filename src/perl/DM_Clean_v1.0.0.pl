@@ -1,12 +1,12 @@
 #!/usr/bin/perl
-#######################################################################################
-###	DOMINO: Development of molecular markers in non-model organisms using NGS data 	###
-###																					###
-###	Authors:																		###
-###	Cristina Frías-López, José F. Sánchez-Herrero, Miquel A. Arnedo, Alejandro 		###
-###	Sánchez-Gracia, and Julio Rozas.					     						###
-###																					###
-#######################################################################################
+###########################################################################################
+###	DOMINO: Development of molecular markers in non-model organisms using NGS data	###
+###											###
+###	Authors:									###
+###	Cristina Frías-López, José F. Sánchez-Herrero, Miquel A. Arnedo, Alejandro 	###
+###	Sánchez-Gracia, and Julio Rozas.					     	###
+###											###
+###########################################################################################
 ##	Usage:
 ##      perl DM_Clean_v1.0.0.pl
 ##
@@ -69,7 +69,7 @@ for (my $j = 0; $j < $#script_path_array; $j++) { $scripts_path .= $script_path_
 ## print each QC thread analysis into a file not to show so many confusing messages
 
 ##################################
-##	Initializing some variables	##
+## Initializing some variables	##
 ##################################
 my (
 ## Options provided
@@ -88,7 +88,7 @@ my %input_options = (
 	7 => 'Illumina_pair_end_multiple_fastq');
 
 ######################
-## Get user options	##
+## Get user options ##
 ######################
 GetOptions(
 	"type_file=i" => \$user_option_file_type,
@@ -595,9 +595,9 @@ To add Reference when available
 =back
 
 =cut
-##########################################################################################
-##					Checking user options												##
-##########################################################################################
+##########################################
+##	Checking user options		##
+##########################################
 if (!$outFolder || !$user_option_file_type) { 
 	Pod::Usage::pod2usage("Try 'perl $0 -man' for more information\n", -exitstatus => 0, -verbose => 0 ); 
 }
@@ -679,9 +679,9 @@ if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_f
 		&printError("\n\nERROR: No barcodes file provided...\n"); &dieNicely();
 }}
 
-##########################################################################################
-##				Checking files															##
-##########################################################################################
+##################################
+##	Checking files		##
+##################################
 my $file_type = $input_options{$user_option_file_type};
 if (!$input_options{$user_option_file_type}) {
 	&printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n");
@@ -793,9 +793,9 @@ if ($file_type eq "Illumina_pair_end_multiple_fastq") {
 
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 
-##########################################################################################
-##					Printing user options												##
-##########################################################################################
+##################################################
+##	Printing user options 			##
+##################################################
 if ($onlyTagging_files) {
 	&print_DOMINO_details("+ Cleaning process would be skipped...OK\n");
 	&print_DOMINO_details("+ Only extracting and tagging of the reads would be done...OK\n");	
@@ -845,15 +845,15 @@ if ($onlyTagging_files) {
 &print_DOMINO_details("+ Errors occurred during the process would be print into file: $error_log...\n\n");
 chdir $dirname;
 
-##########################################################################################
-##					Start the analysis													##
-##########################################################################################
+##########################################################
+##		Start the analysis			##
+##########################################################
 if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_file_type == 4 || $user_option_file_type == 6) {
 	
 	##################################################################################################
 	## If the type of file is SFF, 454_FASTQ, Illumina and Illumina paired-end and it is a unique   ##
 	## file containing information of the different taxa, tagged with MID tags we would extract  	##
-	## and classify 																  				##
+	## and classify 										##
 	##################################################################################################
 	
 	print "\n"; &print_Header(" Extracting taxa sequences from the file provided ","%"); 
@@ -1010,9 +1010,9 @@ foreach my $keys (sort keys %species_names) {
 	my %domino_files_threads_QC;
 	chdir $taxa_dir{$keys}; print "Changing dir to $taxa_dir{$keys}\n";
 
-	##############################################################################
-	## 		Quality control step 1.1 -- PRINSEQ Dust algorithm					##
-	##############################################################################
+	##################################################################
+	## 	Quality control step 1.1 -- PRINSEQ Dust algorithm	##
+	##################################################################
 	print "\n+ Quality control 1.1: low complexity reads: DUST algorithm: $keys\n";
 	my $dust_clean_reads; my $dust_reads; 
 	if ($file_type eq "Illumina_pair_end" || $file_type eq "Illumina_pair_end_multiple_fastq") {		
@@ -1030,9 +1030,9 @@ foreach my $keys (sort keys %species_names) {
 
 	&debugger_print("domino_files_threads_QC"); &debugger_print("Ref", \%domino_files_threads_QC);
 
-	##############################################################################
-	## 		Quality control step 1.2 -- NGS_QC_toolkit							##
-	##############################################################################
+	##################################################
+	## Quality control step 1.2 -- NGS_QC_toolkit	##
+	##################################################
 	print "- Quality control 1.2: short reads and poor quality: \n";
 	print "+ Cleaning poor quality sequences and short sequences. Please check the stats file for results or the html report\n\n";
 	my $NGS_QC_call = "perl ".$scripts_path."NGSQCToolkit_v2.3.1/";
@@ -1066,9 +1066,9 @@ foreach my $keys (sort keys %species_names) {
 
 	&debugger_print("domino_files_threads_QC"); &debugger_print("Ref", \%domino_files_threads_QC);
 
-	##############################################################################
-	## 		Quality control step 2 -- BLAST contaminant and vector search		##
-	##############################################################################
+	##########################################################################
+	## Quality control step 2 -- BLAST contaminant and vector search	##
+	##########################################################################
 	if ($skipping_BLAST) {
 		#If user does not want to search against any database, we would skip the whole step
 		if ($file_type eq "Illumina_pair_end" || $file_type eq "Illumina_pair_end_multiple_fastq") {
@@ -1257,9 +1257,9 @@ foreach my $keys (sort keys %species_names) {
 	my $domino_files_threads_QC_text = $taxa_dir{$keys}."/dumper-hash_QC.txt";
 	&print_dump(\%domino_files_threads_QC, $domino_files_threads_QC_text);
 
-	##########################################################################
-	## 		Getting files ready for finishing								##
-	##########################################################################
+	##################################################
+	## 	Getting files ready for finishing	##
+	##################################################
 	if ($file_type eq "Illumina_pair_end" || $file_type eq "Illumina_pair_end_multiple_fastq") {	
 		##adjust pairs?
 	} else {
@@ -1311,11 +1311,9 @@ print "\n Job done succesfully, exiting the script\n";
 exit(0);
 
 
-######################################################################################
-##																					##	
-##									SUBROUTINES										##
-##																					##
-######################################################################################
+#######################################
+#######	     SUBROUTINES	#######
+#######################################
 sub check_barcode_user_file {
 	
 	my $user_barcodes_path_file = $_[0];
