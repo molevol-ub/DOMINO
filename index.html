@@ -35,19 +35,13 @@
           <h1>
 <a id="1-introduction" class="anchor" href="#1-introduction" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>1. INTRODUCTION</h1>
 
-<p>DOMINO is a new software application specifically designed for improving the development of DNA markers in non-model organisms using either NGS data or pre-computed multiple sequence alignments (MSA) in various formats (including MSA from RAD data). </p>
+<p>DOMINO is a new software application specifically designed for improving the development of DNA markers in non-model organisms using either NGS data or pre-computed multiple sequence alignments (MSA) in various formats (including RAD loci). We used Perl and C++ scripting languages to combine some popular, open-source, bioinformatics tools for NGS data with a set of new developed functions in an integrated bioinformatics pipeline for custom-made marker discovery or selection based on user-defined criteria.</p>
 
-<p>We used Perl and C++ scripting languages to combine some popular, open-source, bioinformatics tools for NGS data with a set of new developed functions in an integrated bioinformatics pipeline for custom-made marker discovery or selection. </p>
+<p>Customizable features include the length of variable and conserved regions (when requested), the minimum levels (or a preferred range) of nucleotide variation, how to manage polymorphic variants, or which taxa (or what fraction of them) should be covered by the marker. All these criteria can be easily defined in a user-friendly GUI or under a command-line version that implements some extended options and that it is particularly useful for working with large NGS data sets in high performance computers (see also the DOMINO documentation). The regions identified or selected in DOMINO can be i) directly used as markers with a particular depth of taxonomic resolution, ii) utilized for their downstream PCR amplification in a broader taxonomic scope or iii) used as suitable templates to optimized bait design for target DNA enrichment techniques.</p>
 
-<p>Using NGS data (raw or pre-processed reads) from typical genome partitioning or low depth sequencing experiments (including or not reference sequences, such as, for example, genome scaffolds), or pre-computed multiple sequence alignments (MSA) of multiple taxa (“taxa panel”, which may represent different populations or species), DOMINO searches for sequence regions with a minimum level of variation, which can be optionally flanked by stretches of conserved sequences (appropriate for further PCR primers design). </p>
+<p>The DOMINO workflow consists in four main phases: “Input Data” and “Pre-processing”, “Assembly”, “Alignment/Mapping” and “Marker Discovery/Selection”. Users can enter to the DOMINO workflow at different points in order to perform specific shortcut runs for marker discovery or selection according to the type of input data. In a typical full run from raw NGS reads (using marker identification module), the program applies an assembly-based approach; the pipeline is therefore optimized to work with genome partitioning methods in which the size-selected or enriched fragments are long enough to permit a successful assembly and have been fully (or nearly fully) sequenced. For MSA inputs, as for example, restriction-site associated DNA (RAD) variation and related methods (e.g. RADseq, ddRAD, GBS) DOMINO can search the MSA of each loci (in this case RAD loci) previously obtained with commonly used software packages for highly informative markers (marker selection module); current version accepts the PHYLIP and FASTA format as well as the pyRAD (.loci) and STACKS (.fa) output file formats.</p>
 
-<p>The DOMINO workflow consists in four main phases: “Input Data” and “Pre-processing”, “Assembly”, “Alignment/Mapping” and “Marker Discovery/Selection”. Users can enter to the DOMINO workflow at different points in order to perform specific shortcut runs for marker discovery or selection according to the type of input data.</p>
-
-<p>In a typical full run from raw NGS reads (using marker identification and marker selection modules), the program applies an assembly-based approach; the pipeline is therefore optimized to work with genome partitioning methods in which the size-selected or enriched fragments are long enough to permit a successful assembly and have been fully (or nearly fully) sequenced. For MSA inputs, as for example, restriction-site associated DNA (RAD) variation and related methods (e.g. RADseq, ddRAD, GBS) DOMINO can searh the MSA of each loci (in this case RAD loci) previously obtained with commonly used software packages for highly informative markers (marker selection module); current version accepts the PHYLIP and FASTA format as well as the pyRAD (<em>.loci) and STACKS (</em>.fa) output file formats. </p>
-
-<p>After the maker development phase, DOMINO provides i) the list the genomic regions (with their corresponding coordinates in each contig) exhibiting the minimum levels of nucleotide variation specified by the user among the selected taxa (or covering at least a pre-defined minimum number of them), and the marker MSAs for these taxa (DOMINO marker identification module) or ii) the list of markers exhibiting the same pre-definable features among a set of aligned sequences supplied by the user and previously obtained in other software (DOMINO marker selection module). </p>
-
-<p>Furthermore, if the taxa panel has been designed in a convenient phylogenetic context and the user asks for highly conserved regions flanking to be included in the developed markers, these markers should be suitable for further surveys of variation in an extended set of phylogenetically related taxa, i.e. “focal taxa”. </p>
+<p>After the marker development phase, DOMINO provides i) a list of the genomic regions (with their corresponding coordinates in each generated contig) that meet marker design criteria and the MSA of each of these markers MSAs for the specified taxa (DOMINO marker identification module outputs) or ii) the list of makers selected under the same criteria among a set of aligned sequences supplied by the user and previously obtained in other software (DOMINO marker selection module outputs).</p>
 
 <h1>
 <a id="2-documentation" class="anchor" href="#2-documentation" aria-hidden="true"><span aria-hidden="true" class="times new roman"></span></a> 2. DOCUMENTATION </h1>
@@ -106,36 +100,30 @@ sudo apt-get install xterm</li>
 <h3>
 <a id="231-domino-gui" class="anchor" href="#231-domino-gui-plus-command-line-version" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>3.3.1. DOMINO GUI:</h3>
 
-<p>Under the DOMINO oficial website, user can obtain installers that will guide the user through the complete installation process for Linux and Mac distributions.</p>
+<p>In the DOMINO website, user can obtain installers that will guide the user through the complete installation process for Linux and Mac distributions.</p>
 
-<p>Also, all the necessary installation files and folders are available at the domino git repository but the user may need to compile and retrieve some Qt libraries.</p>
+<p>Also, all the necessary installation files and folders (the user may need to compile and retrieve some Qt libraries) are available at the domino Git repository.</p>
 
 <p>Once installed, the bin directory will contain the DOMINO perl scripts, the directories with the binaries of the external software included in the DOMINO pipeline and some mandatory Perl modules. In addition, a shortcut Desktop DOMINO icon will be generated.</p>
 
 <h3>
 <a id="232-command-line" class="anchor" href="#232-command-line" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>3.3.2. Command-line:</h3>
 
-<p>In the git directory, the user can find a pre-configured shell script (install.sh) written to handle the installation of command-line version (please, notice that only the command-line version should be installed using this option).</p>
+<p>In the Git directory, the user can find a pre-configured shell script (install.sh) written to handle the installation of command-line version (to install only the command-line version).</p>
 
-<p>In a Unix-based bash console, change the directory to fit the desired installation folder and run the script, with 'sh install.sh'</p>
+<p>In a Unix-based bash console, change the directory to enter in the desired installation folder and run the script, with the command: sh install.sh</p>
 
 <p>The bin directory will contain the DOMINO perl scripts, the directories with the binaries of the external software included in the DOMINO pipeline and some mandatory Perl modules.</p>
 
 <h1>
 <a id="2-bug-reports" class="anchor" href="#2-bug-reports" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>4. BUG REPORTS</h1>
 
-<p>If you encounter bugs that are not listed here, please send a
-report to the main authors.</p>
-
-<pre><code>J.F.Sanchez: jfsanchezherrero@ub.edu
-A.Sanchez-Gracia: elsanchez@ub.edu
-J.Rozas: jrozas@ub.edu 
-</code></pre>
+<p>If you encounter bugs that are not listed here, please send a comments and bug reports via GitHub</p>
 
 <h1>
 <a id="3-community" class="anchor" href="#3-community" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>5. COMMUNITY</h1>
 
-<p>If you would like to see a new feature implemented, send suggestions to the main authors (See AUTHORS). Our aim is to have an "asked features" framework soon.</p>
+<p>If you would like to see a new feature implemented, suggestions are welcome. Our aim is to have a "suggestion" box soon.</p>
 
 <h1>
 <a id="4-thanks" class="anchor" href="#4-thanks" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>6. THANKS</h1>
@@ -146,6 +134,12 @@ J.Rozas: jrozas@ub.edu
 <a id="5-authors" class="anchor" href="#5-authors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>7. AUTHORS</h1>
 
 <p>Cristina Frias-Lopez, Jose F. Sanchez-Herrero, Miquel A. Arnedo, Alejandro Sanchez-Gracia and Julio Rozas.</p>
+<pre><code>C.Frias-Lopez: cristinafriaslopez@ub.edu
+J.F.Sanchez: jfsanchezherrero@ub.edu
+M.A. Arnedo: marnedo@ub.edu
+A.Sanchez-Gracia: elsanchez@ub.edu
+J.Rozas: jrozas@ub.edu 
+</code></pre>
 
 <p>Evolutionary Genomics and Bioinformatics Group, Departament de Genètica, Microbiologia i Estadística and Institut de Recerca de la Biodiversitat (IRBio), Universitat de Barcelona, Av. Diagonal 643, Barcelona 08028, Spain</p>
 
