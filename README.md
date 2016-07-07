@@ -73,7 +73,7 @@ The bin directory will contain the DOMINO perl scripts, the directories with the
 4. BUG REPORTS
 =
 
-If you encounter bugs that are not listed here, please send a comments and bug reports via GitHub
+If you encounter bugs that are not listed here, please send comments and bug reports via GitHub
 
 
 =
@@ -104,10 +104,7 @@ Evolutionary Genomics and Bioinformatics Group, Departament de Genètica, Microb
 =
 8. CITATION
 =
-*To add citation when available*
-
-*Current status: under review*
-
+*To add citation when available. Current status: under review*
 
 =
 9. COPYRIGHT AND LICENSE
