@@ -726,7 +726,8 @@ if ($flagSpades) {
 		print "+ Buffers Memory: ".$memory_hash{"Buffers"}[0]." GiB\n";
 		$total_available = $memory_hash{"MemFree"}[0]+$memory_hash{"Cached"}[0]; ## Cache Memory would be release once we send a command
 		my $p = ($total_available/$memory_hash{"MemTotal"}[0])*100;
-		print "+ Percentage of Free memory: $p %\n";
+		print "Total Available Memory (Cached +  Free): ".$total_available."GiB\n";
+		print "+ Percentage of Available Memory: $p %\n";
 		
 		## Optimize CPUs/taxa
 		my $noOfProcesses_SPAdes;
@@ -772,7 +773,7 @@ if ($flagSpades) {
 	
 				## Send SPAdes command				
 				my $assembly_dir = $keys."_assembly";
-				my $spades_path = $scripts_path."SPAdes-3.8.1-Linux/bin/spades.py -o ".$assembly_dir." ";
+				my $spades_path = "python ".$scripts_path."SPAdes-3.8.1-Linux/bin/spades.py -o ".$assembly_dir." ";
 				if ($file_type == 7) { ## illumina_PE
 					$spades_path .= "-1 $files[0] -2 $files[1] ";				
 				} else { $spades_path .= "-s $MID_species_hash{$keys} ";}
