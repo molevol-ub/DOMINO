@@ -62,7 +62,7 @@ BEGIN {
 ##	Initializing some variables	##
 ##################################
 my ($helpAsked, $job, $type_job, $reference_fasta_file, $hirep, @fastq_files, 
-$avoidDelTMPfiles, $file_type, $cap3flag, %cap3files, %MID_species_hash, @user_files, 
+$avoidDelTMPfiles, $file_type, $cap3flag, %cap3files, %taxa_hash, @user_files, 
 $noOfProcesses, $version, %files_used, $manual, $noClip, $abs_folder, $mrs, $debugger, $flagSpades,
 @CAP3_directories, $DOMINO_files, $overlap_CAP3, $similar_CAP3, $user_files, $further_information,
 @file_abs_path, @file_names, $step_time, %nucleotides, $total_Contigs_all_sets);
@@ -654,10 +654,10 @@ if (scalar @file_abs_path == 0) { &printError("No clean files were provided for 
 
 ## Check if paired end files provided, all pairs have been correctly provided
 if ($file_type == 7) {
-	foreach my $keys (keys %MID_species_hash) {
+	foreach my $keys (keys %taxa_hash) {
 		my $sum_pairs; my $files;
-		for (my $i=0; $i < scalar @{ $MID_species_hash{$keys} }; $i++) {
-			my $string2split = $MID_species_hash{$keys}[$i];
+		for (my $i=0; $i < scalar @{ $taxa_hash{$keys} }; $i++) {
+			my $string2split = $taxa_hash{$keys}[$i];
 			my @array = split("----", $string2split);
 			my $pair = $array[0]; my $file = $array[1];
 			$files .= $file."\n"; $sum_pairs += $pair;
@@ -731,9 +731,9 @@ if ($flagSpades) {
 		
 		## Optimize CPUs/taxa
 		my $noOfProcesses_SPAdes;
-		my $amount_taxa = scalar keys %MID_species_hash;
+		my $amount_taxa = scalar keys %taxa_hash;
 		if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
-			unless ($noOfProcesses > 8) { &printError("To make the most of your server and SPAdes please select more CPUs using -p option") and &dieNicely();}
+			unless ($noOfProcesses >= 8) { &printError("To make the most of your server and SPAdes please select more CPUs using -p option") and &dieNicely();}
 			# Get number of taxa to assembly
 			if ($total_available > 500) {
 				$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
@@ -745,8 +745,7 @@ if ($flagSpades) {
 				$noOfProcesses_SPAdes = $noOfProcesses;
 			}
 
-			print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa 
-			into different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
+			print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa\ninto different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
 				
 			&print_Header(" SPAdes Assembly of each taxa ","#");
 			## Call spades for the assembly and send threads for each taxa
@@ -758,14 +757,14 @@ if ($flagSpades) {
 				print "\n\n** Child process finished with PID $pid and exit code: $exit_code\n\n"; 
 			} );
 			$pm->run_on_start( sub { my ($pid,$ident)=@_; print "\n\n** SPAdes assembly started with PID $pid\n\n"; } );
-			&debugger_print("Ref", \%MID_species_hash);
-			foreach my $keys (keys %MID_species_hash) {
+			&debugger_print("Ref", \%taxa_hash);
+			foreach my $keys (keys %taxa_hash) {
 				my $pid = $pm->start($int_taxa) and next; print "\nSending child process for SPAdes assembling $keys\n\n";
 				$int_taxa++;
 				my @files = ("", "");
 				if ($file_type == 7) { ## illumina_PE
-					for (my $i=0; $i < scalar @{ $MID_species_hash{$keys} }; $i++) {
-						my $string2split = $MID_species_hash{$keys}[$i];
+					for (my $i=0; $i < scalar @{ $taxa_hash{$keys} }; $i++) {
+						my $string2split = $taxa_hash{$keys}[$i];
 						my @array = split("----", $string2split);
 						if ($array[0] == 1) { $files[0] = $array[1];
 						} else { $files[1] = $array[1]; }  
@@ -776,7 +775,7 @@ if ($flagSpades) {
 				my $spades_path = "python ".$scripts_path."SPAdes-3.8.1-Linux/bin/spades.py -o ".$assembly_dir." ";
 				if ($file_type == 7) { ## illumina_PE
 					$spades_path .= "-1 $files[0] -2 $files[1] ";				
-				} else { $spades_path .= "-s $MID_species_hash{$keys} ";}
+				} else { $spades_path .= "-s $taxa_hash{$keys} ";}
 				$spades_path .= "-t $noOfProcesses_SPAdes";
 				print "Sending command:\n".$spades_path."\n";
 				unless ($debugger) {
@@ -820,25 +819,25 @@ if ($flagSpades) {
 	#########################################################################
 	print "\n"; &print_Header("","#"); &print_Header(" MIRA Assembly Step for each taxa ","#"); &print_Header("","#"); print "\n";
 	print "\n"; &print_Header(" Generating an assembly for each taxa ", "%"); print "\n";
-	&debugger_print("Ref", \%MID_species_hash);
-	foreach my $keys (keys %MID_species_hash) {
+	&debugger_print("Ref", \%taxa_hash);
+	foreach my $keys (keys %taxa_hash) {
 		my ($MIRA_manifest_file, @fastq_files_this_taxa, $name_of_project);
 
 		if ($file_type == 7) {
 			my @files = ("", "");
-			for (my $i=0; $i < scalar @{ $MID_species_hash{$keys} }; $i++) {
-				my $string2split = $MID_species_hash{$keys}[$i];
+			for (my $i=0; $i < scalar @{ $taxa_hash{$keys} }; $i++) {
+				my $string2split = $taxa_hash{$keys}[$i];
 				my @array = split("----", $string2split);
 				if ($array[0] == 1) { $files[0] = $array[1];
 				} else { $files[1] = $array[1]; }  
 			}
 			($MIRA_manifest_file, $name_of_project)  = &Generate_manifest_file_pair_end( $files[0], $files[1]);
 		} elsif ($file_type == 5) {		
-			$MIRA_manifest_file = &Generate_manifest_file($MID_species_hash{$keys}, "Illumina");
-			push (@fastq_files_this_taxa, $MID_species_hash{$keys});
+			$MIRA_manifest_file = &Generate_manifest_file($taxa_hash{$keys}, "Illumina");
+			push (@fastq_files_this_taxa, $taxa_hash{$keys});
 		} elsif ($file_type == 3) {
-			$MIRA_manifest_file = &Generate_manifest_file($MID_species_hash{$keys}, "454");		
-			push (@fastq_files_this_taxa, $MID_species_hash{$keys});
+			$MIRA_manifest_file = &Generate_manifest_file($taxa_hash{$keys}, "454");		
+			push (@fastq_files_this_taxa, $taxa_hash{$keys});
 		} 
 			
 		my $abs_path_manifest_file = $assembly_directory_abs_path."/".$MIRA_manifest_file;
@@ -1106,7 +1105,7 @@ sub check_file_format {
 }
 
 sub check_file {
-	## Populate %MID_species_hash with the ids of each file
+	## Populate %taxa_hash with the ids of each file
 	my $file_to_check = $_[0];
 	if (-e -r -s $file_to_check) { 
 		my $name; my $pair_int;
@@ -1138,9 +1137,9 @@ sub check_file {
 			if ($pair) { 
 				&print_DOMINO_details("\t\tPaired end file = ".$pair." ...OK\n");	
 				my $string2push = $pair_int."----".$file_to_check;
-				push (@{ $MID_species_hash{$name} }, $string2push);
+				push (@{ $taxa_hash{$name} }, $string2push);
 			} else { 
-				$MID_species_hash{$name} = $file_to_check;
+				$taxa_hash{$name} = $file_to_check;
 		}} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); &printFormat_message(); &dieNicely();
 	}} else { &printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); &printFormat_message(); &dieNicely();
 	}
