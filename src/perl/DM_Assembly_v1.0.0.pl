@@ -389,7 +389,7 @@ Number of threads/cores to be used. [Default: 2]
 
 =item B<--SPAdes>
 
-Use SPAdes Genome Assembler for a better assembly. It is necessary at least 30GiB of free Memory RAM.
+Use SPAdes Genome Assembler for a better assembly. It is mandatory a Linux server and at least 30GiB of free Memory RAM.
 
 =item B<>
 
@@ -698,6 +698,7 @@ if ($flagSpades) {
 	# Get memory
 	system("cat /proc/meminfo > memory_server.txt");	
 	my $memory_server_file = $assembly_directory_abs_path."/memory_server.txt";
+	my $total_available;
 	if (-e -r -s $memory_server_file) {
 		&print_Header(" Memory RAM Usage retrieval ","#");
 		my %memory_hash;
@@ -713,59 +714,42 @@ if ($flagSpades) {
 				push (@{ $memory_hash{$array[0]} }, $2);
 			}
 			if ($array[0] eq "Cached") { last; }
-		}
-		close (MEM);
+		} close (MEM);
 		&debugger_print("Ref", \%memory_hash);
 		foreach my $keys (keys %memory_hash) {
 			if ($memory_hash{$keys}[1] eq 'kB') {
 				$memory_hash{$keys}[0] = $memory_hash{$keys}[0]/1000000;
-			}
-		}
+		}}
 		print "+ Total Memory: ".$memory_hash{"MemTotal"}[0]." GiB\n";
 		print "+ Free Memory: ".$memory_hash{"MemFree"}[0]." GiB\n";
-		print "+ Available Memory: ".$memory_hash{"MemAvailable"}[0]." GiB\n";
 		print "+ Cached Memory: ".$memory_hash{"Cached"}[0]." GiB\n";
 		print "+ Buffers Memory: ".$memory_hash{"Buffers"}[0]." GiB\n";
-		
-		my $total_available = $memory_hash{"MemFree"}[0]+$memory_hash{"MemAvailable"}[0];
+		$total_available = $memory_hash{"MemFree"}[0]+$memory_hash{"Cached"}[0]; ## Cache Memory would be release once we send a command
 		my $p = ($total_available/$memory_hash{"MemTotal"}[0])*100;
 		print "+ Percentage of Free memory: $p %\n";
 		
 		## Optimize CPUs/taxa
 		my $noOfProcesses_SPAdes;
+		my $amount_taxa = scalar keys %MID_species_hash;
 		if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
-			
+			unless ($noOfProcesses > 8) { &printError("To make the most of your server and SPAdes please select more CPUs using -p option") and &dieNicely();}
 			# Get number of taxa to assembly
-			my $amount_file = scalar @file_abs_path;
-			my $amount_taxa;
-			if ($file_type == 7) { $amount_taxa = $amount_file/2;
-			} else { $amount_taxa = $amount_file; }
+			if ($total_available > 500) {
+				$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
+			} elsif ($total_available > 200) {
+				$noOfProcesses_SPAdes = int($noOfProcesses/4);
+			} elsif ($total_available > 100) {
+				$noOfProcesses_SPAdes = int($noOfProcesses/3);
+			} elsif ($total_available > 50) {
+				$noOfProcesses_SPAdes = $noOfProcesses;
+			}
 
-			if ($noOfProcesses > 20) {
-				if ($total_available > 500) {
-					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
-				} elsif ($total_available > 200) {
-					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa+3);
-				} elsif ($total_available > 50) {
-					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa+$amount_taxa);
-				} else { $noOfProcesses_SPAdes = $noOfProcesses;}
-			} elsif ($noOfProcesses > 8) {
-				if ($total_available > 500) {
-					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
-				} elsif ($total_available > 200) {
-					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa+3);
-				} elsif ($total_available > 50) {
-					$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa+$amount_taxa);
-				} else {
-					$noOfProcesses_SPAdes = $noOfProcesses;
-				}
-			} else { &printError("To make the most of your server and SPAdes please select more CPUs using -p option") and &dieNicely();}
-			
-print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa into different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
-			
+			print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa 
+			into different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
+				
 			&print_Header(" SPAdes Assembly of each taxa ","#");
 			## Call spades for the assembly and send threads for each taxa
-
+	
 			my $int_taxa = 0;
 			my $pm =  new Parallel::ForkManager($noOfProcesses); 			## Sent child process
 			$pm->run_on_finish( 
@@ -785,7 +769,7 @@ print "\n\n+ Given the characteristics of the server and memory RAM available, D
 						if ($array[0] == 1) { $files[0] = $array[1];
 						} else { $files[1] = $array[1]; }  
 				}}
-
+	
 				## Send SPAdes command				
 				my $assembly_dir = $keys."_assembly";
 				my $spades_path = $scripts_path."SPAdes-3.8.1-Linux/bin/spades.py -o ".$assembly_dir." ";
@@ -801,37 +785,33 @@ print "\n\n+ Given the characteristics of the server and memory RAM available, D
 				if ($system_call != 0) {
 					&printError("Something happened when calling SPAdes for assembly reads..."); &dieNicely();
 				} print "\n"; &time_stamp();
-
+	
 				## Get contig file
 				my $contigs_file = $assembly_dir."/contigs.fasta";
 				my $new_contigs_file = $dirname."/assembly_id-".$keys.".contigs.fasta";
 				File::Copy::move($contigs_file, $new_contigs_file);
-
+	
 				## Finish assembly and generate statistics
 				&Contig_Stats($new_contigs_file);
 				$pm->finish($int_taxa); # pass an exit code to finish
 			}
 			$pm->wait_all_children; print "\n** All Assembly child processes have finished...\n\n";		
-			
-
-			###########################################
+	
+			#######################################
 			### Cleaning or renaming some files	###
-			###########################################
+			#######################################
 			print "\n\n";
 			unless ($avoidDelTMPfiles) {
 				&print_Header(" Cleaning all the intermediary files generated ","#"); 
 				&clean_assembling_folders(); print "\n\n";
 			}
-
-			###########################
-			### 	Finish the job	###
-			###########################
+	
+			#######################
+			### Finish the job	###
+			#######################
 			&finish_time_stamp(); print "\n Job done succesfully, exiting the script\n"; exit();
-
-
 		} else { &printError("Only $total_available GiB available of memory RAM, please bear in mind SPAdes would not complete the task...") and &dieNicely();}	
 	} else { &printError("There was an error when retrieving Memory RAM information...\n\nAre you sure this is a linux sever?...") and &dieNicely();}
-
 } else {
 	
 	#########################################################################
@@ -839,38 +819,29 @@ print "\n\n+ Given the characteristics of the server and memory RAM available, D
 	#########################################################################
 	print "\n"; &print_Header("","#"); &print_Header(" MIRA Assembly Step for each taxa ","#"); &print_Header("","#"); print "\n";
 	print "\n"; &print_Header(" Generating an assembly for each taxa ", "%"); print "\n";
-	for (my $i = 0; $i < scalar @fastq_files; $i++) {
+	&debugger_print("Ref", \%MID_species_hash);
+	foreach my $keys (keys %MID_species_hash) {
 		my ($MIRA_manifest_file, @fastq_files_this_taxa, $name_of_project);
+
 		if ($file_type == 7) {
-			if ($files_used{$fastq_files[$i]}) { next; }	
-			my $file_to_find;
-			my $file1_pair = &check_paired_file($fastq_files[$i]);
-			if ($file1_pair == 1) {
-				$file_to_find = $fastq_files[$i];
-				$file_to_find =~ s/left/right/g; 
-				$file_to_find =~ s/R1/R2/g;
-			} else {
-				$file_to_find = $fastq_files[$i];
-				$file_to_find =~ s/right/left/g; 
-				$file_to_find =~ s/R2/R1/g;
+			my @files = ("", "");
+			for (my $i=0; $i < scalar @{ $MID_species_hash{$keys} }; $i++) {
+				my $string2split = $MID_species_hash{$keys}[$i];
+				my @array = split("----", $string2split);
+				if ($array[0] == 1) { $files[0] = $array[1];
+				} else { $files[1] = $array[1]; }  
 			}
-			
-			for (my $j = 0; $j < scalar @fastq_files; $j++) {
-				if ($fastq_files[$j] eq $file_to_find) {
-					push (@fastq_files_this_taxa, $fastq_files[$i]);
-					push (@fastq_files_this_taxa, $fastq_files[$j]);
-					($MIRA_manifest_file, $name_of_project)  = &Generate_manifest_file_pair_end($fastq_files[$i], $fastq_files[$j]);
-					$files_used{$fastq_files[$j]}++; $files_used{$fastq_files[$i]}++;
-		}}} elsif ($file_type == 5) {		
-			$MIRA_manifest_file = &Generate_manifest_file($fastq_files[$i], "Illumina");
-			push (@fastq_files_this_taxa, $fastq_files[$i]);
+			($MIRA_manifest_file, $name_of_project)  = &Generate_manifest_file_pair_end( $files[0], $files[1]);
+		} elsif ($file_type == 5) {		
+			$MIRA_manifest_file = &Generate_manifest_file($MID_species_hash{$keys}, "Illumina");
+			push (@fastq_files_this_taxa, $MID_species_hash{$keys});
 		} elsif ($file_type == 3) {
-			$MIRA_manifest_file = &Generate_manifest_file($fastq_files[$i], "454");		
-			push (@fastq_files_this_taxa, $fastq_files[$i]);
+			$MIRA_manifest_file = &Generate_manifest_file($MID_species_hash{$keys}, "454");		
+			push (@fastq_files_this_taxa, $MID_species_hash{$keys});
 		} 
 			
 		my $abs_path_manifest_file = $assembly_directory_abs_path."/".$MIRA_manifest_file;
-		print $abs_path_manifest_file."\n- Calling MIRA now for $fastq_files[$i]...\n- It might take a while...\n";
+		print $abs_path_manifest_file."\n- Calling MIRA now for $keys assembly...\n- It might take a while...\n";
 		my $mira_exe = $MIRA_exec." -t $noOfProcesses ".$abs_path_manifest_file;
 		if ($debugger) {
 			$mira_exe .= " 2> $error_log"; ## show on screen or maybe print to a file
@@ -1606,9 +1577,8 @@ sub Generate_manifest_file {
 
 	my $individual_fastq_file = $_[0];
 	my $technology = $_[1];
-	my @tmp = split ("\.fastq", $individual_fastq_file);
-	my $name_of_project = $tmp[0];
-	
+	my $name_of_project;
+	if ($individual_fastq_file =~ /.*(id\-.*)\.f*/) { $name_of_project = $1; }
 	&print_Header(" Generate MIRA manifest file ","%"); 
 	print "- Generating the manifest file now for $individual_fastq_file...\n";
 	
@@ -1620,14 +1590,9 @@ sub Generate_manifest_file {
 	print OUT "job = genome, denovo, accurate\n";
 	my $parameter = "parameters = --hirep_something -NW:cnfs=warn\\\n";  
 	$parameter .= "\tCOMMON_SETTINGS -GE:not=$noOfProcesses:amm=on:kpmf=20 -OUT:ors=no:orc=no:otc=no:orw=no:rtd=yes -CL:ascdc=no\\\n";
-	if ($technology eq "454") {
-		$parameter .= "\t454_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
-	} else {
-		$parameter .= "\tSOLEXA_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
-	}
-	print OUT $parameter."\n";
-	print OUT "readgroup = ".$individual_fastq_file."_reads\n";
-	print OUT "data = ".$assembly_directory_abs_path."/".$individual_fastq_file."\n";
+	if ($technology eq "454") { $parameter .= "\t454_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
+	} else { $parameter .= "\tSOLEXA_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";}
+	print OUT $parameter."\nreadgroup = ".$individual_fastq_file."_reads\ndata = $individual_fastq_file\n";
 	if ($technology eq "454") { print OUT "technology = 454\n";
 	} else { print OUT "technology = solexa\n"; }
 	close (OUT);
@@ -1659,7 +1624,7 @@ sub Generate_manifest_file_pair_end {
 	$parameter .= "\tSOLEXA_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
 	print OUT $parameter."\n";
 	print OUT "readgroup = ".$name_of_project."_reads\nautopairing\n";
-	print OUT "data = ".$assembly_directory_abs_path."/".$left_pair_fastq_file." ".$assembly_directory_abs_path."/".$right_pair_fastq_file."\n";
+	print OUT "data = $left_pair_fastq_file $right_pair_fastq_file\n";
 	print OUT "technology = solexa\n";
 	close (OUT);
 	return ($manifest_file, $name_of_project);	
