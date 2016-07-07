@@ -741,9 +741,9 @@ if ($flagSpades) {
 				$noOfProcesses_SPAdes = int($noOfProcesses/4);
 			} elsif ($total_available > 100) {
 				$noOfProcesses_SPAdes = int($noOfProcesses/3);
-			} elsif ($total_available > 50) {
+			} else {
 				$noOfProcesses_SPAdes = $noOfProcesses;
-			}
+			} 
 
 			print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa\ninto different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
 				
