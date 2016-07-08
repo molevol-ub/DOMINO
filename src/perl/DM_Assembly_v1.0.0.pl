@@ -731,18 +731,23 @@ if ($flagSpades) {
 		
 		## Optimize CPUs/taxa
 		my $noOfProcesses_SPAdes;
+		my $subProcesses;
 		my $amount_taxa = scalar keys %taxa_hash;
 		if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
 			unless ($noOfProcesses >= 8) { &printError("To make the most of your server and SPAdes please select more CPUs using -p option") and &dieNicely();}
 			# Get number of taxa to assembly
 			if ($total_available > 500) {
 				$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
+				$subProcesses = $amount_taxa;
 			} elsif ($total_available > 200) {
 				$noOfProcesses_SPAdes = int($noOfProcesses/4);
+				$subProcesses = 4;
 			} elsif ($total_available > 100) {
 				$noOfProcesses_SPAdes = int($noOfProcesses/3);
+				$subProcesses = 3;
 			} else {
 				$noOfProcesses_SPAdes = $noOfProcesses;
+				$subProcesses = 1;
 			} 
 
 			print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa\ninto different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
@@ -751,7 +756,7 @@ if ($flagSpades) {
 			## Call spades for the assembly and send threads for each taxa
 	
 			my $int_taxa = 0;
-			my $pm =  new Parallel::ForkManager($noOfProcesses); 			## Sent child process
+			my $pm =  new Parallel::ForkManager($subProcesses); ## Sent child process
 			$pm->run_on_finish( 
 			sub { my ($pid, $exit_code, $ident) = @_; 
 				print "\n\n** Child process finished with PID $pid and exit code: $exit_code\n\n"; 
