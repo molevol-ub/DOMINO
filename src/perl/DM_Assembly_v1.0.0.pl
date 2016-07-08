@@ -756,7 +756,7 @@ if ($flagSpades) {
 			## Call spades for the assembly and send threads for each taxa
 	
 			my $int_taxa = 0;
-			my $pm =  new Parallel::ForkManager($subProcesses); ## Sent child process
+			my $pm =  new Parallel::ForkManager($subProcesses); ## Number of subprocesses not equal to CPUs. Each subprocesses will have multiple CPUs if available
 			$pm->run_on_finish( 
 			sub { my ($pid, $exit_code, $ident) = @_; 
 				print "\n\n** Child process finished with PID $pid and exit code: $exit_code\n\n"; 

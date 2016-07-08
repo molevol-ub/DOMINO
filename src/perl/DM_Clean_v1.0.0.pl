@@ -995,7 +995,7 @@ unless ($skipping_BLAST) {
 ## Send threads for each taxa
 my $int_taxa = 0;
 ## Sent child process
-my $pm =  new Parallel::ForkManager($noOfProcesses);
+my $pm =  new Parallel::ForkManager($noOfProcesses); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
 $pm->run_on_finish( 
 	sub { my ($pid, $exit_code, $ident) = @_; 
 	print "\n\n** Child process finished for $ident with PID $pid and exit code: $exit_code\n\n"; 
@@ -1283,9 +1283,7 @@ foreach my $taxa (keys %taxa_dir) {
 	}
 	close (DUMP_IN);
 }
-
-&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
-print "\n";
+&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
 
 ##############################################################
 ## 	Check the amount of cleaning done						##

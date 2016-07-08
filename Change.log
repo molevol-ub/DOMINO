@@ -1,3 +1,128 @@
+commit 88bc115bca48613607e937876a03c16fabac09fe
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Fri Jul 8 09:57:51 2016 +0200
+
+    Update TUTORIAL
+
+commit 2432e723578429077100db41c162fdb2cf018938
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jul 8 09:50:44 2016 +0200
+
+    Controlling subprocesses sent
+
+commit e977698a8ed16466a8588ff19247317c945da669
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jul 7 18:01:52 2016 +0200
+
+    Give a default CPU number to SPAdes
+
+commit 77c4e5ee891ca04e4666c54616421c346134e6fa
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jul 7 17:57:37 2016 +0200
+
+    Change a variable name
+
+commit 71aa96e439ed8c942b0b6e55e09fba01fa0b6653
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jul 7 12:22:06 2016 +0200
+
+    Fixing a bug when calling SPAdes
+
+commit ed87500e008a1c1d400da5625fd44443863b74d3
+Merge: 198777d 85f04be
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jul 7 12:03:56 2016 +0200
+
+    Merge branch 'master' of https://github.com/molevol-ub/DOMINO
+
+commit 198777d9eeda4c9cfc82b8192acf1f98cbdf0b51
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jul 7 12:03:32 2016 +0200
+
+    Updated CPU optimization for SPAdes
+
+commit 85f04beea5e9e8326b7bd6c44cd5d8c782f18aa9
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Wed Jul 6 17:52:38 2016 +0200
+
+    Update README.md
+
+commit 3222774681985396e8c3359f59d3992f2fff14c5
+Author: molevol <jfsanchezherrero@ub.edu>
+Date:   Wed Jul 6 17:31:55 2016 +0200
+
+    SPAdes implemented for Linux Servers
+
+commit 8ab67e506a55ac1ede9fa85210a6b856723df838
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Wed Jul 6 15:55:11 2016 +0200
+
+    Update README.md
+
+commit 6beff9499120f85fc7b5d54a22d4e119a5e6ceba
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Jul 6 15:50:49 2016 +0200
+
+    README updated
+
+commit 092c7dafd4e295e5c132a6aa37bfb39055cc3e88
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Jul 6 12:58:51 2016 +0200
+
+    SPAdes implementation on the way
+
+commit 8d50094f73219c07729b2622c0f5b63a0b68d754
+Author: molevol <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 20:14:39 2016 +0200
+
+    Installers updated
+
+commit eadbfae704d17fa13ff5df8b5d8919e743ce9e93
+Author: molevol <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 17:51:19 2016 +0200
+
+    Bitrock updated again
+
+commit c50a43f07bc8ce9051a2d50a4ee1fa413aff6d0c
+Merge: 06d2f1a 6a2c3f1
+Author: molevol <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 17:48:35 2016 +0200
+
+    Merge branch 'master' of https://github.com/molevol-ub/DOMINO
+
+commit 06d2f1aad56edcf37d160393db1bc7006b5a0ad6
+Author: molevol <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 17:48:15 2016 +0200
+
+    BitRock xml file safe
+
+commit 6a2c3f15b723f9efc36ac48ce88f702e8fd41967
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 17:43:40 2016 +0200
+
+    Fixed installers
+
+commit 3488619be06dc21fb73441ef4aae2656deb19527
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 17:04:34 2016 +0200
+
+    Installers and files updated
+
+commit c102cbee102eb7f8bd52fb4781889edc5c424d8f
+Merge: 94febb5 7e12118
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 16:48:18 2016 +0200
+
+    Merge branch 'master' of https://github.com/molevol-ub/DOMINO
+    
+    Merge branches
+
+commit 7e1211882a55f02d1de54d1b1220139385886b9b
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Tue Jul 5 16:47:04 2016 +0200
+
+    Update README.md
+
 commit 94febb5d8ecbf8206996d27ba2eb87ae86d0fcbf
 Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
 Date:   Tue Jul 5 16:44:09 2016 +0200
