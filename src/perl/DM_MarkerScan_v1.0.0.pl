@@ -503,7 +503,7 @@ DOMINO generates a number of subfolders within the main project folder during th
 
 =item B<>
 
-=item B<-DA|--development_analysis [selection|discovery]>
+=item B<-DM|--development_module [selection|discovery]>
 
 Select the module for developing markers: 
 
@@ -941,6 +941,7 @@ if ($avoid_mapping) {
 		my $time_folder;
 		if ($align_dirname =~ /(\d+)\_DM\_mapping/) { $time_folder = $1; }
 		my $parameters_mapping = $align_dirname."/".$time_folder."_tmp.txt";
+		my %tmp_hash;
 		my $flag_mapping = my $flag_mapping_poly = my $flag_mapping_local = 0; my $taxa = 0;
 		if (-e -r -s $parameters_mapping) {
 			open(PA_MAP, $parameters_mapping);
@@ -949,7 +950,6 @@ if ($avoid_mapping) {
 				chomp $line;
 				my @array_split = split(":", $line);
 				my $value = $variables{$array_split[0]};
-				#print "Here!\t".$array_split[0]."\t".$value."\t".$array_split[1]."\n";
 				if ($array_split[0] eq "poly") {
 					if (!$polymorphism_user) {
 						$flag_mapping++;
@@ -960,14 +960,12 @@ if ($avoid_mapping) {
 					} $flag_mapping_local = 1;
 				} elsif ($array_split[0] eq "Mapped") {
 					unless ($array_split[1] eq "GenomeID") {
-						unless ($MID_species_hash{$array_split[1]}) {
-							$flag_mapping++; $taxa++;
-					}}
-				} else {
-					unless ($value == $array_split[1]) {
-						$flag_mapping++;
-			}}}
+						if ($MID_species_hash{$array_split[1]}) { $tmp_hash{$array_split[1]}++;
+				}}} else {
+					unless ($value == $array_split[1]) { $flag_mapping++;}
+			}}
 			close(PA_MAP);
+			foreach my $keys (keys %MID_species_hash) { unless ($tmp_hash{$keys}) { $flag_mapping++; $taxa++; } }
 			if ($flag_mapping_poly == 0) { if ($polymorphism_user) {$flag_mapping++;} }
 			if ($flag_mapping_local == 0) { if ($bowtie_local) {$flag_mapping++;} }
 			if ($flag_mapping > 0) {
@@ -1161,19 +1159,13 @@ if ($behaviour eq 'selection') {
 		&print_DOMINO_details("\n\n+ Parameters for the mapping of molecular markers:\n", \@mapping_param);
 		&print_DOMINO_details("\t- Alignment of the reads using: Bowtie2\n", \@mapping_param);
 		if ($bowtie_local) {
-			&print_DOMINO_details("\t- Local Bowtie: ON", \@mapping_param);
-			print MP_SHORT "bowtie_local:1\n";		
+			&print_DOMINO_details("\t- Local Bowtie: ON", \@mapping_param); print MP_SHORT "bowtie_local:1\n";		
 		}
-		&print_DOMINO_details("\t- Read Gap Open penalty (rdgopen): ".$rdgopen."\n", \@mapping_param);
-		print MP_SHORT "rdgopen:$rdgopen\n";
-		&print_DOMINO_details("\t- Read Gap Extension penalty (rdgexten): ".$rdgexten."\n", \@mapping_param);
-		print MP_SHORT "rdgexten:$rdgexten\n";
-		&print_DOMINO_details("\t- Reference Gap Open penalty (rfgopen): ".$rfgopen."\n", \@mapping_param);
-		print MP_SHORT "rfgopen:$rfgopen\n";
-		&print_DOMINO_details("\t- Reference Gap Open penalty (rfgexten): ".$rfgexten."\n", \@mapping_param);
-		print MP_SHORT "rfgexten:$rfgexten\n";
-		&print_DOMINO_details("\t- Mismath penalty: ".$mis_penalty."\n", \@mapping_param);
-		print MP_SHORT "mis_penalty:$mis_penalty\n";
+		&print_DOMINO_details("\t- Read Gap Open penalty (rdgopen): ".$rdgopen."\n", \@mapping_param); print MP_SHORT "rdgopen:$rdgopen\n";
+		&print_DOMINO_details("\t- Read Gap Extension penalty (rdgexten): ".$rdgexten."\n", \@mapping_param); print MP_SHORT "rdgexten:$rdgexten\n";
+		&print_DOMINO_details("\t- Reference Gap Open penalty (rfgopen): ".$rfgopen."\n", \@mapping_param); print MP_SHORT "rfgopen:$rfgopen\n";
+		&print_DOMINO_details("\t- Reference Gap Open penalty (rfgexten): ".$rfgexten."\n", \@mapping_param); print MP_SHORT "rfgexten:$rfgexten\n";
+		&print_DOMINO_details("\t- Mismath penalty: ".$mis_penalty."\n", \@mapping_param); print MP_SHORT "mis_penalty:$mis_penalty\n";
 		&print_DOMINO_details("\t- Significance Level Coverage Distribution (SLCD): ".$level_significance_coverage_distribution."\n", \@mapping_param);
 		print MP_SHORT "significance_level_coverage_distribution:$level_significance_coverage_distribution\n";		
 	}
@@ -1248,8 +1240,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 		if ($contigs_fasta =~ /.*id\-(.*)\.contigs\.fasta/) {
 			$reference_identifier = $1;
 			if ($reference_identifier =~ /(.*)\_R\d+/) {
-				my $reference_identifier_tmp = $1;
-				$reference_identifier = $reference_identifier_tmp;				
+				$reference_identifier = $1;
 		}} elsif ($genome_fasta) {
 			if ($contigs_fasta =~ /.*id\-(.*)\.fasta/) {
 				$genome_id = $1; $reference_identifier = $1;			

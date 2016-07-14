@@ -763,7 +763,7 @@ if ($flagSpades) {
 			} );
 			$pm->run_on_start( sub { my ($pid,$ident)=@_; print "\n\n** SPAdes assembly started with PID $pid\n\n"; } );
 			&debugger_print("Ref", \%taxa_hash);
-			foreach my $keys (keys %taxa_hash) {
+			foreach my $keys (sort keys %taxa_hash) {
 				my $pid = $pm->start($int_taxa) and next; print "\nSending child process for SPAdes assembling $keys\n\n";
 				$int_taxa++;
 				my @files = ("", "");
@@ -825,7 +825,7 @@ if ($flagSpades) {
 	print "\n"; &print_Header("","#"); &print_Header(" MIRA Assembly Step for each taxa ","#"); &print_Header("","#"); print "\n";
 	print "\n"; &print_Header(" Generating an assembly for each taxa ", "%"); print "\n";
 	&debugger_print("Ref", \%taxa_hash);
-	foreach my $keys (keys %taxa_hash) {
+	foreach my $keys (sort keys %taxa_hash) {
 		my ($MIRA_manifest_file, @fastq_files_this_taxa, $name_of_project);
 
 		if ($file_type == 7) {
@@ -861,16 +861,15 @@ if ($flagSpades) {
 		}print "\n"; &time_stamp();
 		
 		unless ($file_type == 7) {
-			my @tmp = split ("\.fastq", $fastq_files_this_taxa[0]);
-			$name_of_project = $tmp[0];
+			if ($fastq_files_this_taxa[0] =~ /.*id\-(.*)\.fastq/) {
+				$name_of_project = $1;
+			}
 		}
 		my $folder = $name_of_project."_assembly";
-		my $MID_identifier;
-		if ($folder =~ /.*id\-(.*)\_assembly/) { $MID_identifier = $1; }
 		my $fasta_file = $assembly_directory_abs_path."/".$folder."/".$name_of_project."_d_results/".$name_of_project."_out.unpadded.fasta";
 		my $qual_file = $assembly_directory_abs_path."/".$folder."/".$name_of_project."_d_results/".$name_of_project."_out.unpadded.fasta.qual";
-		my $contigs_file = $assembly_directory_abs_path."/assembly_id-".$MID_identifier.".contigs-MIRA.fasta";
-		my $contigs_file_name = "assembly_id-".$MID_identifier.".contigs-MIRA.fasta";
+		my $contigs_file = $assembly_directory_abs_path."/assembly_id-".$name_of_project.".contigs-MIRA.fasta";
+		my $contigs_file_name = "assembly_id-".$name_of_project.".contigs-MIRA.fasta";
 		my $read_tag_list_file = $assembly_directory_abs_path."/".$folder."/".$name_of_project."_d_info/".$name_of_project."_info_readtaglist.txt";
 	
 		# Get path for qual and contigs files for CAP3 scaffolding if specified
@@ -880,6 +879,8 @@ if ($flagSpades) {
 		my $array_ref = \@fastq_files_this_taxa;
 		&extractReadRepeats($read_tag_list_file, $array_ref, $fasta_file, $contigs_file, $assembly_directory_abs_path."/".$folder);
 		chdir $assembly_directory_abs_path;
+		
+		&print_Header(" Assembly finished for $keys ","#"); &time_stamp(); print "\n\n";
 	}
 	print "\n\n";
 	&print_Header("","#"); &print_Header(" MIRA Assembly Step finished ","#");  &print_Header("","#"); print "\n\n";
@@ -1584,7 +1585,7 @@ sub Generate_manifest_file {
 	my $technology = $_[1];
 	my $name_of_project;
 	if ($individual_fastq_file =~ /.*(id\-.*)\.f*/) { $name_of_project = $1; }
-	&print_Header(" Generate MIRA manifest file ","%"); 
+	&print_Header(" Generate MIRA manifest file for $name_of_project","%"); 
 	print "- Generating the manifest file now for $individual_fastq_file...\n";
 	
 	my $manifest_file = "manifest_$name_of_project.txt";
@@ -1614,9 +1615,9 @@ sub Generate_manifest_file_pair_end {
 	my $left_pair_fastq_file = $_[0];
 	my $right_pair_fastq_file = $_[1];
 	my $tmp;
-	if ($left_pair_fastq_file =~ /.*(id\-.*)\_R\d+\.f*/) { $tmp = $1; }
+	if ($left_pair_fastq_file =~ /.*id\-(.*)\_R\d+\.f*/) { $tmp = $1; }
 	my $name_of_project = $tmp;
-	&print_Header(" Generate MIRA manifest file ","%"); 
+	&print_Header(" Generate MIRA manifest file for $tmp ","%"); 
 	print "- Generating the manifest file now for $left_pair_fastq_file and $right_pair_fastq_file...\n";
 	my $manifest_file = "manifest_$name_of_project.txt";
 	open (OUT, ">$manifest_file");
