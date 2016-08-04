@@ -136,4 +136,85 @@ sub mothur_retrieve_seqs {
 	my $system_call = system($line);
 }
 
+sub line_splitter {
+	# given a separator, splits a given line
+	my $separator = $_[0];
+	my @array = split($separator, $_[1]); 
+	return \@array; 
+}
+
+sub get_size {
+	#my $size = -s $_[0]; To get only size
+	# Get lines, words and characters
+	my $wc_out = `wc $_[0]`;
+	$wc_out =~ s/\s/-/g;
+	my $array = &splitter("\-", $wc_out);
+	my @word_count;
+	for (my $i=0; $i < scalar @$array; $i++) {
+		if ($$array[$i] =~ /\S+/) {
+			push (@word_count, $$array[$i]);			
+		}
+	}
+	return \@word_count;
+}
+
+sub file_splitter {
+	# Splits a file such a sam or whatever file that could be read for each line
+	open (FH, "<$file") or die "Could not open source file. $!";
+	print "\n\nSplitting file into blocks of $block characters...\n";
+	my $j = 0; 
+	while (1) {
+    	my $chunk;
+    	print "Processing block $j...\n";
+    	my @tmp = split (".txt", $file);
+		my $file_name = $tmp[0];
+		
+	   	my $block_file = $file_name."_part-".$j."_tmp.txt";
+    	push (@files, $block_file);
+    	open(OUT, ">$block_file") or die "Could not open destination file";
+    	$j++;
+    	if (!eof(FH)) { read(FH, $chunk,$block);  print OUT $chunk; } ## Print the amount of chars
+    	if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken
+    	close(OUT); last if eof(FH);
+	}
+	close(FH);
+}
+
+sub fasta_file_splitter {
+	# Splits fasta file and takes into account to add the whole sequence if it is broken
+	print "\n\nSplitting file into blocks of $block characters...\n";
+	my $j = 0; my @files;
+	while (1) {
+		my $chunk;
+		print "Processing block $j...\n";
+		my $file_name; my $extension;
+		if ($file =~ /(.*)\.(.*)/) {
+			$file_name = $1;
+			$extension = $2;
+		}
+		my $block_file = $file_name."_part-".$j."_tmp.".$extension;
+		push (@files, $block_file);
+		open(OUT, ">$block_file") or die "Could not open destination file";
+		if (!eof(FH)) { read(FH, $chunk,$block);  
+			if ($j > 0) {
+				$chunk = ">".$chunk;
+			}
+			print OUT $chunk;
+		} ## Print the amount of chars
+	
+		if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken
+	
+		if (!eof(FH)) { 
+			$/ = ">"; ## Telling perl where a new line starts
+			$chunk = <FH>; 
+			chop $chunk;
+			print OUT $chunk; 
+			$/ = "\n";
+		} ## print the sequence if it is broken
+		$j++;
+		close(OUT); last if eof(FH);
+	}
+	close(FH);
+}
+
 1;
