@@ -11,3 +11,14 @@ DM_Clean_v1.0.0.pl
 DM_MarkerScan_v1.0.0.pl
 	Write a debug message if importing any module fails
 	use debugger_print for printing Debugging messages
+	
+	
+Implement package and fix bugs
+ - Makeblastdb: return 2 items
+ - blastn & Makeblastdb: provide BLAST executable path
+ - time_stamp: provide step_time
+ - error_log $error_log
+ - finish_time_stamp: provide $start_time
+ - implement as function mothur_retrieve and mothur_remove seqs in DM_assembly
+ - fix print_DOMINO_details for all
+ - To check if it is possible to add some more common subroutines 	

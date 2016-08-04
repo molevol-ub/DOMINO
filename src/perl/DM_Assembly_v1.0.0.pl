@@ -1013,22 +1013,6 @@ sub baseCount {
 	$nucleotides{"N"} += $Ns;
 }
 
-sub blastn {
-
-	##########################################################################################
-	##											##
-	##  This function uses BLASTN to check for the putative contaminants			##
-	##	Jose Fco. Sanchez Herrero, 20/02/2014 	jfsanchezherrero@ub.edu			##
-	##########################################################################################
-
-	my $file = $_[0];
-	my $db;
-	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
-	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-5 -db ".$db." -out blast_search.txt -outfmt 6";
-	my $blastn = system($filter);
-	if ($blastn != 0) { die "BLASTN failed...\n"; } 	
-}
-
 sub calcN50 {
 	my @x = @{$_[0]};
 	my $n = $_[1];
@@ -1320,8 +1304,6 @@ sub Contig_Stats {
 	close(OUT);
 }
 
-sub dieNicely { pod2usage(-exitstatus => 1, -verbose => 0); }
-
 sub debugger_print {
 	my $string = $_[0];
 	my $ref = $_[1];
@@ -1517,19 +1499,6 @@ sub fetch_qual_singlets {
 	close (FILE); close (OUT);
 }
 
-sub finish_time_stamp {
-
-	my $finish_time = time;
-	print "\n\n"; &print_Header("","+"); 
-	&print_Header(" ANALYSIS FINISHED ","+"); 
-	&print_Header("","+"); 
-	print "[".(localtime)." ]\t";
-	my $secs = $finish_time - $start_time; 
-	my $hours = int($secs/3600); $secs %= 3600; 	
-	my $mins = int($secs/60); $secs %= 60; 
-	printf ("Whole process took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
-}
-
 sub get_fastq_files {
 
 	##########################################################################################
@@ -1682,31 +1651,6 @@ sub get_contigs_Assembly {
 	return ($contigs_singlets_file_fasta);
 }
 
-sub makeblastdb {
-
-	##########################################################################################
-	##	 																					##
-	##  This function makes a valid BLAST db for each file given using makeblastdb			##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 20/02/2014 jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
-	
-	my $file = $_[0];
-	my $db;
-	my $make_blast_db = $BLAST."makeblastdb";
-	$make_blast_db .= " -in ".$file;
-	$make_blast_db .= " -dbtype nucl";
-	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
-	$make_blast_db .= " -out ".$db;
-	$make_blast_db .= " -logfile ".$db.".log";
-	
-	my $makeblastresult = system($make_blast_db);
-	if ($makeblastresult != 0) {
-		die "Generating the database failed when trying to proccess the file...\n";
-	}
-}
-
 sub qualfa2fq_modified_bwa {
 
 	##########################################################################################
@@ -1760,66 +1704,6 @@ sub qualfa2fq_modified_bwa {
 	return $fastq_file;
 }
 
-sub print_DOMINO_details {
-	my $string = $_[0];
-	open (PARAM, ">>$param_Detail_file");
-	print PARAM $string;
-	print STDOUT $string;
-	close(PARAM);
-}
-
-sub print_Header {
-	my $sentence = $_[0];
-	my $symbol = $_[1];	
-	my @length_array = ($symbol) x 97;
-	my @array_sentence = split("",$sentence);
-	my $length = scalar @array_sentence;
-	my $start = 49 - ($length/2);
-	for (my $i = 0; $i < scalar @array_sentence; $i++) {
-		$length_array[$start+$i] = $array_sentence[$i];
-	}
-	my $string = join("", @length_array);
-	print $string."\n";
-}
-
-sub printError {
-    my $msg = $_[0];
-	print "\n\n";&print_Header(" ERROR ","!!"); print "\n";
-    print $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n";
-	print "\n\n"; &print_Header("","!!"); &print_Header("","!!"); 
-    &printError_log($msg);
-}
-
-sub printError_log {
-	my $message = $_[0];
-	open (ERR, ">>$error_log");
-	print ERR $message."\n";
-	close (ERR);
-	#print STDERR $message."\n";
-}
-
-sub printFormat_message {
-	print "\n\nPlease tag your files using: [xxx](id-)[yyy](_R[*]).fastq\nWhere:\n\txxx: any character or none.Please avoid using dots (.)\n\tid-: Optional. If xxx is too long, please provide 'id-' to identify the name provided with [yyy]\n\tyyy: is any desired name for identifying the taxa reads in these file\n\t(_R[*]): if paired end files, please tag left file using R1 and right using R2\n\n\n";
-}
-
-sub time_stamp {
-	my $current_time = time;
-	print "[ ".(localtime)." ]\t";
-	my $secs = $current_time - $step_time; 
-	my $hours = int($secs/3600); $secs %= 3600; 
-	my $mins = int($secs/60); $secs %= 60; 
-	$step_time = $current_time;
-	printf ("Step took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
-}
-
-sub read_dir {
-	my $dir = $_[0];
-	opendir(DIR, $dir);
-	my @dir_files = readdir(DIR);
-	my $array_ref = \@dir_files;
-	return $array_ref;
-}
-
 sub read_FASTA_hash {
 
 	my $file = $_[0];
@@ -1865,4 +1749,113 @@ sub read_FASTA_hash_length {
 	$/ = "\n";
 	my $hashRef = \%hash;
 	return $hashRef;
+}
+
+
+
+## To include in DM_subroutines.pm
+sub print_DOMINO_details {
+	my $string = $_[0];
+	open (PARAM, ">>$param_Detail_file");
+	print PARAM $string;
+	print STDOUT $string;
+	close(PARAM);
+}
+sub printError {
+    my $msg = $_[0];
+	print "\n\n";&print_Header(" ERROR ","!!"); print "\n";
+    print $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n";
+	print "\n\n"; &print_Header("","!!"); &print_Header("","!!"); 
+    &printError_log($msg);
+}
+sub printError_log {
+	my $message = $_[0];
+	open (ERR, ">>$error_log");
+	print ERR $message."\n";
+	close (ERR);
+	#print STDERR $message."\n";
+}
+sub time_stamp {
+	my $current_time = time;
+	print "[ ".(localtime)." ]\t";
+	my $secs = $current_time - $step_time; 
+	my $hours = int($secs/3600); $secs %= 3600; 
+	my $mins = int($secs/60); $secs %= 60; 
+	$step_time = $current_time;
+	printf ("Step took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
+}
+sub finish_time_stamp {
+
+	my $finish_time = time;
+	print "\n\n"; &print_Header("","+"); 
+	&print_Header(" ANALYSIS FINISHED ","+"); 
+	&print_Header("","+"); 
+	print "[".(localtime)." ]\t";
+	my $secs = $finish_time - $start_time; 
+	my $hours = int($secs/3600); $secs %= 3600; 	
+	my $mins = int($secs/60); $secs %= 60; 
+	printf ("Whole process took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
+}
+sub dieNicely { pod2usage(-exitstatus => 1, -verbose => 0); }
+sub blastn {
+
+	##########################################################################################
+	##											##
+	##  This function uses BLASTN to check for the putative contaminants			##
+	##	Jose Fco. Sanchez Herrero, 20/02/2014 	jfsanchezherrero@ub.edu			##
+	##########################################################################################
+
+	my $file = $_[0];
+	my $db;
+	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
+	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-5 -db ".$db." -out blast_search.txt -outfmt 6";
+	my $blastn = system($filter);
+	if ($blastn != 0) { die "BLASTN failed...\n"; } 	
+}
+sub makeblastdb {
+
+	##########################################################################################
+	##	 																					##
+	##  This function makes a valid BLAST db for each file given using makeblastdb			##
+	## 		        																		##
+	##	Jose Fco. Sanchez Herrero, 20/02/2014 jfsanchezherrero@ub.edu						##
+	## 		        																		##
+	##########################################################################################
+	
+	my $file = $_[0];
+	my $db;
+	my $make_blast_db = $BLAST."makeblastdb";
+	$make_blast_db .= " -in ".$file;
+	$make_blast_db .= " -dbtype nucl";
+	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
+	$make_blast_db .= " -out ".$db;
+	$make_blast_db .= " -logfile ".$db.".log";
+	
+	my $makeblastresult = system($make_blast_db);
+	if ($makeblastresult != 0) {
+		die "Generating the database failed when trying to proccess the file...\n";
+	}
+}
+sub print_Header {
+	my $sentence = $_[0];
+	my $symbol = $_[1];	
+	my @length_array = ($symbol) x 97;
+	my @array_sentence = split("",$sentence);
+	my $length = scalar @array_sentence;
+	my $start = 49 - ($length/2);
+	for (my $i = 0; $i < scalar @array_sentence; $i++) {
+		$length_array[$start+$i] = $array_sentence[$i];
+	}
+	my $string = join("", @length_array);
+	print $string."\n";
+}
+sub read_dir {
+	my $dir = $_[0];
+	opendir(DIR, $dir);
+	my @dir_files = readdir(DIR);
+	my $array_ref = \@dir_files;
+	return $array_ref;
+}
+sub printFormat_message {
+	print "\n\nPlease tag your files using: [xxx](id-)[yyy](_R[*]).fastq\nWhere:\n\txxx: any character or none.Please avoid using dots (.)\n\tid-: Optional. If xxx is too long, please provide 'id-' to identify the name provided with [yyy]\n\tyyy: is any desired name for identifying the taxa reads in these file\n\t(_R[*]): if paired end files, please tag left file using R1 and right using R2\n\n\n";
 }
