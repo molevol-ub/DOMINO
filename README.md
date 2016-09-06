@@ -104,7 +104,7 @@ Evolutionary Genomics and Bioinformatics Group, Departament de Genètica, Microb
 =
 8. CITATION
 =
-*To add citation when available. Current status: under review*
+Bioinformatics first published online August 16, 2016 doi:10.1093/bioinformatics/btw534 <http://bioinformatics.oxfordjournals.org/content/early/2016/09/02/bioinformatics.btw534.full> 
 
 =
 9. COPYRIGHT AND LICENSE
