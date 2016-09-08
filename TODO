@@ -1,7 +1,15 @@
 ## TODOs
+
+ALL:
+add SAMTOOLS new version and implement threads in sort etc
+add bowtie2 new version and implement threads in build step
+
 DM_Assembly_v1.0.0.pl
 	Write a debug message if importing any module fails
 	use debugger_print for printing Debugging messages
+	
+	line 944: Implement threads for copying files...
+	line 987: print each QC thread analysis into a file not to show so many confusing messages
 	
 DM_Clean_v1.0.0.pl
 	Write a debug message if importing any module fails
@@ -21,4 +29,7 @@ Implement package and fix bugs
  - finish_time_stamp: provide $start_time
  - implement as function mothur_retrieve and mothur_remove seqs in DM_assembly
  - fix print_DOMINO_details for all
- - To check if it is possible to add some more common subroutines 	
+ - To check if it is possible to add some more common subroutines
+ 
+ 
+ 
