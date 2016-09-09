@@ -1,6 +1,18 @@
 #!/usr/bin/perl
-package DOMINO;
+####################################################################
+###	DOMINO: Development of molecular markers in non-model organisms 
+####################################################################
 # This package provides multiple subroutines for the DOMINO package 
+
+package DOMINO;
+use Data::Dumper;
+
+sub blastn {
+	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
+	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-10 -db '".$db."' -out $results -outfmt 6";
+	print "BLASTN command: $filter\n"; my $blastn = system($filter);
+	return $blastn;
+}
 
 sub check_file_format {    
     my $file = $_[0];
@@ -25,78 +37,11 @@ sub check_file_format {
 }
 
 sub dieNicely {
-	print "\n"; print DOMINO::time_stamp();	print "\n";
+	print DOMINO::time_stamp();	print "\n\nTry perl $0 -man for more information\n\n";
 	Pod::Usage::pod2usage( -exitstatus => 0, -verbose => 0 );
 }
 
-sub printFormat_message {
-	print "\n\nPlease tag your files using: [xxx](id-)[yyy](_R[*]).fastq\nWhere:\n\txxx: any character or none.Please avoid using dots (.)\n\tid-: Optional. If xxx is too long, please provide 'id-' to identify the name provided with [yyy]\n\tyyy: is any desired name for identifying the taxa reads in these file\n\t(_R[*]): if paired end files, please tag left file using R1 and right using R2\n\n\n";
-}
-
-sub print_Header {
-	my $sentence = $_[0]; my $symbol = $_[1];	
-	my @length_array = ($symbol) x 97;	
-	my @array_sentence = split("",$sentence);
-	my $length = scalar @array_sentence;	
-	my $start = 49 - ($length/2);	
-	for (my $i = 0; $i < scalar @array_sentence; $i++) {
-		$length_array[$start+$i] = $array_sentence[$i];
-	}	
-	my $string = join("", @length_array);
-	print $string."\n";
-}
-
-sub read_dir {
-	my $dir = $_[0];
-	opendir(DIR, $dir) or die "ERROR: Can not open folder $dir..."; ## FIX ADD TO ERROR-LOG
-	my @dir_files = readdir(DIR);
-	my $array_ref = \@dir_files;
-	return $array_ref;
-}
-
-sub time_stamp { return "[ ".(localtime)." ]"; }
-
-
-
-
-##### TODO
-
-sub printError {
-    my $msg = $_[0];
-	print "\n\n";&print_Header(" ERROR ","!!"); print "\n";
-    print $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n";
-	print "\n\n"; &print_Header("","!!"); &print_Header("","!!"); 
-    &printError_log($msg);
-}
-
-sub printError_log {
-	my $message = $_[0];
-	open (ERR, ">>$error_log");
-	print ERR $message."\n";
-	close (ERR);
-	#print STDERR $message."\n";
-}
-
-sub blastn {
-
-	##########################################################################################
-	##	 																					##
-	##  This function uses BLASTN to check for the putative contaminants					##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 20/02/2014 	jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
-
-	my $file = $_[0];
-	my $db;
-	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
-	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-5 -db ".$db." -out blast_search.txt -outfmt 6";
-	my $blastn = system($filter);
-	return $blastn;
-}
-
 sub makeblastdb {
-
 	my $file = $_[0]; my $make_blast_db = $_[1]; my $error_log = $_[2];
 	my $db;
 	$make_blast_db .= "makeblastdb -in ".$file;
@@ -104,11 +49,9 @@ sub makeblastdb {
 	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
 	$make_blast_db .= " -out ".$db." -logfile ".$db.".log 2> $error_log";	
 	my $makeblastresult = system($make_blast_db);
-	if ($makeblastresult != 0) { &printError("Generating the database failed when trying to proccess the file... DOMINO would not stop in this step...\n"); }
+	if ($makeblastresult != 0) { DOMINO::printError("Generating the database failed when trying to proccess the file... DOMINO would not stop in this step...\n"); }
 	return $db;
 }
-
-
 
 sub mothur_remove_seqs {	
 	# This subroutine takes as input a FASTQ file AND classifies according to the tags provided, by Roche and trims the seqs
@@ -131,6 +74,70 @@ sub mothur_retrieve_seqs {
 	my $system_call = system($line);
 }
 
+sub printFormat_message {
+	print "\n\nPlease tag your files using: [xxx](id-)[yyy](_R[*]).fastq\nWhere:\n\txxx: any character or none.Please avoid using dots (.)\n\tid-: Optional. If xxx is too long, please provide 'id-' to identify the name provided with [yyy]\n\tyyy: is any desired name for identifying the taxa reads in these file\n\t(_R[*]): if paired end files, please tag left file using R1 and right using R2\n\n\n";
+}
+
+sub print_Header {
+	my $sentence = $_[0]; my $symbol = $_[1];	
+	my @length_array = ($symbol) x 97;	
+	my @array_sentence = split("",$sentence);
+	my $length = scalar @array_sentence;	
+	my $start = 49 - ($length/2);	
+	for (my $i = 0; $i < scalar @array_sentence; $i++) {
+		$length_array[$start+$i] = $array_sentence[$i];
+	}	
+	my $string = join("", @length_array);
+	print $string."\n";
+}
+
+sub print_Details {
+	my $string = $_[0]; my $param_Detail_file = $_[1];
+	open (PARAM, ">>$param_Detail_file");
+	print PARAM $string;
+	print $string;
+	close(PARAM);
+}
+
+sub printError_log {
+	my $message = $_[0]; my $error_log = $_[1];
+	open (ERR, ">>$error_log");
+	print ERR $message."\n";
+	close (ERR);
+}
+
+sub print_typeInput {
+
+print "\n\nType of input explanation:\nAccording to the type of NGS files provided several options are available but only one option would be provided: -type_input [int]
+ 1: A single file in Standard Flowgram Format (SFF), 454 file, containing all the reads of the different taxa accordingly tagged
+ 2: FASTQ files coming from 454 Roche. A single file containing all the reads of the different taxa accordingly tagged
+ 3: Multiple FASTQ files coming from 454 Roche. Each file contains each taxa reads. 
+ 4: FASTQ file from Illumina single end, containing all the reads of the different taxa accordingly tagged
+ 5: Multiple FASTQ file from Illumina single end. Each file contains each taxa reads. 
+ 6: A single pair of FASTQ files from Illumina paired-end sequencing: Each pair would contain all the reads of the different taxa accordingly tagged. 
+ Please tagged left read file with xxx_R1.fastq and right read file as xxx_R2.fastq
+ 7: Multiple FASTQ files from Illumina paired-end: Each pair of files containing each taxa left and right reads respectively\n\n";
+ 
+ DOMINO::printFormat_message();
+ 
+}
+
+sub read_dir {
+	my $dir = $_[0];
+	opendir(DIR, $dir) or die "ERROR: Can not open folder $dir..."; ## FIX ADD TO ERROR-LOG
+	my @dir_files = readdir(DIR);
+	my $array_ref = \@dir_files;
+	return $array_ref;
+}
+
+sub time_stamp { return "[ ".(localtime)." ]"; }
+
+
+
+
+##### TODO
+
+
 sub line_splitter {
 	# given a separator, splits a given line
 	my $separator = $_[0];
@@ -149,8 +156,7 @@ sub get_size {
 		if ($$array[$i] =~ /\S+/) {
 			push (@word_count, $$array[$i]);			
 		}
-	}
-	return \@word_count;
+	} return \@word_count;
 }
 
 sub file_splitter {
@@ -195,10 +201,8 @@ sub fasta_file_splitter {
 				$chunk = ">".$chunk;
 			}
 			print OUT $chunk;
-		} ## Print the amount of chars
-	
-		if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken
-	
+		} ## Print the amount of chars	
+		if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken	
 		if (!eof(FH)) { 
 			$/ = ">"; ## Telling perl where a new line starts
 			$chunk = <FH>; 
@@ -210,6 +214,40 @@ sub fasta_file_splitter {
 		close(OUT); last if eof(FH);
 	}
 	close(FH);
+}
+
+sub read_FASTA_hash {
+
+	my $file = $_[0];
+	my %hash;
+	open(FILE, $file) || die "Could not open the $file ...\n";
+	$/ = ">"; ## Telling perl where a new line starts
+	while (<FILE>) {		
+		next if /^#/ || /^\s*$/;
+		chomp;
+    	my ($titleline, $sequence) = split(/\n/,$_,2);
+    	next unless ($sequence && $titleline);
+    	$hash{$titleline} = $sequence;
+	}
+	close(FILE);
+	$/ = "\n";
+	my $hashRef = \%hash;
+	return $hashRef;
+}
+
+sub seq_counter {
+	
+	my $file = $_[0];	
+	my $option_format = DOMINO::check_file_format($file);
+	my ($nSequences, $nLines);
+	open (F1, "$file") or &printError("Could not open file $file") and exit(); 
+	while (<F1>) { $nLines++; } close(F1);
+	if ($option_format eq "fastq") { 
+		$nSequences = int ($nLines/4);
+	} elsif ($option_format eq "fasta") {
+		$nSequences = int ($nLines/2);
+	}
+	return $nSequences;
 }
 
 1;
