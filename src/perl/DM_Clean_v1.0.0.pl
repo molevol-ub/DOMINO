@@ -615,9 +615,9 @@ if (-e $param_Detail_file) { File::Copy::move($param_Detail_file, $param_Detail_
 ### Lets start the pipeline
 my $start_time = $step_time = time;
 print "\n"; 
-DOMINO::print_Header("","#"); DOMINO::print_Header(" DOMINO Cleaning Stage ","#"); DOMINO::print_Header("","#"); 
-print "\n"; DOMINO::print_Header("","+"); DOMINO::print_Header(" Analysis Started ","+");  DOMINO::print_Header("","+"); 
-DOMINO::print_Details("Starting the process: [ ".(localtime)." ]\n\n", $param_Detail_file);
+DOMINO::printHeader("","#"); DOMINO::printHeader(" DOMINO Cleaning Stage ","#"); DOMINO::printHeader("","#"); 
+print "\n"; DOMINO::printHeader("","+"); DOMINO::printHeader(" Analysis Started ","+");  DOMINO::printHeader("","+"); 
+DOMINO::printDetails("Starting the process: [ ".(localtime)." ]\n\n", $param_Detail_file);
 
 ## Getting scripts path variable
 my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
@@ -625,8 +625,8 @@ my $BLAST = $scripts_path."NCBI_BLAST_v2.2.28/";
 my $db_dirname_default = $scripts_path."db_default"; # Default databases provided
 my $db_dirname = $dirname."/db";
 
-DOMINO::print_Header(" Input File and Parameter Preprocessing ","#");
-DOMINO::print_Details("\n+ Output Directory: ".$dirname." ...OK\n\n", $param_Detail_file);
+DOMINO::printHeader(" Input File and Parameter Preprocessing ","#");
+DOMINO::printDetails("\n+ Output Directory: ".$dirname." ...OK\n\n", $param_Detail_file);
 if (scalar (@user_files) == 0 || !$user_option_file_type) {
 	&printError("No input files provided"); DOMINO::dieNicely();
 } else {
@@ -647,7 +647,7 @@ if (scalar (@user_files) == 0 || !$user_option_file_type) {
 chdir $dirname;
 
 ## Option 1: User barcodes provided
-my @MID_species_array; my %species_names_tmp;
+my @MID_species_array;
 if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_file_type == 4 || $user_option_file_type == 6 ) {
 	if ($user_barcodes_file) {
 		my $user_barcodes_path_file = abs_path($user_barcodes_file);
@@ -656,7 +656,6 @@ if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_f
 			&printError("File $user_barcodes_path_file does not exist or it is not readable\n Please provide a readable file");
 			&FormatError_barcodes(); DOMINO::dieNicely();
 		}
-		my %species_names_tmp;
 		my $ROCHE_oligos_file = $dirname."/ROCHE.oligos";
 		open (ROCHE, ">$ROCHE_oligos_file");	
 		open (BARCODE, "<$user_barcodes_path_file");
@@ -668,7 +667,6 @@ if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_f
 			my @barcode_array = split ("\,", $line);
 			if (scalar @barcode_array < 2) { &format_error(); DOMINO::dieNicely(); }
 			print ROCHE "barcode\t\t$barcode_array[1]\t\t$barcode_array[3]\n";
-			$species_names_tmp{$barcode_array[3]} = $barcode_array[2];
 		} close(BARCODE);
 	} else {
 		&printError("\n\nERROR: No barcodes file provided...\n"); &FormatError_barcodes(); DOMINO::dieNicely();
@@ -679,12 +677,12 @@ if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_f
 ###################
 my $file_type = $input_options{$user_option_file_type};
 if ($input_options{$user_option_file_type}) {
-	DOMINO::print_Details("+ Type of file(s): Option: $user_option_file_type -- $file_type ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Type of file(s): Option: $user_option_file_type -- $file_type ...OK\n", $param_Detail_file);
 } else { 
 	&printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n");
-	DOMINO::print_typeInput(); DOMINO::dieNicely();
+	DOMINO::printInput_type(); DOMINO::dieNicely();
 }
-DOMINO::print_Details("+ Checking file(s):\n", $param_Detail_file);
+DOMINO::printDetails("+ Checking file(s):\n", $param_Detail_file);
 
 #### Type file: 1 
 if ($file_type eq "454_sff") {
@@ -694,7 +692,7 @@ if ($file_type eq "454_sff") {
 		&printError("Wrong 454 file provided.\nPlease provide a binary SFF extension file or provide a different type of file"); DOMINO::dieNicely();
 	} elsif (-e -r -s $file_abs_path[0]) {
 		my $id = $file_names[0];
-		DOMINO::print_Details("\t$file_abs_path[0]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = SFF ...OK\n\t\tIt also contains an identifier ($id) in the name for later analysis...OK\n\n", $param_Detail_file);	
+		DOMINO::printDetails("\t$file_abs_path[0]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = SFF ...OK\n\t\tIt also contains an identifier ($id) in the name for later analysis...OK\n\n", $param_Detail_file);	
 		push (@{$domino_files{"original"}{'SFF'}}, $file_abs_path[0]); 
 
 #### Type file: 2
@@ -705,7 +703,7 @@ if ($file_type eq "454_sff") {
 		my $format = DOMINO::check_file_format($file_abs_path[0]);
 		if ($file_abs_path[0] =~ /.*\.f.*q$/) {
 			if ($format =~ /fastq/) {
-				DOMINO::print_Details("\t$file_abs_path[0]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format." ...OK\n", $param_Detail_file);		
+				DOMINO::printDetails("\t$file_abs_path[0]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format." ...OK\n", $param_Detail_file);		
 				push (@{$domino_files{"original"}{'454_fastq'}}, $file_abs_path[0]); 
 
 			} else { 
@@ -727,7 +725,7 @@ if ($file_type eq "454_sff") {
 		my $format = DOMINO::check_file_format($file_abs_path[0]);
 		if ($file_abs_path[0] =~ /.*\.f.*q$/) {
 			if ($format =~ /fastq/) {
-				DOMINO::print_Details("\t$file_abs_path[0]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format." ...OK\n", $param_Detail_file);		
+				DOMINO::printDetails("\t$file_abs_path[0]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format." ...OK\n", $param_Detail_file);		
 				push (@{$domino_files{"original"}{'illu_FASTQ'}}, $file_abs_path[0]); 
 			} else { 
 				&printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[0]... Format: $format"); DOMINO::dieNicely();
@@ -753,7 +751,7 @@ if ($file_type eq "454_sff") {
 				} elsif ($pair_int == 2) { $pair = "Right reads file";	
 				} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[$i]...\nFormat: $format\nPair: $pair_int\n"); DOMINO::dieNicely(); }
 				if ($format =~ /fastq/) {
-					DOMINO::print_Details("\t$file_abs_path[$i]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format." ...OK\n\t\tPaired end file = ".$pair." ...OK\n", $param_Detail_file);
+					DOMINO::printDetails("\t$file_abs_path[$i]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format." ...OK\n\t\tPaired end file = ".$pair." ...OK\n", $param_Detail_file);
 					push (@{$domino_files{"original"}{'illu_PE'}}, $file_abs_path[$i]);
 				} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[$i]...\nFormat: $format\nPair: $pair_int\n"); DOMINO::dieNicely();
 
@@ -784,36 +782,36 @@ if ($file_type eq "Illumina_pair_end_multiple_fastq") {
 ##	Printing user options 			##
 ##################################################
 if ($onlyTagging_files) {
-	DOMINO::print_Details("+ Cleaning process would be skipped...OK\n", $param_Detail_file);
-	DOMINO::print_Details("+ Only extracting and tagging of the reads would be done...OK\n", $param_Detail_file);	
+	DOMINO::printDetails("+ Cleaning process would be skipped...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Only extracting and tagging of the reads would be done...OK\n", $param_Detail_file);	
 } else {
 	## Print information of the input parameters
-	DOMINO::print_Details("+ Number of Processor: ".$noOfProcesses." ...OK\n", $param_Detail_file);
-	DOMINO::print_Details("+ Number of mismatches allowed in the barcode sequence: $bdiffs ...OK\n", $param_Detail_file);	
-	DOMINO::print_Details("+ Minimum read length: $minimum_length_GUI pb ...OK\n", $param_Detail_file);
-	DOMINO::print_Details("+ Minimum QUAL: $minimum_qual_GUI ...OK\n", $param_Detail_file);
-	DOMINO::print_Details("+ Minimum length of a read satisfying QUAL cutoff: $read_length_GUI % ...OK\n", $param_Detail_file);
-	DOMINO::print_Details("+ Threshold for complexity/entropy of a read: $threshold ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Number of Processor: ".$noOfProcesses." ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Number of mismatches allowed in the barcode sequence: $bdiffs ...OK\n", $param_Detail_file);	
+	DOMINO::printDetails("+ Minimum read length: $minimum_length_GUI pb ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Minimum QUAL: $minimum_qual_GUI ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Minimum length of a read satisfying QUAL cutoff: $read_length_GUI % ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Threshold for complexity/entropy of a read: $threshold ...OK\n", $param_Detail_file);
 	unless ($avoidDelTMPfiles) {
-		DOMINO::print_Details("+ Deleting of temporary files would be done ...OK\n", $param_Detail_file);
+		DOMINO::printDetails("+ Deleting of temporary files would be done ...OK\n", $param_Detail_file);
 	} else { 
-		DOMINO::print_Details("+ Deleting temporary files would be avoid ...OK\n", $param_Detail_file);
+		DOMINO::printDetails("+ Deleting temporary files would be avoid ...OK\n", $param_Detail_file);
 	}
 
 	## Check databases to use in BLAST contaminations search
 	unless ($skipping_BLAST) {
-		DOMINO::print_Details("+ Checking Databases to use during BLAST search of contaminants:\n\tA folder named as 'db' would be generated to place the databases we are going to use\n", $param_Detail_file);
+		DOMINO::printDetails("+ Checking Databases to use during BLAST search of contaminants:\n\tA folder named as 'db' would be generated to place the databases we are going to use\n", $param_Detail_file);
 		mkdir $db_dirname, 0755; chdir $db_dirname;
 		if ($only_user_db) {
-			DOMINO::print_Details("\t\tNo default databases would be used and only user provided databases would be used instead\n", $param_Detail_file);
+			DOMINO::printDetails("\t\tNo default databases would be used and only user provided databases would be used instead\n", $param_Detail_file);
 		} else {
-			DOMINO::print_Details("\tDefault databases provided in the package would be used\n\tCopying...\n", $param_Detail_file);
+			DOMINO::printDetails("\tDefault databases provided in the package would be used\n\tCopying...\n", $param_Detail_file);
 			&download_db(); 
 		}
 
 		## Check if User provide any database
 		if (@user_blast_db_tmp) {
-			DOMINO::print_Details("\t+ Additional user provided databases would be used:\n", $param_Detail_file);
+			DOMINO::printDetails("\t+ Additional user provided databases would be used:\n", $param_Detail_file);
 			for (my $i = 0; $i < scalar @user_blast_db_tmp; $i++) {
 				print "\t$user_blast_db_tmp[$i]\n";
 				my $tmp_abs_name = abs_path($user_blast_db_tmp[$i]);
@@ -823,18 +821,18 @@ if ($onlyTagging_files) {
 				} else {
 					push (@user_blast_db, $tmp_abs_name);
 		}}}
-		DOMINO::print_Details("\n\t+ Database(s):\n", $param_Detail_file); &looking4db();
+		DOMINO::printDetails("\n\t+ Database(s):\n", $param_Detail_file); &looking4db();
 	} else {
-		DOMINO::print_Details("+ No BLAST search of contaminants ...OK\n", $param_Detail_file);
+		DOMINO::printDetails("+ No BLAST search of contaminants ...OK\n", $param_Detail_file);
 }}
 ## Print info about where to print info and error
-DOMINO::print_Details("\n+ Parameters details would be print into file: ".$clean_folder."/".$datestring."_DM_Cleaning_Parameters.txt...\n", $param_Detail_file);
-DOMINO::print_Details("+ Errors occurred during the process would be print into file: ".$clean_folder."/".$datestring."_DM_Cleaning_ERROR.txt...\n\n", $param_Detail_file);
-chdir $dirname;
+DOMINO::printDetails("\n+ Parameters details would be print into file: ".$clean_folder."/".$datestring."_DM_Cleaning_Parameters.txt...\n", $param_Detail_file);
+DOMINO::printDetails("+ Errors occurred during the process would be print into file: ".$clean_folder."/".$datestring."_DM_Cleaning_ERROR.txt...\n\n", $param_Detail_file);
+chdir $dirname; print "\n"; &time_log(); print "\n";
 
-##########################################################
-##		Start the analysis			##
-##########################################################
+###########################
+##		Start the analysis 
+###########################
 if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_file_type == 4 || $user_option_file_type == 6) {
 	
 	##################################################################################################
@@ -843,39 +841,38 @@ if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_f
 	## and classify 										##
 	##################################################################################################
 	
-	print "\n"; DOMINO::print_Header(" Extracting taxa sequences from the file provided ","%"); 
+	print "\n"; DOMINO::printHeader(" Extracting taxa sequences from the file provided ","%"); 
 	my $file_tmp_barcodes = $domino_files{"original"}{"barcodes_file"}[0];
-	DOMINO::print_Details("+ Barcodes file provided: $file_tmp_barcodes ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Barcodes file provided: $file_tmp_barcodes ...OK\n", $param_Detail_file);
 	
 	for (my $i=0; $i < scalar @file_abs_path; $i++) {
 		if ($file_type eq "454_sff") { 
 			# Extracting the sff file given
 			print "+ Extracting information from the SFF file provided as input\n\t-> This might take a while for large files\n- Entering to MOTHUR executable";
-			&mothur_sffinfo($file_abs_path[$i], $file_names[$i]);
+			&mothur_sffinfo($file_abs_path[$i], $file_names[$i]); 	print "\n"; &time_log(); print "\n";
 			print "\n- Exiting MOTHUR executable\n- Job done: sff file has been extracted and sequences has been trimmed according to their tag\n";
-			&splitting_fastq($file_names[$i], $i);
+			&splitting_fastq($file_names[$i], $i, $dirname); 	print "\n"; &time_log(); print "\n";
 		} else {
 			&extracting_fastq($file_abs_path[$i], $file_names[$i]); 
-			&mothur_trim_fastq($file_names[$i]); &splitting_fastq($file_names[$i], $i);
+			&mothur_trim_fastq($file_names[$i]); &splitting_fastq($file_names[$i], $i, $dirname);
 	}}
 	&time_log(); &debugger_print("domino_files"); &debugger_print("Ref", \%domino_files);
-	my $array_ref = DOMINO::read_dir($dirname);
-	for (my $i=0; $i < scalar @$array_ref; $i++) {
-		if ($$array_ref[$i] eq "." || $$array_ref[$i] eq ".." || $$array_ref[$i] eq ".DS_Store") { next;}
-		if ($$array_ref[$i] eq "db") {next;}
-		if (-d $$array_ref[$i]) {
-			push (@{ $domino_files{$$array_ref[$i]}{"DIR"} }, $dirname."/".$$array_ref[$i]);				
-			#$species_names{$$array_ref[$i]} = $$array_ref[$i]; # get species tag
-			my $dump_file = $domino_files{$$array_ref[$i]}{"DIR"}[0]."/dumper_extracted.txt";
-			open (DUMP_IN, "$dump_file");
-			while (<DUMP_IN>) {
-				my $line = $_; chomp $line;
-				my @array = split("\t", $line);
-				&debugger_print($line);
-				push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
-			} close (DUMP_IN);
-}}} 
-&debugger_print("domino_files"); &debugger_print("Ref", \%domino_files);
+	my $array_ref = DOMINO::readDir($dirname);
+	
+	foreach my $taxa (keys %domino_files) {
+		next if ($taxa eq 'original');
+		my $dump_file = $domino_files{$taxa}{"DIR"}[0]."/dumper_extracted.txt";
+		open (DUMP_IN, "$dump_file");
+		while (<DUMP_IN>) {
+			my $line = $_; chomp $line;
+			my @array = split("\t", $line);
+			&debugger_print($line);
+			push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
+		} close (DUMP_IN);
+	}
+} 
+&debugger_print("domino_files"); &debugger_print("Ref", \%domino_files); 
+print "\n"; &time_log(); print "\n";
 
 ######################################################################################################
 ## If user only wants to tag files accordingly to the names input and do no cleaning step at all.	##
@@ -903,7 +900,7 @@ if ($onlyTagging_files) {
 				push (@{ $domino_files_threads_OTG{$keys}{"FINAL"} }, $copy_name);			
 			}
 			my $domino_files_threads_OTG_text = $dir."/dumper-hash_OTG.txt";
-			&print_dump(\%domino_files_threads_OTG, $domino_files_threads_OTG_text);			
+			DOMINO::printDump(\%domino_files_threads_OTG, $domino_files_threads_OTG_text);			
     		$pm->finish($int); # pass an exit code to finish
 		}
 		$pm->wait_all_children;
@@ -930,7 +927,6 @@ if ($onlyTagging_files) {
 } else {
 
 	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-
 	## Copy files and get ready for QC
 	if ($file_type eq "454_multiple_fastq" || $file_type eq "Illumina_multiple_fastq" || $file_type eq "Illumina_pair_end_multiple_fastq") {
 		my $pm_copy =  new Parallel::ForkManager($noOfProcesses);
@@ -958,23 +954,23 @@ if ($onlyTagging_files) {
 				push (@{ $domino_files_cp{$keys}{"EXTRACTED"} }, $copy_name);
 			}
 			my $domino_copy_files_threads_text = $dirname."/dumper-hash_cp.txt";
-			&print_dump(\%domino_files_cp, $domino_copy_files_threads_text);
+			DOMINO::printDump(\%domino_files_cp, $domino_copy_files_threads_text);
 	 		$pm_copy->finish($int); # pass an exit code to finish
 		}
 		$pm_copy->wait_all_children; print "\n** All child processes have finished...\n\n";
+
+		## Check each taxa dump file conainting file info
+		&debugger_print("Retrieve info from dumper-hash_cp.txt");
+		my $dump_file = $dirname."/dumper-hash_cp.txt";
+		open (DUMP_IN, "$dump_file");
+		while (<DUMP_IN>) {
+			my $line = $_; chomp $line;
+			my @array = split("\t", $line);
+			&debugger_print($line);
+			push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
+		} close (DUMP_IN);
 	}
 	print "\n"; &time_log(); print "\n";
-
-	## Check each taxa dump file conainting file info
-	&debugger_print("Retrieve info from dumper-hash_cp.txt");
-	my $dump_file = $dirname."/dumper-hash_cp.txt";
-	open (DUMP_IN, "$dump_file");
-	while (<DUMP_IN>) {
-		my $line = $_; chomp $line;
-		my @array = split("\t", $line);
-		&debugger_print($line);
-		push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
-	} close (DUMP_IN);
 }
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
 
@@ -999,7 +995,7 @@ unless ($skipping_BLAST) {
 
 ##############################
 ## QC analysis for each taxa
-DOMINO::print_Header(" Quality Control Analysis ","#");
+DOMINO::printHeader(" Quality Control Analysis ","#");
 ## Send threads for each taxa
 my $int_taxa = 0;
 my $pm =  new Parallel::ForkManager($noOfProcesses); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
@@ -1098,12 +1094,12 @@ foreach my $keys (sort keys %domino_files) {
 			push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $final_name);
 			File::Copy::move( $domino_files_threads_QC{$keys}{"NGS_QC"}[0], $final_name);
 		}			
-		DOMINO::print_Header(" Cleaning Step 2: BLAST and Vector screen ","#"); 
+		DOMINO::printHeader(" Cleaning Step 2: BLAST and Vector screen ","#"); 
 		print "+ Skipping the BLAST step for searching against databases for putative contaminants\n";
 	} else {
-		DOMINO::print_Header(" Cleaning Step 2: BLAST and Vector screen ","#"); 
+		DOMINO::printHeader(" Cleaning Step 2: BLAST and Vector screen ","#"); 
 		print "+ Eliminating that reads that could be potential contaminations\n+ Default databases would be used plus the one(s) provided by the user (if any)\n\n\n";
-		DOMINO::print_Header(" Database Generation ","%"); print "+ Generation of Databases: \n";
+		DOMINO::printHeader(" Database Generation ","%"); print "+ Generation of Databases: \n";
 		print "Please be patient, it could take a while for large files...\n\n";
 		my @reads_db;
 		if ($file_type eq "Illumina_pair_end" || $file_type eq "Illumina_pair_end_multiple_fastq") {
@@ -1130,7 +1126,7 @@ foreach my $keys (sort keys %domino_files) {
 		&debugger_print("domino_files_threads_QC"); &debugger_print("Ref", \%domino_files_threads_QC);
 
 		# Blasting our reads against the databases generated
-		print "\n"; DOMINO::print_Header(" Database Search: BLAST ","%"); 
+		print "\n"; DOMINO::printHeader(" Database Search: BLAST ","%"); 
 		my $out_file = $taxa_dir."/blast_search.txt";
 		my $db; for (my $j=0; $j < scalar @reads_db; $j++) { $db .= $reads_db[$j]." "; } chop $db;
 		my $blastn = DOMINO::blastn($merge_fasta_database, $db, $out_file, $BLAST);
@@ -1154,15 +1150,20 @@ foreach my $keys (sort keys %domino_files) {
 			##############################################################################################
 		
 			my $align_len_read = '90'; my $similarity_thr = '97'; my $var;
+			my $message;
 			if ($file_type eq "454_fastq" || $file_type eq "454_multiple_fastq" || $file_type eq "454_sff" ) {
-				$var = &read_FASTA_hash_length($reads_db[0].".fasta_filtered");
-			} else { $var = &read_FASTA_hash_length($reads_db[0].".fasta"); }
+				($var, $message) = DOMINO::readFASTA_hashLength($reads_db[0].".fasta_filtered");
+			} else { 
+				($var, $message) = DOMINO::readFASTA_hashLength($reads_db[0].".fasta"); 
+			}
+			&debugger_print($message);
 			my %hash_length = %$var; my $fixed_length;
 			if ($hash_length{"UNDEF"}) { $fixed_length = $hash_length{"UNDEF"}; }			
 			print "- Reading the BLAST result file $out_file ...\n";
 			$/ = "\n";
-			my $contamination_ids = $taxa_dir."/contaminant_ids.txt";
-			open (CONTAMINATION, ">$contamination_ids");	
+			my $contamination_ReadIds = $taxa_dir."/contaminant_ReadIds_".$keys.".txt";
+			my $contaminants = $taxa_dir."/contaminants_identified_".$keys.".txt";
+			open (READS, ">$contamination_ReadIds"); open (CONTAMINANTS, ">$contaminants");	
 			open(BLAST_result, "<$out_file") || die "Could not open the $out_file file.\n";
 			while(<BLAST_result>){
 				my $line = $_;
@@ -1172,30 +1173,34 @@ foreach my $keys (sort keys %domino_files) {
 				## gnl|uv|NGB00361.1:1-92	HWI-ST993:479:C3DBYACXX:4:1101:10015:3765	100.00		33		0	0	60	92	101	69	2e-11	62.1
 				## query_id					## subjectID								#perc		#length							#evalue
 				## array[0]					array[1]									array[2] 	array[3]						#array[10]
-
 				if ($array[0] =~ /gnl|uv.*/) { ## Hits similar to vectors
-					if ($array[2] > $similarity_thr) { print CONTAMINATION $array[1]."\n"; }
+					if ($array[2] > $similarity_thr) { 
+						print READS $array[1]."\n"; print CONTAMINANTS $array[0]."\n";
+					}
 				} else { ## Rest of the reads
 					if ($array[2] > $similarity_thr) { 
 						if ($fixed_length) {
 							my $match_align = $array[3];
 							my $percent = (($match_align*100)/$fixed_length);
-							if ($percent > $align_len_read) { print CONTAMINATION $array[1]."\n"; }
-						} elsif ($hash_length{$array[1]}) {
+							if ($percent > $align_len_read) { 
+								print READS $array[1]."\n"; print CONTAMINANTS $array[0]."\n";
+						}} elsif ($hash_length{$array[1]}) {
 							my $match_align = $array[3];
 							my $percent = (($match_align*100)/$hash_length{$array[1]});
-							if ($percent > $align_len_read) { print CONTAMINATION $array[1]."\n"; }
-						} else { next;				
-			}}}} close(BLAST_result); close (CONTAMINATION);
+							if ($percent > $align_len_read) { 
+								print READS $array[1]."\n"; print CONTAMINANTS $array[0]."\n";
+						}} else { next;				
+			}}}} 
+			close(BLAST_result); close (READS); close(CONTAMINANTS);
 			
 			## TODO: Print contaminants ($array[0]) to a file (cat | uniq ) to show user not the reads but the contaminants found
-
+			
 			## Discard reads
-			if (-s $contamination_ids) {
+			if (-s $contamination_ReadIds) {
 				## Check this paired-end
 				my @array = @{$domino_files_threads_QC{$keys}{"FASTA4BLAST"}};
 				for (my $j=0; $j < scalar @array; $j++) {
-					DOMINO::mothur_remove_seqs($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[$j], $domino_files_threads_QC{$keys}{"QUAL4BLAST"}[$j], $taxa_dir, $contamination_ids, $mothur_path);
+					DOMINO::mothur_remove_seqs($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[$j], $domino_files_threads_QC{$keys}{"QUAL4BLAST"}[$j], $taxa_dir, $contamination_ReadIds, $mothur_path);
 					my @name;
 					if ($file_type eq "454_fastq" || $file_type eq "454_multiple_fastq" || $file_type eq "454_sff" ) {
 						@name = split("\.fasta_filtered", $domino_files_threads_QC{$keys}{"FASTA4BLAST"}[$j]);
@@ -1206,7 +1211,6 @@ foreach my $keys (sort keys %domino_files) {
 						push (@{ $domino_files_threads_QC{$keys}{"FASTA4BLAST_filtered"} }, $name[0].".filtered.pick.fasta");
 						push (@{ $domino_files_threads_QC{$keys}{"QUAL4BLAST_filtered"} }, $name[0].".filtered.pick.qual");
 					}
-
 					my $final_name;
 					my @path_name = split("/", $domino_files_threads_QC{$keys}{"FASTA4BLAST_filtered"}[$j]);
 					if (scalar @array > 1) {
@@ -1220,9 +1224,13 @@ foreach my $keys (sort keys %domino_files) {
 								$final_name .= $path_name[$j]."/";
 							} $final_name .= "QC-filtered_id-".$1.".fastq";
 					}}
-					my $fastq_filtered = &qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"FASTA4BLAST_filtered"}[$j], $domino_files_threads_QC{$keys}{"QUAL4BLAST_filtered"}[$j], $keys, $final_name);
+					my $fastq_filtered = DOMINO::qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"FASTA4BLAST_filtered"}[$j], $domino_files_threads_QC{$keys}{"QUAL4BLAST_filtered"}[$j], $keys, $final_name, $file_type);
 					push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $fastq_filtered);
 				} print "\n+ BLAST search and parsing of results for $keys done...\n";		
+				
+				## Get contaminants for each taxa
+				push(@{$domino_files_threads_QC{$keys}{"CONTAMINANTS"} }, $contaminants);
+				
 			} else { $no_contamination = 1; }
 		} else { $no_contamination = 1; }
 		if ($no_contamination == 1) {
@@ -1237,7 +1245,7 @@ foreach my $keys (sort keys %domino_files) {
 							$final_name .= $path_name[$j]."/";
 						} $final_name .= "QC-filtered_id-".$1."_R".$2.".fastq";
 					}
-					my $fastq_filtered = &qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[$i], $domino_files_threads_QC{$keys}{"QUAL4BLAST"}[$i], $keys, $final_name);
+					my $fastq_filtered = DOMINO::qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[$i], $domino_files_threads_QC{$keys}{"QUAL4BLAST"}[$i], $keys, $final_name, $file_type);
 					push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $fastq_filtered);
 			}} else {
 				my $final_name;
@@ -1247,12 +1255,15 @@ foreach my $keys (sort keys %domino_files) {
 						$final_name .= $path_name[$j]."/";
 					} $final_name .= "QC-filtered_id-".$1.".fastq";
 				}
-				my $fastq_filtered = &qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[0], $domino_files_threads_QC{$keys}{"QUAL4BLAST"}[0], $keys, $final_name);
+				my $fastq_filtered = DOMINO::qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[0], $domino_files_threads_QC{$keys}{"QUAL4BLAST"}[0], $keys, $final_name, $file_type);
 				push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $fastq_filtered);
 	}}} 
 	print "\n"; &time_log(); print "\n";
+	
+	&debugger_print("DOMINO Files threads QC"); &debugger_print("Ref", \%domino_files_threads_QC); print "\n";
+	
 	my $domino_files_threads_QC_text = $taxa_dir."/dumper-hash_QC.txt";
-	&print_dump(\%domino_files_threads_QC, $domino_files_threads_QC_text);
+	DOMINO::printDump(\%domino_files_threads_QC, $domino_files_threads_QC_text);
 
 	########################################
 	## 	Getting files ready for finishing	
@@ -1265,9 +1276,12 @@ foreach my $keys (sort keys %domino_files) {
 $pm->wait_all_children; print "\n** All QC child processes have finished...\n\n";		
 
 ## Check each taxa dump file conainting file info
+&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+
 &debugger_print("Retrieve info from files");
 foreach my $taxa (keys %domino_files) {
-	if ($domino_files{$taxa}{'DIR'}[0]) {
+	next if ($taxa eq 'original');
+	if ($domino_files{$taxa}{'DIR'}) {
 		my $dump_file = $domino_files{$taxa}{'DIR'}[0]."/dumper-hash_QC.txt";
 		open (DUMP_IN, "$dump_file");
 		while (<DUMP_IN>) {
@@ -1276,7 +1290,7 @@ foreach my $taxa (keys %domino_files) {
 			&debugger_print($line);
 			push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
 		}
-close (DUMP_IN);
+		close (DUMP_IN);
 }}
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
 
@@ -1289,13 +1303,14 @@ chdir $dirname; &create_folder_cleaning_step();
 ##########################################################################
 ## 		Deleting temporary files and sorting the output files			##
 ##########################################################################
-print "\n\n"; DOMINO::print_Header(" Deleting Temporary Files ","#");
-print "+ Deleting or renaming some files...\n"; &delete_temp_file(); print "\n";
+print "\n\n"; DOMINO::printHeader(" Deleting Temporary Files ","#");
+print "+ Deleting or renaming some files...\n"; 
+#&delete_temp_file(); print "\n";
 
 ##########################################################################
 ## 	Printing some STATISTICS, generating output folders					##
 ##########################################################################
-#DOMINO::print_Header("","#"); DOMINO::print_Header(" STATISTICS ","#"); DOMINO::print_Header("","#");
+#DOMINO::printHeader("","#"); DOMINO::printHeader(" STATISTICS ","#"); DOMINO::printHeader("","#");
 #&printing_statistics($hash_reads_Ref);  
 print "\n Job done succesfully, exiting the script\n"; &finish_time_stamp(); print "\n";
 exit(0);
@@ -1304,48 +1319,6 @@ exit(0);
 #######################################
 #######	     SUBROUTINES	#######
 #######################################
-sub check_id_length {
-	
-	my $file = $_[0];
-	my $option = $_[1];
-	open (F1, "$file") or &printError("Could not open file $file") and exit();
-	
-	if ($option eq 'fastq') {
-		my $isEOF = 1;
-		open (F1, "$file");
-		while(<F1>) {
-			my @Read = ();
-			chomp(my $id = $_);
-			last if($id=~ /^\n$/);
-
-			## Read each entry of the FASTQ file; 1) @Seq_id 2) Sequence 3) +Seq_id  4) Qual
-			for(my $i=0; $i<3; $i++) { $Read[$i] = <F1>; }
-			chomp(my $QualLine = $Read[2]); chomp(my $SeqLine = $Read[0]);
-			
-			my $length_id = length($id);
-			&debugger_print("Length of ID: $file");
-			if ($length_id < 40) {
-				&debugger_print("Length < 40 char"); return (1);
-			} else {
-				&debugger_print("Length > 40 char. Lets rename the files"); 
-				return (0);
-		}} close (F1);
-	} else {	
-		$/ = ">"; ## Telling perl where a new line starts
-		while (<F1>) {		
-			next if /^#/ || /^\s*$/;
-			chomp;
-	    	my ($titleline, $sequence) = split(/\n/,$_,2);
-	    	next unless ($sequence && $titleline);
-			my $length_id = length($titleline);
-	    	if ($length_id < 40) {
-				&debugger_print("Length < 40 char"); return (1);
-			} else {
-				&debugger_print("Length > 40 char. Lets rename the files"); 
-				return (0);
-		}} close(F1); $/ = "\n";
-}}
-
 sub check_file {
 	## Populate %species_names with the ids of each file
 	my $file_to_check = $_[0];
@@ -1377,102 +1350,13 @@ sub check_file {
 		}}
 		
 		if ($format_returned =~ /fastq/) {
-			DOMINO::print_Details("\t$file_to_check\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format_returned." ...OK\n\t\tIt also contains an identifier ($name) in the name for later analysis...OK\n", $param_Detail_file);
+			DOMINO::printDetails("\t$file_to_check\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format_returned." ...OK\n\t\tIt also contains an identifier ($name) in the name for later analysis...OK\n", $param_Detail_file);
 			push (@{ $domino_files{"original"}{$name} }, $file_to_check); 
-			if ($pair) {  DOMINO::print_Details("\t\tPaired end file = ".$pair." ...OK\n", $param_Detail_file);	 }
+			if ($pair) {  DOMINO::printDetails("\t\tPaired end file = ".$pair." ...OK\n", $param_Detail_file);	 }
 		} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); DOMINO::printFormat_message; DOMINO::dieNicely();
 	}} else { &printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); DOMINO::printFormat_message; DOMINO::dieNicely();} 
-	DOMINO::print_Details("\n", $param_Detail_file);
+	DOMINO::printDetails("\n", $param_Detail_file);
 	&debugger_print("File: $file_to_check -- $format_returned -- OK;\n");
-}
-
-sub check_paired_file_fastq {
-
-	my $file = $_[0];
-	my ($tmp_id, $pair, $pair_return, @pair, @types, $type);
-	my $count = 0;
-	open (F1, "$file") or &printError("Could not open file $file") and exit();
-	while(<F1>) {
-		my @Read = ();
-		chomp(my $id = $_);
-		last if($id=~ /^\n$/);
-		## Read each entry of the FASTQ file; 1) @Seq_id 2) Sequence 3) +Seq_id  4) Qual
-		for(my $i=0; $i<3; $i++) { $Read[$i] = <F1>; }
-		chomp(my $QualLine = $Read[2]);
-		chomp(my $SeqLine = $Read[0]);
-
-		if ($id =~ /(.*)\/(\d+)/) {
-			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/2
-			$tmp_id = $1; $pair = $2; $count++;
-			push(@pair, $pair);
-			push(@types, "/1,/2");
-
-		} elsif ($id =~ /(\S*)\s+(\d+)\:N\:\.*/) {
-			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918 2:N:0:CCGTCC
-			$tmp_id = $1; $pair = $2; $count++;
-			push(@pair, $pair);
-			push(@types, "1:,2:");
-		} elsif ($id =~ /(.*)\/(\R|\L)/) {
-			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/L
-			$tmp_id = $1; $pair = $2; $count++;
-			push(@pair, $pair);
-			push(@types, "L,R");
-		}
-		if ($count == 5) {last;}
-	} close(F1);
-	for (my $i = 1; $i < scalar @pair; $i++) {
-		if ($pair[0] == $pair[$i]) {
-			$pair_return = $pair[$i];
-		} else { &printError("The reads provided within the file $file do not belong to the same pair..."); DOMINO::dieNicely();}
-		if ($types[0] eq $types[$i]) {
-			$type = $types[$i];
-		} else { &printError("The reads provided within the file $file do not belong to the same pair..."); DOMINO::dieNicely();}
-	}
-	return ($pair_return, $type);
-}
-
-sub check_paired_file_fasta {
-
-	my $file = $_[0];
-	my ($count, $tmp_id, $pair, $pair_return, @pair, @types, $type);
-	open (FILE, "$file") or &printError("Could not open file $file") and exit();
-	$/ = ">"; ## Telling perl where a new line starts
-	while (<FILE>) {		
-		next if /^#/ || /^\s*$/;
-		chomp;
-    	my ($id, $sequence) = split(/\n/,$_,2);
-    	next unless ($sequence && $id);
-   		if ($id =~ /(.*)\/(\d+)/) {
-			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/2
-			$tmp_id = $1; $pair = $2; $count++;
-			push(@pair, $pair);
-			push(@types, "/1,/2");
-		} elsif ($id =~ /(\S*)\s+(\d+)\:N\:\.*/) {
-			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918 2:N:0:CCGTCC
-			$tmp_id = $1; $pair = $2; $count++;
-			push(@pair, $pair);
-			push(@types, "1:,2:");
-		} elsif ($id =~ /(.*)\/(\R|\L)/) {
-			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/L
-			$tmp_id = $1; $pair = $2; $count++;
-			push(@pair, $pair);
-			push(@types, "L,R");
-		} else {
-			print $id."\n";
-		}
-		if ($count == 5) { last; }
-	}
-	close(FILE);
-	$/ = "\n";
-	for (my $i=1; $i < scalar @pair; $i++) {
-		if ($pair[0] == $pair[$i]) {
-			$pair_return = $pair[$i];
-		} else { &printError("The reads provided within the file $file do not belong to the same pair..."); DOMINO::dieNicely();}
-		if ($types[0] eq $types[$i]) {
-			$type = $types[$i];
-		} else { &printError("The reads provided within the file $file do not belong to the same pair..."); DOMINO::dieNicely();
-	}}
-	return ($pair_return, $type);
 }
 
 sub checking_names {
@@ -1554,7 +1438,7 @@ sub create_folder_cleaning_step {
 	push (@{ $domino_files{"main"}{"clean_data"} }, $clean_folder);
 		
 	my $domino_files_general = $intermediate_folder."/dumper-hash_DOMINO_files.txt";
-	&print_dump(\%domino_files, $domino_files_general);
+	DOMINO::printDump(\%domino_files, $domino_files_general);
 
 }
 
@@ -1580,7 +1464,7 @@ sub delete_temp_file {
 	##########################################################################################
 
 	print "+ Deleting temporary files...\n";	
-	my $files_ref = DOMINO::read_dir($dirname); my @files = @$files_ref;
+	my $files_ref = DOMINO::readDir($dirname); my @files = @$files_ref;
 	my $temp_dir = $dirname."/Temporary_files_Cleaning";
 	mkdir $temp_dir, 0755;
 	for (my $i = 0; $i < scalar @files; $i++) {
@@ -1617,7 +1501,7 @@ sub delete_temp_file {
 			
 			## Check each taxa folder
 			my $dir = $domino_files{$tags}{'DIR'}[0];
-			my $files_taxa_ref = DOMINO::read_dir($dir);
+			my $files_taxa_ref = DOMINO::readDir($dir);
 			my @files_taxa_ref = @$files_taxa_ref;
 			for (my $f=0; $f < scalar @files_taxa_ref; $f++) {
 				if ($files_taxa_ref[$f] eq ".DS_Store" || $files_taxa_ref[$f] eq "." || $files_taxa_ref[$f] eq ".." ) { next;
@@ -1701,7 +1585,7 @@ sub extracting_fastq {
 
 sub finish_time_stamp {
 	my $finish_time = time;
-	print "\n\n"; DOMINO::print_Header("","+"); DOMINO::print_Header(" ANALYSIS FINISHED ","+");  DOMINO::print_Header("","+");  
+	print "\n\n"; DOMINO::printHeader("","+"); DOMINO::printHeader(" ANALYSIS FINISHED ","+");  DOMINO::printHeader("","+");  
 	print DOMINO::time_stamp."\t";
 	my $secs = $finish_time - $start_time; 
 	my $hours = int($secs/3600); $secs %= 3600; 	
@@ -1752,7 +1636,7 @@ sub looking4db {
 	&checking_names($dir);
 	find(\&print_file, $dir);
 
-	for (my $i = 0; $i < scalar @blast_db; $i++) { DOMINO::print_Details("\t\t- $blast_db[$i]\n", $param_Detail_file); }
+	for (my $i = 0; $i < scalar @blast_db; $i++) { DOMINO::printDetails("\t\t- $blast_db[$i]\n", $param_Detail_file); }
 	sub print_file{
 		my $element = $_;
 		if(-f $element && $element =~ /.fa/){
@@ -1775,8 +1659,8 @@ sub mothur_sffinfo {
 	my $directory = $dirname;
 
 	## The '#' is necessary to be in the first place when calling mothur with a given set of commands
-	$mothur_path .= " '#set.dir(output=$directory); sffinfo(sff='".$file."'); trim.seqs(fasta="."$file_name".".fasta, qfile=".$file_name.".qual, oligos=ROCHE.oligos, bdiffs=$bdiffs, processors=$noOfProcesses)'";
-	my $mothur_result = system($mothur_path);
+	my $mothur_call = $mothur_path." '#set.dir(output=$directory); sffinfo(sff='".$file."'); trim.seqs(fasta="."$file_name".".fasta, qfile=".$file_name.".qual, oligos=ROCHE.oligos, bdiffs=$bdiffs, processors=$noOfProcesses)'";
+	my $mothur_result = system($mothur_call);
 	if ($mothur_result != 0) { &printError("MOTHUR failed when trying to proccess the file..."); exit(); } else { print "Done...OK\n\n"; }	
 }
 
@@ -1787,10 +1671,10 @@ sub mothur_trim_fastq {
 	my $directory = $dirname;
 
 	## The '#' is necessary to be in the first place when calling mothur with a given set of commands
-	$mothur_path .= " '#set.dir(output=".$directory."); trim.seqs(fasta=".$file_name.".fasta, qfile=".$file_name.".qual, oligos=ROCHE.oligos, bdiffs=".$bdiffs.", processors=".$noOfProcesses.")'";
+	my $mothur_call = $mothur_path." '#set.dir(output=".$directory."); trim.seqs(fasta=".$file_name.".fasta, qfile=".$file_name.".qual, oligos=ROCHE.oligos, bdiffs=".$bdiffs.", processors=".$noOfProcesses.")'";
 	print "+ Triming the reads according to MID tag\n$mothur_path\n";
 
-	my $mothur_result = system($mothur_path);
+	my $mothur_result = system($mothur_call);
 	if ($mothur_result != 0) { 	&printError("MOTHUR failed when trying to proccess the file..."); exit(); } else { print "Done...OK\n\n"; }
 }
 
@@ -1827,178 +1711,6 @@ sub prinseq_dust {
 	return ($out_good, $out_bad);	
 }
 
-sub print_dump {
-	my $ref = $_[0]; 
-	my $out_file = $_[1];
-	my %tmp_hash = %$ref;
-	
-	open (DUMP, ">>$out_file"); 
-	&debugger_print("Printing to a file $out_file");
-	foreach my $names (sort keys %tmp_hash) {
-		my %hash = %{$tmp_hash{$names}};
-		foreach my $tags (sort keys %hash) {
-			my @array = @{ $hash{$tags} };
-			for (my $i=0; $i < scalar @array; $i++) {
-				print DUMP $names."\t".$tags."\t".$hash{$tags}[$i]."\n";
-				&debugger_print($names."\t".$tags."\t".$hash{$tags}[$i]);
-			}
-		}
-	} close (DUMP);
-}
-
-sub qualfa2fq_modified_bwa {
-
-	##########################################################################################
-	##  This is a modified version of the perl script provided in the bwa-0.7.8 package		##	
-	## 	to convert fasta+qual files into fastq files										##
-	##	Jose Fco. Sanchez Herrero, 06/05/2014 jfsanchezherrero@ub.edu						##
-	##########################################################################################
-	
-	my ($fhs, $fhq, $q, $a);
-	my $taxa_name = $_[2];
-	my $name = $_[3];
-	my @temp_name = split ("fasta", $_[0]);
-	my $fastq_file; my $bool_change_name = 0; my $pair;
-
-	my $codeReturn = &check_id_length($_[0], "fasta");
-	my ($pairReturn, $type);
-	if ($file_type eq "Illumina_pair_end" || $file_type eq "Illumina_pair_end_multiple_fastq") {
-		($pairReturn, $type) = &check_paired_file_fasta($_[0]);
-		&debugger_print("Pair: ".$pairReturn."\t"."Type: ".$type);
-		if ($pairReturn eq "L" ) { 
-			$codeReturn = 0; ## Force to rewrite seq					
-			&debugger_print("Lets change id $_[0] : pair was $pairReturn");
-		} elsif ($pairReturn eq "R") { 
-			$codeReturn = 0; ## Force to rewrite seq
-			&debugger_print("Lets change id $_[0] : pair was $pairReturn");
-		} # else {
-			## There is no need to change file according to pair
-	}
-	if ($codeReturn == 0) { $bool_change_name = 1; } 
-	
-	if ($file_type eq "Illumina_pair_end" || $file_type eq "Illumina_pair_end_multiple_fastq") {
-		($pair, $type) = &check_paired_file_fasta($_[0]);
-		&debugger_print("Pair: ".$pair."\t"."Type: ".$type);
-	}
-	if ($name) { $fastq_file = $name; } else { $fastq_file = $temp_name[0]."fastq";}
-
-	## Writing
-	open (FASTQ_out, ">$fastq_file");	
-	open($fhs, ($_[0])) or die ("Unable to open $_[0] file"); #fasta_file
-	open($fhq, ($_[1])) or die ("Unable to open $_[1] file"); #qual_file
-	my $int=0;
-	print "+ Generating a fastq file $fastq_file now...\n";
-	$/ = ">"; <$fhs>; <$fhq>; $/ = "\n";
-	while (<$fhs>) {
-		my $id = <$fhq>;
-  		$/ = ">";
-  		$a = <$fhs>; 
-  		$q = <$fhq>;
-  		chomp($q); chomp($a);
-		my @array_seq = split ("\n", $a);
-		my $seq;
-		for (my $i = 0; $i < scalar @array_seq; $i++) { $seq .= $array_seq[$i]; }
-		my @array_qual = split (" ", $q);
-		my $qual;
-		for (my $j = 0; $j < scalar @array_qual; $j++) {
-			if ($array_qual[$j] =~ /\d+/) {
-				if ($array_qual[$j] > 80) { $array_qual[$j] = $array_qual[$j] - 30; }
-				my $qual_tmp = $array_qual[$j];
-				$qual_tmp =~ s/(\d+)/chr($1+33)/eg;	
-				$qual .=$qual_tmp;
-		}}
-		if ($bool_change_name == 1) {
-			$int++; my $id_new = "Seq_".$int."_".$taxa_name;
-			my $new_pair;
-			if ($pair) { 
-				if ($pair eq "L" ) { $new_pair = 1;					
-				} elsif ($pair eq "R") { $new_pair = 2;					
-				} else { $new_pair = $pair; }
-				# /1|/2 or 1:N|2:N
-				$id_new .= "/".$new_pair;
-			}
-			if (length($id_new) > 40) {
-				$id_new = "Seq_".$int;
-				if ($pair) { $id_new .= "/".$new_pair; }
-			}
-			print FASTQ_out "\@".$id_new."\n".$seq."\n+\n".$qual."\n";
-		} else { 
-			print FASTQ_out "\@".$id.$seq."\n+\n".$qual."\n";
-		}
-		$/ = "\n";
-	} close($fhs); close($fhq); close(FASTQ_out);
-	$/ = "\n"; ## Telling Perl where a new line starts
-	return $fastq_file;
-}
- 
-sub read_FASTQ_ids_file {
-	
-	my $file = $_[0];
-	my %hash;		
-	open (F1, "$file") or &printError("Could not open file $file") and exit();
-	while(<F1>) {
-		my @Read = ();
-		chomp(my $id = $_);
-		last if($id=~ /^\n$/);
-
-		## Read each entry of the FASTQ file; 1) @Seq_id 2) Sequence 3) +Seq_id  4) Qual
-		for(my $i=0; $i<3; $i++) { 
-			$Read[$i] = <F1>;
-		}
-		chomp(my $QualLine = $Read[2]);
-		chomp(my $SeqLine = $Read[0]);
-		my $pair; my $seq_id;
-		if ($id =~ /(.*)(\/\d+)/) { $seq_id = $1; $pair = $2; }
-		$hash{$seq_id}++;
-	}
-	close(F1);	
-	my $hashRefreturn = \%hash;
-	return $hashRefreturn;
-}
-
-sub read_FASTA_hash_length {
-
-	my $file = $_[0];
-	my %hash;
-	my $counter;
-	open(FILE, $file) || die "Could not open the $file ...\n";
-	$/ = ">"; ## Telling perl where a new line starts
-	while (<FILE>) {		
-		next if /^#/ || /^\s*$/;
-		chomp;
-    	my ($titleline, $sequence) = split(/\n/,$_,2);
-    	next unless ($sequence && $titleline);
-    	$titleline =~ s/ /\t/g;
-    	my @array_titleline = split("\t",$titleline);    	
-		chomp $sequence;
-		$sequence =~ s/\s+//g;
-		$sequence =~ s/\r//g;
-		$titleline =~ s/\r//g;
-   		my $size = length($sequence);
-	   	$hash{$array_titleline[0]} = $size;
-	   	$counter++;
-	   	
-   		my $length;
-   		my $same_counter = 0;
-	   	if ($counter == 10) {
-	   		my @ids = keys %hash;
-			for (my $j=0; $j < scalar @ids; $j++) {
-				if ($hash{$ids[0]} == $hash{$ids[$j]}) {
-					$length = $hash{$ids[$j]}; $same_counter++;
-		}}}
-		## There is no need to continue if all the reads are the same
-		if ($same_counter > 5) { 
-			&debugger_print("Fixed size for reads in $file -- $length");
-			my %return = ("UNDEF" => $length); 
-			return \%return; 
-		} 
-	}
-	close(FILE); $/ = "\n"; 
-	&debugger_print("Different sequence lengths");
-	&debugger_print("Ref", \%hash);
-	return \%hash;
-}
-
 sub rename_seqs {
 
 	my $file = $_[0];
@@ -2009,16 +1721,11 @@ sub rename_seqs {
 	my $dir = $dirname."/".$id_Taxa;
 	unless (-d $dir) { mkdir $dir, 0755; }
 	my $file_path = $dir."/renamed_".$file_name[-1];
-	
-	my $codeReturn = &check_id_length($file, "fastq");
-
+	my ($codeReturn, $messageDebugger) = DOMINO::check_ID_length($file, "fastq");
+	&debugger_print($messageDebugger);
 	my ($pairReturn, $type);
 	if ($file_type eq "Illumina_pair_end" || $file_type eq "Illumina_pair_end_multiple_fastq") {
-		if ($typeFile eq 'fastq' ) {
-			($pairReturn, $type) = &check_paired_file_fastq($_[0]);
-		} else {
-			($pairReturn, $type) = &check_paired_file_fasta($_[0]);
-		}
+		($pairReturn, $type) = DOMINO::check_paired_file($_[0], $typeFile);
 		&debugger_print("Pair: ".$pairReturn."\t"."Type: ".$type);
 		if ($pairReturn eq "L" ) { 
 			$codeReturn = 0; ## Force to rewrite seq					
@@ -2037,9 +1744,7 @@ sub rename_seqs {
 		&debugger_print("No need to change file if of $file neither because of length nor type of pair");		
 	
 	} else {
-
 		&debugger_print("Rename file $file");		
-		
 		open (F1, "$file") or &printError("Could not open file $file") and exit();
 		open (FASTQ_out, ">$file_path");
 		my $int = 0;
@@ -2047,15 +1752,11 @@ sub rename_seqs {
 			my @Read = ();
 			chomp(my $id = $_);
 			last if($id=~ /^\n$/);
-
 			## Read each entry of the FASTQ file; 1) @Seq_id 2) Sequence 3) +Seq_id  4) Qual
-			for(my $i=0; $i<3; $i++) { 
-				$Read[$i] = <F1>;
-			}
+			for(my $i=0; $i<3; $i++) { $Read[$i] = <F1>; }
 			chomp(my $qual = $Read[2]);
 			chomp(my $seq = $Read[0]);
-			$int++;
-			
+			$int++;			
 			my $id_new = "Seq_".$int."_".$id_Taxa;
 			my $new_pair;
 			if ($pairReturn) { 
@@ -2080,29 +1781,32 @@ sub splitting_fastq {
 
 	my $file_name = $_[0];
 	my $int = $_[1];
-	my $fasta_file = $file_name.".trim.fasta";
-	my $qual_file = $file_name.".trim.qual";
-	my $group_file = $dirname."/".$file_name.".groups";
+	my $general_dir = $_[2];
+	my $fasta_file = $general_dir."/".$file_name.".trim.fasta";
+	my $qual_file = $general_dir."/".$file_name.".trim.qual";
+	my $group_file = $general_dir."/".$file_name.".groups";
 	my %files_generated;
 
+	print "- Checking files generated and splitting into multiple threads...\n";
+	
 	$/ = "\n"; ## Telling Perl where a new line starts
 	open (GROUPS, $group_file) or &printError("Cannot open file groups: $group_file") and exit();
-	my %files;
 	# Generate a hash with the identifier for each sequence
 	while (<GROUPS>) {
 		chomp; my $line = $_;
 		$line =~ s/\s+/\t/g; $line =~ s/\t+/\t/g;
 		my @array = split ("\t", $line);
 		my $filehandle;
-		if ($files{$array[1]}) {
-			$filehandle = $files{$array[1]}
+		if ($domino_files{$array[1]}{'IDS'}) {
+			$filehandle = $domino_files{$array[1]}{'IDS'}[0];
 		} else {
-			$filehandle = $dirname."/".$file_name."-".$array[1]."_ids.txt";
-			$files{$array[1]} = $filehandle;
+			$filehandle = $general_dir."/".$file_name."-".$array[1]."_ids.txt";
+			push (@{ $domino_files{$array[1]}{'IDS'} }, $filehandle);
+			push (@{ $domino_files{$array[1]}{'DIR'} }, $general_dir."/".$array[1]);
 		}
 		open (OUT, ">>$filehandle"); print OUT $array[0]."\n"; close(OUT);
 	} close (GROUPS);
-	&debugger_print("Taxa ids reads:\n"); &debugger_print("Ref", \%files);
+	&debugger_print("Taxa ids reads:\n"); &debugger_print("Ref", \%domino_files);
 	
 	my $pm_mothur =  new Parallel::ForkManager($noOfProcesses);
 	$pm_mothur->run_on_finish( 
@@ -2111,32 +1815,52 @@ sub splitting_fastq {
 	} );
 	$pm_mothur->run_on_start( sub { my ($pid,$ident)=@_; print "\n\n** Mothur retrieving sequences started for $ident with PID $pid\n\n"; } );
 	
-	foreach my $files_ids (sort keys %files) {
+	foreach my $files_ids (sort keys %domino_files) {
+		next unless ( exists ($domino_files{$files_ids}{'IDS'}));
 		my $pid = $pm_mothur->start($files_ids) and next;
 		print "\nSending child process for retriving reads for $files_ids\n\n";
-		my $dir = $dirname."/".$files_ids; unless (-d $dir) { mkdir $dir, 0755; }
-		DOMINO::mothur_retrieve_seqs($fasta_file, $qual_file, $dir, $files{$files_ids}, $mothur_path);
-
-		push (@{ $files_generated{$files_ids}{'reads_ids'} }, $files{$files_ids});
+		my $dir = $general_dir."/".$files_ids; unless (-d $dir) { mkdir $dir, 0755; }
+		DOMINO::mothur_retrieve_seqs($fasta_file, $qual_file, $dir, $domino_files{$files_ids}{'IDS'}[0], $mothur_path);
 		push (@{ $files_generated{$files_ids}{'FASTA_extracted'} }, $dir."/".$file_name.".trim.pick.fasta");
 		push (@{ $files_generated{$files_ids}{'QUAL_extracted'} }, $dir."/".$file_name.".trim.pick.qual");			
 		my $name;
 		if ($file_type eq "Illumina_pair_end") {
 			my $pair; my $type;
-			($pair, $type) = &check_paired_file_fasta($dir."/".$file_name.".trim.pick.fasta");
+			($pair, $type) = DOMINO::check_paired_file($dir."/".$file_name.".trim.pick.fasta", "fasta");
 			$name = $dir."/reads_id-".$files_ids."_R".$pair.".fastq";
 		} else { $name = $dir."/reads_id-".$files_ids.".fastq"; }
 
-		my $fastq_file = &qualfa2fq_modified_bwa($dir."/".$file_name.".trim.pick.fasta", $dir."/".$file_name.".trim.pick.qual", $files_ids, $name);
+		my $fastq_file = DOMINO::qualfa2fq_modified_bwa($dir."/".$file_name.".trim.pick.fasta", $dir."/".$file_name.".trim.pick.qual", $files_ids, $name, $file_type);
 		push (@{ $files_generated{$files_ids}{'EXTRACTED'} }, $fastq_file);			
 		my $extracted = $dir."/dumper_extracted.txt";
-		&debugger_print("####### Extracted dumper ".$extracted); &print_dump(\%files_generated, $extracted);
+		&debugger_print("####### Extracted dumper ".$extracted); 
+		DOMINO::printDump(\%files_generated, $extracted);
 		$pm_mothur->finish($int_taxa); # pass an exit code to finish
 	}
 	$pm_mothur->wait_all_children;
 	print "\n** All Mothur retrieve processes have finished...\n\n";	
 }
 
+sub time_log {	
+	my $current_time = time;
+	print DOMINO::time_stamp."\t";
+	my $secs = $current_time - $step_time; 
+	my $hours = int($secs/3600); $secs %= 3600; 
+	my $mins = int($secs/60); $secs %= 60; 
+	$step_time = $current_time;
+	printf ("Step took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
+}
+
+sub printError {
+    my $msg = $_[0];
+	print "\n\n";DOMINO::printHeader(" ERROR ","!!"); print "\n";
+    print STDERR $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n\n\n";
+	DOMINO::printHeader("","!!"); DOMINO::printHeader("","!!"); 
+    DOMINO::printError_log($msg, $error_log);
+}
+
+
+__END__
 sub printing_statistics {
 
 	## TODO
@@ -2197,25 +1921,3 @@ sub printing_statistics {
 	print "\tA total amount of $total_discarded_reads reads were discarded during the cleaning process acounting for: $h %...\n";
 	print "\tCleaned reads are in file: ".$reads{"BLAST_filtered"}[0]." containing ".$reads{"BLAST_filtered"}[1]." reads: ".(100 - $h)."\n";
 }
-
-sub time_log {	
-	my $current_time = time;
-	print DOMINO::time_stamp."\t";
-	my $secs = $current_time - $step_time; 
-	my $hours = int($secs/3600); $secs %= 3600; 
-	my $mins = int($secs/60); $secs %= 60; 
-	$step_time = $current_time;
-	printf ("Step took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
-}
-
-sub printError {
-    my $msg = $_[0];
-	print "\n\n";DOMINO::print_Header(" ERROR ","!!"); print "\n";
-    print STDERR $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n\n\n";
-	DOMINO::print_Header("","!!"); DOMINO::print_Header("","!!"); 
-    DOMINO::printError_log($msg, $error_log);
-}
-
-
-
-

@@ -14,13 +14,43 @@ sub blastn {
 	return $blastn;
 }
 
+sub check_ID_length {
+	
+	my $file = $_[0];
+	my $option = $_[1];
+	open (F1, "$file") or die "Could not open file $file for reading ID length";
+	
+	if ($option eq 'fastq') {
+		my $isEOF = 1;
+		open (F1, "$file");
+		while(<F1>) {
+			my @Read = ();
+			chomp(my $id = $_);
+			last if($id=~ /^\n$/);
+			## Read each entry of the FASTQ file; 1) @Seq_id 2) Sequence 3) +Seq_id  4) Qual
+			for(my $i=0; $i<3; $i++) { $Read[$i] = <F1>; }
+			chomp(my $QualLine = $Read[2]); chomp(my $SeqLine = $Read[0]);
+			my $length_id = length($id);
+			if ($length_id < 40) { return (1, "Length < 40 char");
+			} else { return (0, "Length > 40 char. Lets rename the files");
+		}} close (F1);
+	} else {	
+		$/ = ">"; ## Telling perl where a new line starts
+		while (<F1>) {		
+			next if /^#/ || /^\s*$/;
+			chomp;
+	    	my ($titleline, $sequence) = split(/\n/,$_,2);
+	    	next unless ($sequence && $titleline);
+			my $length_id = length($titleline);
+	    	if ($length_id < 40) { return (1, "Length < 40 char");
+	    	} else { return (0, "Length > 40 char. Lets rename the files");
+		}} close(F1); $/ = "\n";
+}}
+
 sub check_file_format {    
-    my $file = $_[0];
-    my $id; my $count = 3;
-    my $fasta = my $fastq = my $qual = 0;
-    my $format = 'unknown';
-    #open(FILE, $file) or &printError("Could not open file $file") and exit(); TO FIX
-    open(FILE, $file) or die "Could not open file $file";
+    my $file = $_[0]; my $id; my $count = 3;
+    my $fasta = my $fastq = my $qual = 0; my $format = 'unknown';
+    open(FILE, $file) or die "Could not open file $file when checking file format...";
     while (<FILE>) {
         if($count-- == 0) { last;
         } elsif(!$fasta && /^\>\S+\s*/o) { $fasta = 1; $qual = 1;
@@ -36,9 +66,97 @@ sub check_file_format {
     return $format;
 }
 
+sub check_paired_file {
+
+	my $file = $_[0];
+	my $option = $_[1];
+	my ($tmp_id, $pair, $pair_return, @pair, @types, $type);
+	my $count = 0;
+	
+	if ($option eq "fastq") {
+		open (F1, "$file") or die "Could not open file $file for checking paired-end reads";
+		while(<F1>) {
+			my @Read = ();
+			chomp(my $id = $_);
+			last if($id=~ /^\n$/);
+			## Read each entry of the FASTQ file; 1) @Seq_id 2) Sequence 3) +Seq_id  4) Qual
+			for(my $i=0; $i<3; $i++) { $Read[$i] = <F1>; }
+			chomp(my $QualLine = $Read[2]);
+			chomp(my $SeqLine = $Read[0]);
+			if ($id =~ /(.*)\/(\d+)/) { ## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/2
+				$tmp_id = $1; $pair = $2; $count++;
+				push(@pair, $pair); push(@types, "/1,/2");
+			} elsif ($id =~ /(\S*)\s+(\d+)\:N\:\.*/) {			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918 2:N:0:CCGTCC
+				$tmp_id = $1; $pair = $2; $count++;
+				push(@pair, $pair); push(@types, "1:,2:");
+			} elsif ($id =~ /(.*)\/(\R|\L)/) { 			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/L
+				$tmp_id = $1; $pair = $2; $count++;
+				push(@pair, $pair); push(@types, "L,R");
+			}
+			if ($count == 5) {last;}
+		} close(F1);
+		
+	} else {
+		open (FILE, "$file") or die "Could not open file $file when checking paired-end reads";
+		$/ = ">"; ## Telling perl where a new line starts
+		while (<FILE>) {		
+			next if /^#/ || /^\s*$/;
+			chomp;
+			my ($id, $sequence) = split(/\n/,$_,2);
+			next unless ($sequence && $id);
+			if ($id =~ /(.*)\/(\d+)/) {
+				## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/2
+				$tmp_id = $1; $pair = $2; $count++;
+				push(@pair, $pair); push(@types, "/1,/2");
+			} elsif ($id =~ /(\S*)\s+(\d+)\:N\:\.*/) {
+				## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918 2:N:0:CCGTCC
+				$tmp_id = $1; $pair = $2; $count++;
+				push(@pair, $pair); push(@types, "1:,2:");
+			} elsif ($id =~ /(.*)\/(\R|\L)/) {
+				## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/L
+				$tmp_id = $1; $pair = $2; $count++;
+				push(@pair, $pair); push(@types, "L,R");
+			}
+			if ($count == 5) { last; }
+		}
+		close(FILE);
+		$/ = "\n";
+	}
+	
+	for (my $i = 1; $i < scalar @pair; $i++) {
+		if ($pair[0] == $pair[$i]) {
+			$pair_return = $pair[$i];
+		} else { die "The reads provided within the file $file do not belong to the same pair...";}
+		if ($types[0] eq $types[$i]) {
+			$type = $types[$i];
+		} else { die "The reads provided within the file $file do not belong to the same pair...";}
+	}
+	return ($pair_return, $type);
+}
+
 sub dieNicely {
 	print DOMINO::time_stamp();	print "\n\nTry perl $0 -man for more information\n\n";
 	Pod::Usage::pod2usage( -exitstatus => 0, -verbose => 0 );
+}
+
+sub get_earliest {
+	
+	my $option = $_[0];
+	my $folder = $_[1];
+	#$option == "clean_data, assembly, mapping" 
+	
+	my $array_files_ref=DOMINO::readDir($folder);
+	my @array_files = @$array_files_ref;
+	my (%mapping_dirs, $earliest);
+	for (my $i=0; $i<scalar @array_files;$i++) {
+		if ($array_files[$i] eq "." || $array_files[$i] eq ".." || $array_files[$i] eq ".DS_Store") {next;}
+		if ($array_files[$i] =~ /(\d+)\_DM\_$option.*/) {
+			my $time_log=$1;
+			if (!$earliest) { $earliest=$time_log; } else { if ($time_log > $earliest) {$earliest=$time_log}}
+			$mapping_dirs{$time_log} = $folder."/".$array_files[$i];
+	}}
+	if (!exists $mapping_dirs{$earliest}) { return 'NO';
+	} else {  return $mapping_dirs{$earliest}; }	
 }
 
 sub makeblastdb {
@@ -49,7 +167,7 @@ sub makeblastdb {
 	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
 	$make_blast_db .= " -out ".$db." -logfile ".$db.".log 2> $error_log";	
 	my $makeblastresult = system($make_blast_db);
-	if ($makeblastresult != 0) { DOMINO::printError("Generating the database failed when trying to proccess the file... DOMINO would not stop in this step...\n"); }
+	if ($makeblastresult != 0) { print "Generating the database failed when trying to proccess the file... DOMINO would not stop in this step...\n"; }
 	return $db;
 }
 
@@ -57,11 +175,16 @@ sub mothur_remove_seqs {
 	# This subroutine takes as input a FASTQ file AND classifies according to the tags provided, by Roche and trims the seqs
 	my $fasta = $_[0]; my $qual = $_[1]; my $directory = $_[2];
 	my $ids2remove = $_[3]; my $mothur_path = $_[4];
-	
-	my $line = $mothur_path." '#set.dir(output=$directory); remove.seqs(accnos=$ids2remove, fasta=$fasta, qfile=$qual)'";
+	my $line;
+	if ($qual eq 'YES') { 
+		$line = $mothur_path." '#set.dir(output=$directory); remove.seqs(accnos=$ids2remove, fastq=$fasta)'";
+	} elsif ($qual eq 'NO') {
+		$line = $mothur_path." '#set.dir(output=$directory); remove.seqs(accnos=$ids2remove, fasta=$fasta)'";
+	} else { 
+		$line = $mothur_path." '#set.dir(output=$directory); remove.seqs(accnos=$ids2remove, fasta=$fasta, qfile=$qual)'";
+	}
 	print "\n+ Calling mothur executable for discarding reads...\n\n";
 	my $system_call = system($line);
-
 }
 
 sub mothur_retrieve_seqs {
@@ -78,7 +201,7 @@ sub printFormat_message {
 	print "\n\nPlease tag your files using: [xxx](id-)[yyy](_R[*]).fastq\nWhere:\n\txxx: any character or none.Please avoid using dots (.)\n\tid-: Optional. If xxx is too long, please provide 'id-' to identify the name provided with [yyy]\n\tyyy: is any desired name for identifying the taxa reads in these file\n\t(_R[*]): if paired end files, please tag left file using R1 and right using R2\n\n\n";
 }
 
-sub print_Header {
+sub printHeader {
 	my $sentence = $_[0]; my $symbol = $_[1];	
 	my @length_array = ($symbol) x 97;	
 	my @array_sentence = split("",$sentence);
@@ -91,13 +214,31 @@ sub print_Header {
 	print $string."\n";
 }
 
-sub print_Details {
+sub printDetails {
 	my $string = $_[0]; my $param_Detail_file = $_[1];
 	open (PARAM, ">>$param_Detail_file");
 	print PARAM $string;
 	print $string;
 	close(PARAM);
 }
+
+sub printDump {
+	my $ref = $_[0]; 
+	my $out_file = $_[1];
+	my %tmp_hash = %$ref;
+	
+	open (DUMP, ">>$out_file"); 
+	#&debugger_print("Printing to a file $out_file");
+	foreach my $names (sort keys %tmp_hash) {
+		my %hash = %{$tmp_hash{$names}};
+		foreach my $tags (sort keys %hash) {
+			my @array = @{ $hash{$tags} };
+			for (my $i=0; $i < scalar @array; $i++) {
+				print DUMP $names."\t".$tags."\t".$hash{$tags}[$i]."\n";
+				#&debugger_print($names."\t".$tags."\t".$hash{$tags}[$i]);
+	}}} close (DUMP);
+}
+
 
 sub printError_log {
 	my $message = $_[0]; my $error_log = $_[1];
@@ -106,7 +247,7 @@ sub printError_log {
 	close (ERR);
 }
 
-sub print_typeInput {
+sub printInput_type {
 
 print "\n\nType of input explanation:\nAccording to the type of NGS files provided several options are available but only one option would be provided: -type_input [int]
  1: A single file in Standard Flowgram Format (SFF), 454 file, containing all the reads of the different taxa accordingly tagged
@@ -122,7 +263,93 @@ print "\n\nType of input explanation:\nAccording to the type of NGS files provid
  
 }
 
-sub read_dir {
+sub qualfa2fq_modified_bwa {
+
+	##########################################################################################
+	##  This is a modified version of the perl script provided in the bwa-0.7.8 package		##	
+	## 	to convert fasta+qual files into fastq files										##
+	##	Jose Fco. Sanchez Herrero, 06/05/2014 jfsanchezherrero@ub.edu						##
+	##########################################################################################
+	
+	my ($fhs, $fhq, $q, $a);
+	# fasta = $_[0], qual = $_[1]
+	my $taxa_name = $_[2];
+	my $name = $_[3];
+	my $file_type = $_[4];
+	
+	my @temp_name = split ("fasta", $_[0]);
+	my $fastq_file; my $bool_change_name = 0; my $pair;
+
+	my $codeReturn = DOMINO::check_ID_length($_[0], "fasta");
+	my ($pairReturn, $type);
+	if ($file_type eq "Illumina_pair_end" || $file_type eq "Illumina_pair_end_multiple_fastq") {
+		($pairReturn, $type) = DOMINO::check_paired_file($_[0], "fasta");
+		#print "File: $_[0]\tPair: ".$pairReturn."\t"."Type: ".$type."\n";
+		if ($pairReturn eq "L" ) { 
+			$codeReturn = 0; ## Force to rewrite seq					
+			#&debugger_print("Lets change id $_[0] : pair was $pairReturn");
+		} elsif ($pairReturn eq "R") { 
+			$codeReturn = 0; ## Force to rewrite seq
+			#&debugger_print("Lets change id $_[0] : pair was $pairReturn");
+		} # else {
+			## There is no need to change file according to pair
+	}
+	if ($codeReturn == 0) { $bool_change_name = 1; }	
+	if ($file_type eq "Illumina_pair_end" || $file_type eq "Illumina_pair_end_multiple_fastq") {
+		($pair, $type) = DOMINO::check_paired_file($_[0], "fasta"); #&debugger_print("Pair: ".$pair."\t"."Type: ".$type);
+	}
+	if ($name) { $fastq_file = $name; } else { $fastq_file = $temp_name[0]."fastq";}
+
+	## Writing
+	open (FASTQ_out, ">$fastq_file");	
+	open($fhs, ($_[0])) or die ("Unable to open $_[0] file"); #fasta_file
+	open($fhq, ($_[1])) or die ("Unable to open $_[1] file"); #qual_file
+	my $int=0;
+	print "+ Generating a fastq file $fastq_file now...\n";
+	$/ = ">"; <$fhs>; <$fhq>; $/ = "\n";
+	while (<$fhs>) {
+		my $id = <$fhq>;
+  		$/ = ">";
+  		$a = <$fhs>; 
+  		$q = <$fhq>;
+  		chomp($q); chomp($a);
+		my @array_seq = split ("\n", $a);
+		my $seq;
+		for (my $i = 0; $i < scalar @array_seq; $i++) { $seq .= $array_seq[$i]; }
+		my @array_qual = split (" ", $q);
+		my $qual;
+		for (my $j = 0; $j < scalar @array_qual; $j++) {
+			if ($array_qual[$j] =~ /\d+/) {
+				if ($array_qual[$j] > 80) { $array_qual[$j] = $array_qual[$j] - 30; }
+				my $qual_tmp = $array_qual[$j];
+				$qual_tmp =~ s/(\d+)/chr($1+33)/eg;	
+				$qual .=$qual_tmp;
+		}}
+		if ($bool_change_name == 1) {
+			$int++; my $id_new = "Seq_".$int."_".$taxa_name;
+			my $new_pair;
+			if ($pair) { 
+				if ($pair eq "L" ) { $new_pair = 1;					
+				} elsif ($pair eq "R") { $new_pair = 2;					
+				} else { $new_pair = $pair; }
+				# /1|/2 or 1:N|2:N
+				$id_new .= "/".$new_pair;
+			}
+			if (length($id_new) > 40) {
+				$id_new = "Seq_".$int;
+				if ($pair) { $id_new .= "/".$new_pair; }
+			}
+			print FASTQ_out "\@".$id_new."\n".$seq."\n+\n".$qual."\n";
+		} else { 
+			print FASTQ_out "\@".$id.$seq."\n+\n".$qual."\n";
+		}
+		$/ = "\n";
+	} close($fhs); close($fhq); close(FASTQ_out);
+	$/ = "\n"; ## Telling Perl where a new line starts
+	return $fastq_file;
+}
+
+sub readDir {
 	my $dir = $_[0];
 	opendir(DIR, $dir) or die "ERROR: Can not open folder $dir..."; ## FIX ADD TO ERROR-LOG
 	my @dir_files = readdir(DIR);
@@ -130,10 +357,117 @@ sub read_dir {
 	return $array_ref;
 }
 
+sub readFASTA_hash {
+
+	my $file = $_[0];
+	my %hash;
+	open(FILE, $file) || die "Could not open the $file ...\n";
+	$/ = ">"; ## Telling perl where a new line starts
+	while (<FILE>) {		
+		next if /^#/ || /^\s*$/;
+		chomp;
+    	my ($titleline, $sequence) = split(/\n/,$_,2);
+    	next unless ($sequence && $titleline);
+    	$hash{$titleline} = $sequence;
+	}
+	close(FILE);
+	$/ = "\n";
+	my $hashRef = \%hash;
+	return $hashRef;
+}
+
+sub readFASTA_hashLength {
+
+	my $file = $_[0];
+	my %hash;
+	my $counter;
+	my $message;
+	open(FILE, $file) || die "Could not open the $file ...\n";
+	$/ = ">"; ## Telling perl where a new line starts
+	while (<FILE>) {		
+		next if /^#/ || /^\s*$/;
+		chomp;
+    	my ($titleline, $sequence) = split(/\n/,$_,2);
+    	next unless ($sequence && $titleline);
+    	$titleline =~ s/ /\t/g;
+    	my @array_titleline = split("\t",$titleline);    	
+		chomp $sequence;
+		$sequence =~ s/\s+//g;
+		$sequence =~ s/\r//g;
+		$titleline =~ s/\r//g;
+   		my $size = length($sequence);
+	   	$hash{$array_titleline[0]} = $size;
+	   	$counter++;
+	   	
+   		my $length;
+   		my $same_counter = 0;
+	   	if ($counter == 10) {
+	   		my @ids = keys %hash;
+			for (my $j=0; $j < scalar @ids; $j++) {
+				if ($hash{$ids[0]} == $hash{$ids[$j]}) {
+					$length = $hash{$ids[$j]}; $same_counter++;
+		}}}
+		## There is no need to continue if all the reads are the same
+		if ($same_counter > 5) { 
+			$message = "Fixed size for reads in $file -- $length";
+			my %return = ("UNDEF" => $length); 
+			return (\%return, $message); 
+		} 
+	}
+	close(FILE); $/ = "\n"; 
+	$message = "Different sequence lengths";
+	return (\%hash, $message);
+}
+
+sub readFASTQ_IDSfile {
+	
+	my $file = $_[0];
+	my %hash;		
+	open (F1, "$file") or &printError("Could not open file $file") and exit();
+	while(<F1>) {
+		my @Read = ();
+		chomp(my $id = $_);
+		last if($id=~ /^\n$/);
+
+		## Read each entry of the FASTQ file; 1) @Seq_id 2) Sequence 3) +Seq_id  4) Qual
+		for(my $i=0; $i<3; $i++) { 
+			$Read[$i] = <F1>;
+		}
+		chomp(my $QualLine = $Read[2]);
+		chomp(my $SeqLine = $Read[0]);
+		my $pair; my $seq_id;
+		if ($id =~ /(.*)(\/\d+)/) { $seq_id = $1; $pair = $2; }
+		$hash{$seq_id}++;
+	}
+	close(F1);	
+	my $hashRefreturn = \%hash;
+	return $hashRefreturn;
+}
+
+sub readFASTA_IDSfile {
+
+	my $file = $_[0];
+	my %hash;
+	open(FILE, $file) || die "Could not open the $file ...\n";
+	$/ = ">"; ## Telling perl where a new line starts
+	while (<FILE>) {		
+		next if /^#/ || /^\s*$/;
+		chomp;
+    	my ($titleline, $sequence) = split(/\n/,$_,2);
+    	next unless ($sequence && $titleline);
+    	$titleline =~ s/ /\t/g;
+    	my @array_titleline = split("\t",$titleline);    	
+		chomp $sequence;
+		$sequence =~ s/\s+//g;
+		$sequence =~ s/\r//g;
+		$titleline =~ s/\r//g;
+	   	$hash{$array_titleline[0]}++;
+	}
+	close(FILE); $/ = "\n"; 
+	return \%hash;
+}
+
 sub time_stamp { return "[ ".(localtime)." ]"; }
-
-
-
 
 ##### TODO
 
@@ -214,25 +548,6 @@ sub fasta_file_splitter {
 		close(OUT); last if eof(FH);
 	}
 	close(FH);
-}
-
-sub read_FASTA_hash {
-
-	my $file = $_[0];
-	my %hash;
-	open(FILE, $file) || die "Could not open the $file ...\n";
-	$/ = ">"; ## Telling perl where a new line starts
-	while (<FILE>) {		
-		next if /^#/ || /^\s*$/;
-		chomp;
-    	my ($titleline, $sequence) = split(/\n/,$_,2);
-    	next unless ($sequence && $titleline);
-    	$hash{$titleline} = $sequence;
-	}
-	close(FILE);
-	$/ = "\n";
-	my $hashRef = \%hash;
-	return $hashRef;
 }
 
 sub seq_counter {

@@ -44,15 +44,12 @@ use FindBin;
 use lib $FindBin::Bin."/lib";
 
 BEGIN {
-	require List::Uniq;
-	use List::Uniq qw(uniq);
+	require DOMINO;
+	require List::Uniq; use List::Uniq qw(uniq);
 	require File::Copy; 
-	require File::Find;
-	use File::Find qw(find);			
-	require File::Path;
-	use File::Path qw(remove_tree);
-	require Cwd;
-	use Cwd qw(abs_path);  
+	require File::Find; use File::Find qw(find);			
+	require File::Path; use File::Path qw(remove_tree);
+	require Cwd; use Cwd qw(abs_path);  
 	require Parallel::ForkManager;
 }
 ## TODO: Write a debug message if importing any module fails
@@ -61,9 +58,13 @@ BEGIN {
 ##################################
 ##	Initializing some variables	##
 ##################################
-my ($helpAsked, $job, $type_job, $reference_fasta_file, $hirep, @fastq_files, 
-$avoidDelTMPfiles, $file_type, $cap3flag, %cap3files, %taxa_hash, @user_files, 
-$noOfProcesses, $version, %files_used, $manual, $noClip, $abs_folder, $mrs, $debugger, $flagSpades,
+my ($helpAsked, %domino_files, $avoidDelTMPfiles, $file_type, $cap3flag,
+$manual, $abs_folder, $mrs, $debugger, $flagSpades, $noOfProcesses, $version,
+
+@fastq_files, 
+ %cap3files, @user_files, 
+%files_used, 
+
 @CAP3_directories, $DOMINO_files, $overlap_CAP3, $similar_CAP3, $user_files, $further_information,
 @file_abs_path, @file_names, $step_time, %nucleotides, $total_Contigs_all_sets);
 
@@ -504,7 +505,8 @@ if (!$abs_folder || !$file_type) {
 	Pod::Usage::pod2usage(-exitstatus => 0, -verbose => 0 );
 } elsif ($user_files) {
 	if (!$file_type) {
-		print "Some parameters are missing\tPlease provide type of file\n"; &dieNicely();
+		print "Some parameters are missing\tPlease provide type of file\n"; DOMINO::printInput_type();
+		DOMINO::dieNicely();
 }}
 
 ## Using default options if not provided
@@ -537,15 +539,12 @@ if (-e $param_Detail_file) {
 	File::Copy::move($param_Detail_file, $param_Detail_file."_old_".$random_number);
 } elsif (-e $error_log) {
 	File::Copy::move($error_log, $error_log."_old_".$random_number);
-}	
-																							  
+}
 if ($user_files) {
 	## Check files absolute path and name
 	for (my $i = 0; $i < scalar @user_files; $i++) {
 		my $tmp = abs_path($user_files[$i]);
-		push (@file_abs_path, $tmp);
-		my @tmp_file_path = split ("/", $tmp);
-		push (@file_names, $tmp_file_path[-1]);		
+		push (@{ $domino_files{"USER_FILES"} }, $tmp);
 }}
 
 ## Generate directories
@@ -555,15 +554,15 @@ if (-d $dirname_tmp) { File::Copy::move($dirname_tmp, $dirname_tmp."_old_".$rand
 mkdir $dirname_tmp, 0755;
 
 ## Start the Analysis
-print "\n"; &print_Header("","+");  &print_Header(" Analysis Started ","+"); &print_Header("","+"); print "\n";
+print "\n"; DOMINO::printHeader("","+");  DOMINO::printHeader(" Analysis Started ","+"); DOMINO::printHeader("","+"); print "\n";
 my $start_time = $step_time = time;
-&print_DOMINO_details("Starting the process: [ ".(localtime)." ]\n\n");
+DOMINO::printDetails("Starting the process: [ ".(localtime)." ]\n\n", $param_Detail_file);
 # Checking user options
-&print_Header(" Input File and Parameter Preprocessing ","#");
-&print_DOMINO_details("\n+ Output Directory: ".$dirname." ....OK\n");
+DOMINO::printHeader(" Input File and Parameter Preprocessing ","#");
+DOMINO::printDetails("\n+ Output Directory: ".$dirname." ....OK\n", $param_Detail_file);
 
 ## If using SPADES for assembly instead of MIRA
-my ($assembly_directory, $assembly_directory_abs_path, $CAP3_directory, $CAP3_directory_abs_path);
+my ($assembly_directory, $CAP3_directory, $CAP3_directory_abs_path);
 if ($flagSpades) {
 	$assembly_directory = "spades_assemblies";
 } else {
@@ -572,7 +571,7 @@ if ($flagSpades) {
 		$CAP3_directory = "CAP3_assemblies"; mkdir $CAP3_directory, 0755;
 		$CAP3_directory_abs_path = abs_path($CAP3_directory); 
 }}
-$assembly_directory_abs_path = abs_path($assembly_directory);
+my $assembly_directory_abs_path = abs_path($assembly_directory);
 mkdir $assembly_directory_abs_path, 0755; chdir $assembly_directory_abs_path;
 
 ##################################
@@ -580,112 +579,104 @@ mkdir $assembly_directory_abs_path, 0755; chdir $assembly_directory_abs_path;
 ##################################
 if ($input_options{$file_type}) {
 	if ($file_type == 1 || $file_type == 2 || $file_type == 4|| $file_type == 6) {
-		&printError("Input file type provided not supported, please read the documentation..."); &dieNicely();	
+		&printError("Input file type provided not supported, please read the documentation..."); 
+		DOMINO::printInput_type(); DOMINO::dieNicely();	
 	}
 } else {
 	&printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n");
-	&printError("According to the type of NGS files provided several options are available but only one option would be provided: -type_input [int]
- 1: A single file in Standard Flowgram Format (SFF), 454 file, containing all the reads of the different taxa accordingly tagged
- 2: FASTQ files coming from 454 Roche. A single file containing all the reads of the different taxa accordingly tagged
- 3: Multiple FASTQ files coming from 454 Roche. Each file contains each taxa reads. 
- 4: FASTQ file from Illumina single end, containing all the reads of the different taxa accordingly tagged
- 5: Multiple FASTQ file from Illumina single end. Each file contains each taxa reads. 
- 6: A single pair of FASTQ files from Illumina paired-end sequencing: Each pair would contain all the reads of the different taxa accordingly tagged
- 7: Multiple FASTQ files from Illumina paired-end: Each pair of files containing each taxa left and right reads respectively
- 
- During the assembly stage, only separate files for each taxa is valid, so only options 3, 5 and 7 could be provided\n\n");
-	Pod::Usage::pod2usage("Try 'perl $0 -man' for more information\n");	exit();
+	DOMINO::printInput_type(); DOMINO::dieNicely();
 }
 
 if ($user_files) { ## If users provides files for the assembly either than the DOMINO_clean_data
 	if (scalar (@user_files) == 0 || !$file_type) {
-		&printError("No input files provided"); &dieNicely();		
+		&printError("No input files provided"); DOMINO::printInput_type(); DOMINO::dieNicely();		
 	} else {
 		## Checking files
-		&print_DOMINO_details("+ Type of file(s): Option $file_type : $input_options{$file_type} ...OK\n");
-		&print_DOMINO_details("+ User files option provided: ....OK\n");
-		&print_DOMINO_details("+ Checking file(s) user provided:\n");
+		DOMINO::printDetails("+ Type of file(s): Option $file_type : $input_options{$file_type} ...OK\n", $param_Detail_file);
+		DOMINO::printDetails("+ User files option provided: ....OK\n", $param_Detail_file);
+		DOMINO::printDetails("+ Checking file(s) user provided:\n", $param_Detail_file);
 		
-		if ($file_type == 1) {
-			&printError("Please provide a 454 Roche SFF file extracted into multiple FASTQ files tagged with MID ids like 'Seq_56-328-1_MID1_sp1'"); &dieNicely();
-		} elsif ($file_type == 2) {
-			&printError("Please provide a multiple FASTQ files containing each taxa read accordingly tagged with MID ids like 'Seq_56-328-1_MID1_sp1'"); &dieNicely();
-		} elsif ($file_type == 3) {
-			if (scalar (@file_abs_path) == 1) {
-				&printError("Please provide multiple 454 Roche FASTQ file containing each of the taxa reads"); &dieNicely();
-			} else {
-				for (my $i = 0; $i < scalar @file_abs_path; $i++) {
-					&check_file($file_abs_path[$i]);
-					system("ln -s $file_abs_path[$i]");
-					push (@fastq_files, $file_names[$i]);
-			}}
-		} elsif ($file_type == 4) {
-			&printError("Please provide multiple Illumina FASTQ files containing each taxa reads accordingly tagged with MID ids like 'Seq_56-328-1_MID1_sp1'"); &dieNicely();
-		} elsif ($file_type == 5) { 
-			if (scalar (@file_abs_path) == 1) {
-				&printError("Please provide multiple Illumina FASTQ files containing containing each of the taxa reads"); &dieNicely();
-			} elsif (scalar (@file_abs_path) != 1) {
-				for (my $i = 0; $i < scalar @file_abs_path; $i++) {
-					&check_file($file_abs_path[$i]);
-					system("ln -s $file_abs_path[$i]");
-					push (@fastq_files, $file_names[$i]);
-		}}} elsif ($file_type == 6) {
-			&printError("type_file == 6 is not valid. Please provide multiple Illumina Paired-End FASTQ files for each taxa (type_file 7) (2 files for specie)");
-			&printFormat_message(); &dieNicely();
-		} elsif ($file_type == 7) {  ## Specify user to input left-right for each taxa: -input sp1_left.fastq -input sp1_right.fastq -input sp2_left.fastq -input sp2_right.fastq
-			if (scalar (@file_abs_path) == 2 ) {
-				&printError("type_file == 6 is not valid. Please provide multiple Illumina Paired-End FASTQ files for each taxa (type_file 7) (2 files for specie)");
-				&printFormat_message(); &dieNicely();
-			} elsif (scalar (@file_abs_path) != 2) {
-				for (my $i = 0; $i < scalar @file_abs_path; $i++) {
-					&check_file($file_abs_path[$i]);
-					system("ln -s $file_abs_path[$i]");
-					push (@fastq_files, $file_names[$i]);
-		}}} else { ## Option provided is not recognized or mispelled
-			&printError("Please provide a valid file type option"); &dieNicely();
-}}} else {
+		my @file_abs_path_user = @{$domino_files{"USER_FILES"}};
+		if (scalar (@file_abs_path_user) == 1) {
+			if ($file_type == 3) { 
+				&printError("Please provide multiple 454 Roche FASTQ file containing each of the taxa reads");
+			} elsif ($file_type == 5) { 
+				&printError("Please provide multiple Illumina FASTQ files containing containing each of the taxa reads");
+			} elsif ($file_type == 7) {  ## Specify user to input left-right for each taxa: -input sp1_left.fastq -input sp1_right.fastq -input sp2_left.fastq -input sp2_right.fastq
+				&printError("Please provide multiple Illumina Paired-End FASTQ files for each taxa (type_file 7) (2 files for specie)");
+			}
+			DOMINO::printInput_type(); DOMINO::dieNicely();	
+		} else {
+			for (my $i = 0; $i < scalar @file_abs_path_user; $i++) {
+				&check_file($file_abs_path[$i]);
+				system("ln -s $file_abs_path[$i]");
+	}}}
+} else {
 	## Go to DOMINO_clean_data and get the files
-	&print_DOMINO_details("+ Type of file(s): Option $file_type : $input_options{$file_type} ...OK\n+ No user files provided: Default DOMINO cleaning files ...OK\n+ Get the clean FASTQ files generated in the cleaning step ...OK\n");
-	&get_fastq_files();	
-	for (my $i = 0; $i < scalar @file_abs_path; $i++) { &check_file($file_abs_path[$i]); }
+	DOMINO::printDetails("+ Type of file(s): Option $file_type : $input_options{$file_type} ...OK\n+ No user files provided: Default DOMINO cleaning files ...OK\n+ Get the clean FASTQ files generated in the cleaning step ...OK\n", $param_Detail_file);
+	my $clean_folder = DOMINO::get_earliest("clean_data", $path_abs_folder);
+	if ($clean_folder eq 'NO') { &printError("No Clean Data folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely(); }
+	my $files_ref = DOMINO::readDir($clean_folder);
+	my $flag=0;
+	for (my $i = 0; $i < scalar @$files_ref; $i++) { if ($$files_ref[$i] eq "preRepeatScanner_DOMINO_clean_data") { $flag = 1;} }
+	if ($flag == 1) {
+		print "+ A pre assembly folder correcting the repeats have been, using the original clean files...\n";
+		my $pre_assembly_dir = $clean_folder."/preRepeatScanner_DOMINO_clean_data";
+		my $pre_files_ref =  DOMINO::readDir($pre_assembly_dir);
+		for (my $h=0; $h < scalar @$pre_files_ref; $h++) {
+			if ($$pre_files_ref[$h] eq ".DS_Store" || $$pre_files_ref[$h] eq "." || $$pre_files_ref[$h] eq ".." ) { next; }
+			File::Copy::move($pre_assembly_dir."/".$$pre_files_ref[$h], $clean_folder);
+		}
+		remove_tree($pre_assembly_dir);
+	}
+	for (my $i = 0; $i < scalar @$files_ref; $i++) {
+		if ($$files_ref[$i] eq ".DS_Store" || $$files_ref[$i] eq "." || $$files_ref[$i] eq ".." ) { next; }
+		if ($$files_ref[$i] =~ /.*MIDtag\.fastq/) { next; }
+		if ($$files_ref[$i] =~ /.*id\-.*fastq/) {
+			my $file_path = $clean_folder."/".$$files_ref[$i];	
+			&check_file($file_path); system("ln -s $file_path");		
+	}}
 }
-print "\n"; &time_stamp();
-if (scalar @file_abs_path == 0) { &printError("No clean files were provided for the assembly...\n"); &printFormat_message(); &dieNicely();}
+print "\n"; &time_log();
+&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
+
 
 ## Check if paired end files provided, all pairs have been correctly provided
-if ($file_type == 7) {
-	foreach my $keys (keys %taxa_hash) {
-		my $sum_pairs; my $files;
-		for (my $i=0; $i < scalar @{ $taxa_hash{$keys} }; $i++) {
-			my $string2split = $taxa_hash{$keys}[$i];
-			my @array = split("----", $string2split);
-			my $pair = $array[0]; my $file = $array[1];
-			$files .= $file."\n"; $sum_pairs += $pair;
-		}
-		if ($sum_pairs ne 3) { &printError("Wrong pair of FASTQ files provided. Please check pair of files corresponding to $keys:\n$files\n"); &dieNicely(); }
+if ($file_type eq 7) {
+	foreach my $keys (keys %domino_files) {
+		my @species_files = @{$domino_files{$keys}{'original'}};
+		if (scalar @species_files != 2) {
+			&printError("Wrong pair of FASTQ files provided. Please check pair of files corresponding to $keys:\n"); DOMINO::dieNicely();
+		} else { &debugger_print("OK: $keys\n\n"); }
 }}
+
+foreach my $keys (keys %domino_files) {
+	my $dir = $assembly_directory_abs_path."/".$keys."_assembly";
+	push (@{ $domino_files{$keys}{'DIR'} }, $dir);
+}
+&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 
 ###########################
 ## Printing user options ##
 ###########################
 ## Print information of the input parameters
-&print_DOMINO_details("+ Threads: ".$noOfProcesses." ...OK\n");
-&print_DOMINO_details("+ Minimum relative Score (mrs) to use in MIRA assembly: $mrs ...OK\n");
+DOMINO::printDetails("+ Threads: ".$noOfProcesses." ...OK\n", $param_Detail_file);
+DOMINO::printDetails("+ Minimum relative Score (mrs) to use in MIRA assembly: $mrs ...OK\n", $param_Detail_file);
 if ($cap3flag) {
-	&print_DOMINO_details("+ CAP3 would be used in a second round of assembly ...OK\n");
-	&print_DOMINO_details("+ Similarity between reads for CAP3 assembly: $similar_CAP3 ...OK\n");
-	&print_DOMINO_details("+ Overlapping between reads for CAP3 assembly: $overlap_CAP3 ...OK\n");
+	DOMINO::printDetails("+ CAP3 would be used in a second round of assembly ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Similarity between reads for CAP3 assembly: $similar_CAP3 ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Overlapping between reads for CAP3 assembly: $overlap_CAP3 ...OK\n", $param_Detail_file);
 } else { 
-if ($flagSpades) { &print_DOMINO_details("+ MIRA has been disabled, SPAdes would perform the assembly ...OK\n");	
-} else { &print_DOMINO_details("+ CAP3 has been disabled, only MIRA would perform the assembly ...OK\n");
+if ($flagSpades) { DOMINO::printDetails("+ MIRA has been disabled, SPAdes would perform the assembly ...OK\n", $param_Detail_file);	
+} else { DOMINO::printDetails("+ CAP3 has been disabled, only MIRA would perform the assembly ...OK\n", $param_Detail_file);
 }}
 unless ($avoidDelTMPfiles) {
-	&print_DOMINO_details("+ Deleting of temporary files would be done ...OK\n");
-} else { &print_DOMINO_details("+ Deleting temporary files would be avoid ...OK\n"); }
+	DOMINO::printDetails("+ Deleting of temporary files would be done ...OK\n", $param_Detail_file);
+} else { DOMINO::printDetails("+ Deleting temporary files would be avoid ...OK\n", $param_Detail_file); }
 
 ## Print info about where to print info and error
-&print_DOMINO_details("\n+ Parameters details would be print into file: $param_Detail_file...\n");
-&print_DOMINO_details("+ Errors occurred during the process would be print into file: $error_log...\n\n");
+DOMINO::printDetails("\n+ Parameters details would be print into file: $param_Detail_file...\n", $param_Detail_file);
+DOMINO::printDetails("+ Errors occurred during the process would be print into file: $error_log...\n\n", $param_Detail_file);
 
 ## Assembly
 if ($flagSpades) {
@@ -700,7 +691,7 @@ if ($flagSpades) {
 	my $memory_server_file = $assembly_directory_abs_path."/memory_server.txt";
 	my $total_available;
 	if (-e -r -s $memory_server_file) {
-		&print_Header(" Memory RAM Usage retrieval ","#");
+		DOMINO::printHeader(" Memory RAM Usage retrieval ","#");
 		my %memory_hash;
 		open (MEM, $memory_server_file);
 		while (<MEM>) {
@@ -732,9 +723,9 @@ if ($flagSpades) {
 		## Optimize CPUs/taxa
 		my $noOfProcesses_SPAdes;
 		my $subProcesses;
-		my $amount_taxa = scalar keys %taxa_hash;
+		my $amount_taxa = scalar keys %domino_files;
 		if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
-			unless ($noOfProcesses >= 8) { &printError("To make the most of your server and SPAdes please select more CPUs using -p option") and &dieNicely();}
+			unless ($noOfProcesses >= 8) { &printError("To make the most of your server and SPAdes please select more CPUs using -p option") and DOMINO::dieNicely();}
 			# Get number of taxa to assembly
 			if ($total_available > 500) {
 				$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
@@ -752,7 +743,7 @@ if ($flagSpades) {
 
 			print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa\ninto different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
 				
-			&print_Header(" SPAdes Assembly of each taxa ","#");
+			DOMINO::printHeader(" SPAdes Assembly of each taxa ","#");
 			## Call spades for the assembly and send threads for each taxa
 	
 			my $int_taxa = 0;
@@ -762,219 +753,239 @@ if ($flagSpades) {
 				print "\n\n** Child process finished with PID $pid and exit code: $exit_code\n\n"; 
 			} );
 			$pm->run_on_start( sub { my ($pid,$ident)=@_; print "\n\n** SPAdes assembly started with PID $pid\n\n"; } );
-			&debugger_print("Ref", \%taxa_hash);
-			foreach my $keys (sort keys %taxa_hash) {
+
+			foreach my $keys (sort keys %domino_files) {
+				next if ($keys eq 'original'); 
+				my %files_threads;
 				my $pid = $pm->start($int_taxa) and next; print "\nSending child process for SPAdes assembling $keys\n\n";
 				$int_taxa++;
-				my @files = ("", "");
-				if ($file_type == 7) { ## illumina_PE
-					for (my $i=0; $i < scalar @{ $taxa_hash{$keys} }; $i++) {
-						my $string2split = $taxa_hash{$keys}[$i];
-						my @array = split("----", $string2split);
-						if ($array[0] == 1) { $files[0] = $array[1];
-						} else { $files[1] = $array[1]; }  
-				}}
-	
+		
 				## Send SPAdes command				
-				my $assembly_dir = $keys."_assembly";
+				my $assembly_dir = $domino_files{$keys}{'DIR'}[0];
 				my $spades_path = "python ".$scripts_path."SPAdes-3.8.1-Linux/bin/spades.py -o ".$assembly_dir." ";
 				if ($file_type == 7) { ## illumina_PE
-					$spades_path .= "-1 $files[0] -2 $files[1] ";				
-				} else { $spades_path .= "-s $taxa_hash{$keys} ";}
-				$spades_path .= "-t $noOfProcesses_SPAdes";
+					$spades_path .= "-1 ".$domino_files{$keys}{'original'}[0]." -2 ".$domino_files{$keys}{'original'}[1];				
+				} else { 
+					$spades_path .= "-s ".$domino_files{$keys}{'original'}[0];
+				}
+				$spades_path .= " -t $noOfProcesses_SPAdes";
 				print "Sending command:\n".$spades_path."\n";
 				unless ($debugger) {
 					$spades_path .= " > /dev/null"; ## discarding SPAdes output		
 				}
 				my $system_call = system($spades_path);
 				if ($system_call != 0) {
-					&printError("Something happened when calling SPAdes for assembly reads..."); &dieNicely();
-				} print "\n"; &time_stamp();
+					&printError("Something happened when calling SPAdes for assembly reads..."); DOMINO::dieNicely();
+				} print "\n"; &time_log();
 	
 				## Get contig file
 				my $contigs_file = $assembly_dir."/contigs.fasta";
 				my $new_contigs_file = $dirname."/assembly_id-".$keys.".contigs.fasta";
+				$files_threads{$keys}{'FINAL'} = $new_contigs_file;
 				File::Copy::move($contigs_file, $new_contigs_file);
 	
 				## Finish assembly and generate statistics
-				&Contig_Stats($new_contigs_file);
+				my $stats = &Contig_Stats($new_contigs_file); 
+				$files_threads{$keys}{'stats'} = $stats;
+
+				&debugger_print("DOMINO threads Assembly files"); &debugger_print("Ref", \%files_threads);
+				my $spades_dump_hash = $assembly_dir."/dumper_files_threads.txt";
+				DOMINO::printDump(\%files_threads, $spades_dump_hash);
+				
 				$pm->finish($int_taxa); # pass an exit code to finish
 			}
 			$pm->wait_all_children; print "\n** All Assembly child processes have finished...\n\n";		
+	
+			## Check each taxa dump file conainting file info
+			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+			&debugger_print("Retrieve info from files");
+			foreach my $taxa (keys %domino_files) {
+				if ($domino_files{$taxa}{'DIR'}) {
+					my $dump_file = $domino_files{$taxa}{'DIR'}[0]."/dumper_files_threads.txt";
+					open (DUMP_IN, "$dump_file");
+					while (<DUMP_IN>) {
+						my $line = $_; chomp $line;
+						my @array = split("\t", $line);
+						&debugger_print($line);
+						push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
+					}
+					close (DUMP_IN);
+			}}
+			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
 	
 			#######################################
 			### Cleaning or renaming some files	###
 			#######################################
 			print "\n\n";
 			unless ($avoidDelTMPfiles) {
-				&print_Header(" Cleaning all the intermediary files generated ","#"); 
+				DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
 				&clean_assembling_folders(); print "\n\n";
 			}
 	
 			#######################
 			### Finish the job	###
 			#######################
-			&finish_time_stamp(); print "\n Job done succesfully, exiting the script\n"; exit();
-		} else { &printError("Only $total_available GiB available of memory RAM, please bear in mind SPAdes would not complete the task...") and &dieNicely();}	
-	} else { &printError("There was an error when retrieving Memory RAM information...\n\nAre you sure this is a linux sever?...") and &dieNicely();}
+			&finish_time_log(); print "\n Job done succesfully, exiting the script\n"; exit();
+		} else { &printError("Only $total_available GiB available of memory RAM, please bear in mind SPAdes would not complete the task...") and DOMINO::dieNicely();}	
+	} else { &printError("There was an error when retrieving Memory RAM information...\n\nAre you sure this is a linux sever?...") and DOMINO::dieNicely();}
 } else {
 	
 	#########################################################################
 	# 	MIRA ASSEMBLY STEP OF THE READS OF EACH TAXA			#
 	#########################################################################
-	print "\n"; &print_Header("","#"); &print_Header(" MIRA Assembly Step for each taxa ","#"); &print_Header("","#"); print "\n";
-	print "\n"; &print_Header(" Generating an assembly for each taxa ", "%"); print "\n";
-	&debugger_print("Ref", \%taxa_hash);
-	foreach my $keys (sort keys %taxa_hash) {
-		my ($MIRA_manifest_file, @fastq_files_this_taxa, $name_of_project);
-
-		if ($file_type == 7) {
-			my @files = ("", "");
-			for (my $i=0; $i < scalar @{ $taxa_hash{$keys} }; $i++) {
-				my $string2split = $taxa_hash{$keys}[$i];
-				my @array = split("----", $string2split);
-				if ($array[0] == 1) { $files[0] = $array[1];
-				} else { $files[1] = $array[1]; }  
-			}
-			($MIRA_manifest_file, $name_of_project)  = &Generate_manifest_file_pair_end( $files[0], $files[1]);
+	print "\n"; DOMINO::printHeader("","#"); DOMINO::printHeader(" MIRA Assembly Step for each taxa ","#"); DOMINO::printHeader("","#"); print "\n";
+	print "\n"; DOMINO::printHeader(" Generating an assembly for each taxa ", "%"); print "\n";
+	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+	foreach my $keys (sort keys %domino_files) {
+		my $MIRA_manifest_file;
+		my @species_files = @{$domino_files{$keys}{'original'}};
+		
+		if (scalar @species_files == 2) {
+			$MIRA_manifest_file = &Generate_manifest_file($keys, 'Illumina', $species_files[0], $species_files[1]);	
 		} elsif ($file_type == 5) {		
-			$MIRA_manifest_file = &Generate_manifest_file($taxa_hash{$keys}, "Illumina");
-			push (@fastq_files_this_taxa, $taxa_hash{$keys});
+			$MIRA_manifest_file = &Generate_manifest_file($keys, 'Illumina', $species_files[0]);	
 		} elsif ($file_type == 3) {
-			$MIRA_manifest_file = &Generate_manifest_file($taxa_hash{$keys}, "454");		
-			push (@fastq_files_this_taxa, $taxa_hash{$keys});
-		} 
-			
+			$MIRA_manifest_file = &Generate_manifest_file($keys, '454', $species_files[0]);	
+		}
+		
 		my $abs_path_manifest_file = $assembly_directory_abs_path."/".$MIRA_manifest_file;
+		push (@{ $domino_files{$keys}{'manifest'}}, $abs_path_manifest_file);
+		
 		print $abs_path_manifest_file."\n- Calling MIRA now for $keys assembly...\n- It might take a while...\n";
 		my $mira_exe = $MIRA_exec." -t $noOfProcesses ".$abs_path_manifest_file;
-		if ($debugger) {
-			$mira_exe .= " 2> $error_log"; ## show on screen or maybe print to a file
-		} else {
-			$mira_exe .= " > /dev/null 2> $error_log"; ## discarding MIRA output		
+		if ($debugger) { $mira_exe .= " 2> $error_log"; ## show on screen or maybe print to a file
+		} else { $mira_exe .= " > /dev/null 2> $error_log"; ## discarding MIRA output
 		}
 	
-		print $mira_exe."\n\n";
-		my $system_call = system($mira_exe);
-		if ($system_call != 0) {
-			&printError("Something happened when calling MIRA for assembly reads..."); &dieNicely();
-		}print "\n"; &time_stamp();
-		
-		unless ($file_type == 7) {
-			if ($fastq_files_this_taxa[0] =~ /.*id\-(.*)\.fastq/) {
-				$name_of_project = $1;
-			}
-		}
-		my $folder = $name_of_project."_assembly";
-		my $fasta_file = $assembly_directory_abs_path."/".$folder."/".$name_of_project."_d_results/".$name_of_project."_out.unpadded.fasta";
-		my $qual_file = $assembly_directory_abs_path."/".$folder."/".$name_of_project."_d_results/".$name_of_project."_out.unpadded.fasta.qual";
-		my $contigs_file = $assembly_directory_abs_path."/assembly_id-".$name_of_project.".contigs-MIRA.fasta";
-		my $contigs_file_name = "assembly_id-".$name_of_project.".contigs-MIRA.fasta";
-		my $read_tag_list_file = $assembly_directory_abs_path."/".$folder."/".$name_of_project."_d_info/".$name_of_project."_info_readtaglist.txt";
-	
+		print $mira_exe."\n\n"; my $system_call = system($mira_exe);
+		if ($system_call != 0) { &printError("Something happened when calling MIRA for assembly reads..."); DOMINO::dieNicely(); }
+		print "\n"; &time_log();
+		push(@{ $domino_files{$keys}{'contigs_fasta'}}, $domino_files{$keys}{'DIR'}[0]."/".$keys."_d_results/".$keys."_out.unpadded.fasta");
+		push(@{ $domino_files{$keys}{'contigs_qual'}}, $domino_files{$keys}{'DIR'}[0]."/".$keys."_d_results/".$keys."_out.unpadded.fasta.qual");
+		push(@{ $domino_files{$keys}{'readTagList'}}, $domino_files{$keys}{'DIR'}[0]."/".$keys."_d_info/".$keys."_info_readtaglist.txt");
+		push(@{ $domino_files{$keys}{'contigsMIRA'}}, $domino_files{$keys}{'DIR'}[0]."/assembly_id-".$keys.".contigs-MIRA.fasta");
+
 		# Get path for qual and contigs files for CAP3 scaffolding if specified
-		$cap3files{$contigs_file_name} = $qual_file;	
+		#$cap3files{$contigs_file_name} = $qual_file;	
 	
 		## Obtain reads/contigs identified as repeats
-		my $array_ref = \@fastq_files_this_taxa;
-		&extractReadRepeats($read_tag_list_file, $array_ref, $fasta_file, $contigs_file, $assembly_directory_abs_path."/".$folder);
+		&extractReadRepeats($domino_files{$keys}{'readTagList'}[0], \@species_files, $domino_files{$keys}{'contigs_fasta'}[0], $domino_files{$keys}{'contigsMIRA'}[0], $domino_files{$keys}{'DIR'}[0]);
 		chdir $assembly_directory_abs_path;
-		
-		&print_Header(" Assembly finished for $keys ","#"); &time_stamp(); print "\n\n";
+		DOMINO::printHeader(" Assembly finished for $keys ","#"); &time_log(); print "\n\n";
 	}
-	print "\n\n";
-	&print_Header("","#"); &print_Header(" MIRA Assembly Step finished ","#");  &print_Header("","#"); print "\n\n";
+	print "\n\n"; DOMINO::printHeader("","#"); DOMINO::printHeader(" MIRA Assembly Step finished ","#");  DOMINO::printHeader("","#"); print "\n\n";
+	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
 	
 	if ($cap3flag) { print "\n\nGetting ready for scaffolding step using CAP3...\n"; }
 	## Generates folders and generates link for files of each taxa into them
-	
-	opendir(DIR, $assembly_directory_abs_path);
-	my @files = readdir(DIR);
-	for (my $i = 0; $i < scalar @files; $i++) {
-		if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-		unless (-d $files[$i]) { ## if a directory
-			if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-			my $MID_identifier;                     
-			if ($files[$i] =~ /(.*)id\-(.*)\.contigs\-MIRA\.fasta/) {
-				$MID_identifier = $2; 
-				my $fasta_file = $assembly_directory_abs_path."/".$files[$i];
-				my $new_fasta_file = $dirname."/".$1."id\-".$2.".contigs.fasta";
+	foreach my $taxa (keys %domino_files) {
+		
+		my $contigsMIRA_Fasta_file = $domino_files{$taxa}{'contigsMIRA'}[0];
+		my $FINAL_fasta_file = $dirname."/assembly_id-".$taxa.".contigs.fasta";			
+		push( @{ $domino_files{$taxa}{'FINAL'}}, $FINAL_fasta_file);
 					
-				if ($cap3flag) { # If cap3 is used for scaffolding move files and generate folders
-					my $qual_tmp_file = $cap3files{$files[$i]};
-					my $qual_file = $fasta_file.".qual";
-					print "Fetching qual values for $fasta_file\n";
-					my $hash_identifiers_ref = &read_FASTA_hash_length($fasta_file);
-					my %hash_identifiers = %{$hash_identifiers_ref};
-					$/ = ">"; ## Telling perl where a new line starts
-					open (QUAL, $qual_tmp_file);
-					open (OUT, ">$qual_file"); while (<QUAL>) {
-					next if /^#/ || /^\s*$/;
-					chomp;
-					my ($seq_id, $sequence) = split(/\n/,$_,2);
-					next unless ($sequence && $seq_id);
-					if ($hash_identifiers{$seq_id}) {
-						$seq_id = ">".$seq_id;
-					print OUT $seq_id."\n".$sequence."\n";                  
-					}} $/ = "\n";	close (QUAL); close (OUT);
+		if ($cap3flag) { # If cap3 is used for scaffolding move files and generate folders
+			my $qual_tmp_file = $domino_files{$taxa}{'contigs_qual'}[0];
+			my $contigsMIRA_qual_file = $domino_files{$taxa}{'contigsMIRA'}[0].".qual";
+			push (@{$domino_files{$taxa}{'contigsMIRA_qual'}}, $contigsMIRA_qual_file);
+			print "Fetching qual values for $contigsMIRA_Fasta_file\n";
+		
+			my $hash_identifiers_ref = DOMINO::readFASTA_IDSfile($contigsMIRA_Fasta_file);
+			my %hash_identifiers = %{$hash_identifiers_ref};
+			$/ = ">"; ## Telling perl where a new line starts
+			open (QUAL, $qual_tmp_file);
+			open (OUT, ">$contigsMIRA_qual_file");
+			while (<QUAL>) {
+				next if /^#/ || /^\s*$/;
+				chomp;
+				my ($seq_id, $sequence) = split(/\n/,$_,2);
+				next unless ($sequence && $seq_id);
+				if ($hash_identifiers{$seq_id}) {
+					print OUT ">".$seq_id."\n".$sequence;                  
+				}
+			} $/ = "\n";
+			close (QUAL); close (OUT);
 																	
-					## Generate directories
-					my $MID_directory = $CAP3_directory_abs_path."/".$MID_identifier;
-					unless (-d $MID_directory) {
-						mkdir $MID_directory, 0755;
-						push (@CAP3_directories, $MID_directory);
-					}                                               
-					system("ln -s $fasta_file $MID_directory/");
-					system("ln -s $qual_file $MID_directory/");                             
-				} else { &change_seq_names($fasta_file, $new_fasta_file, $MID_identifier);
-}}}}}
+			## Generate directories
+			my $MID_directory = $CAP3_directory_abs_path."/".$taxa;
+			unless (-d $MID_directory) { mkdir $MID_directory, 0755; }                                               
+			system("ln -s $contigsMIRA_Fasta_file $MID_directory/"); 
+			system("ln -s $contigsMIRA_qual_file $MID_directory/"); 
+			push(@{$domino_files{$taxa}{'CAP3_dir'}}, $MID_directory);
+			chdir $MID_directory;
+				
+			###########################################################################
+			###	cap3 Scaffolding of the contigs MIRA generated for each taxa	###
+			###########################################################################
+			print "\n\n"; DOMINO::printHeader("","#"); 
+			DOMINO::printHeader(" CAP3 Assembly Step Started ","#"); DOMINO::printHeader("","#"); print "\n\n";
+			
+			my @tmp_array = split("/", $contigsMIRA_Fasta_file);
+			my $fasta_name_contigsMIRA = $tmp_array[-1];
+			my $command_CAP3 = $CAP3_exec." ".$fasta_name_contigsMIRA." -o ".$overlap_CAP3." -p ".$similar_CAP3;
+			$command_CAP3 .= " 2> $error_log";
+			print $command_CAP3."\n"; my $system_CAP3 = system($command_CAP3);
+			if ($system_CAP3 != 0) { &printError("Some error happened when calling CAP3 for assembly reads..."); DOMINO::dieNicely(); }
+			
+			###########################################
+			### Get contigs and singlets assembled 	###
+			###########################################
+			## Get the contigs + singlets
+			my $singlets_file_CAP3 = $fasta_name_contigsMIRA.".cap.singlets";
+			push (@{$domino_files{$taxa}{'singletsCAP3'}}, $singlets_file_CAP3);
+			my $contigs_file_CAP3 = $fasta_name_contigsMIRA.".cap.contigs";
+			push (@{$domino_files{$taxa}{'contigsCAP3'}}, $contigs_file_CAP3);
 
+			my $tmp_fasta = "tmp.fasta"; open (OUT_fasta, ">$tmp_fasta"); 
+			open (CONTIGS, $contigs_file_CAP3); while (<CONTIGS>) { print OUT_fasta $_; } close (CONTIGS);
+			open (SINGLETS, $singlets_file_CAP3); while (<SINGLETS>) { print OUT_fasta $_; } close (SINGLETS);close (OUT_fasta);
 
+			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+			&change_seq_names($tmp_fasta, $FINAL_fasta_file, $taxa);
+			File::Copy::move($FINAL_fasta_file, $dirname);
+			print "\n"; &time_log();			
+			
+			#my $qual_file = $fasta_name.".qual";
+			#print "Fetching qual singlets for $singlets_file\n";
+			#my $hash_identifiers = DOMINO::readFasta_hash($qual_file);
+			#my $singlets_qual_file = $singlets_file.".qual";
+			#open (OUT_singlets, ">$singlets_file");
+			#open (FILE, $singlets_file) or &printError("Could not open file.") and DOMINO::dieNicely;
+			# Get the idenfitiers of the singlet file, all of them
+			#while (<FILE>) {
+			#	next if /^#/ || /^\s*$/;
+			#	chomp;
+			#	my ($seq_id, $sequence) = split(/\n/,$_,2);
+			#	next unless ($sequence && $seq_id);
+			#	$seq_id = ">".$seq_id;		
+			#	if ($$hash_identifiers{$seq_id}) {
+			#		print OUT_singlets $seq_id."\n".$$hash_identifiers{$seq_id}."\n";
+			#}}
+			#close (FILE); close (OUT_singlets);
+			
+			#my $qual_contigs_file = $fasta_name.".cap.contigs.qual";
+			#my $tmp_qual = "tmp.qual"; #open (OUT_qual, ">$tmp_qual");
+			#open (CONTIGS_qual, $qual_contigs_file); while (<CONTIGS_qual>) { print OUT_qual $_; } close (CONTIGS_qual);
+			#open (SINGLETS_qual, $singlets_qual_file); while (<SINGLETS_qual>) { print OUT_qual $_; } close (SINGLETS_qual); close (OUT_qual);
 
+		} else { 
+			&change_seq_names($contigsMIRA_Fasta_file, $FINAL_fasta_file, $taxa);
+		}
+	}
+}
+print "\n"; &time_log();
 
-###########################################################################
-###	cap3 Scaffolding of the contigs MIRA generated for each taxa	###
-###########################################################################
-if ($cap3flag) { 
-
-	print "\n\n"; &print_Header("","#"); 
-	&print_Header(" CAP3 Assembly Step Started ","#"); &print_Header("","#"); print "\n\n";
-	for (my $j = 0; $j < scalar @CAP3_directories; $j++) {
-		my ($fasta_file, $qual_file); 
-		opendir(MID_DIR, $CAP3_directories[$j]);
-		my @files = readdir(MID_DIR);
-		for (my $i = 0; $i < scalar @files; $i++) {
-			if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-			if ($files[$i] =~ /(.*)fasta\.qual/) {
-				$qual_file = $files[$i]; next;
-			} else {
-				$fasta_file = $CAP3_directories[$j]."/".$files[$i];
-		}}
-	
-		###################################
-		### System call for cap3 	###
-		###################################
-		my $command_CAP3 = $CAP3_exec." ".$fasta_file." -o ".$overlap_CAP3." -p ".$similar_CAP3;
-		$command_CAP3 .= " 2> $error_log";
-		print $command_CAP3."\n";
-		my $system_CAP3 = system($command_CAP3);
-		if ($system_CAP3 != 0) { &printError("Some error happened when calling CAP3 for assembly reads..."); &dieNicely(); }
-	
-		###########################################
-		### Get contigs and singlets assembled 	###
-		###########################################
-		&fetch_qual_singlets($fasta_file);
-		my $fasta = &get_contigs_Assembly($fasta_file); 
-		File::Copy::move($fasta, $dirname);
-		print "\n"; &time_stamp();
-}}
+&debugger_print("DOMINO files"); &debugger_print("Ref", \%domino_files);
+my $dump_hash = $dirname_tmp."/dumper_assembly_files.txt";
+DOMINO::printDump(\%domino_files, $dump_hash);
+exit();
 
 ###########################################
 ### Cleaning or renaming some files	###
 ###########################################
 print "\n\n";
 unless ($avoidDelTMPfiles) {
-	&print_Header(" Cleaning all the intermediary files generated ","#"); 
+	DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
 	&clean_assembling_folders(); print "\n\n";
 }
 
@@ -982,22 +993,19 @@ unless ($avoidDelTMPfiles) {
 ## Generating some statistics #
 ###############################
 chdir $dirname;
-my $array_Ref = &read_dir($dirname);
+my $array_Ref = DOMINO::readDir($dirname);
 my @dirname_files = @$array_Ref;
-for (my $i = 0; $i < scalar @dirname_files; $i++) {
-	if ($dirname_files[$i] eq ".DS_Store" || $dirname_files[$i] eq "." || $dirname_files[$i] eq ".." ) { next; }
-	if ($dirname_files[$i] =~ /.*\.fasta/) {
-		print "+ Generating some statistics for Assembly file: $dirname_files[$i]\n";
-		&Contig_Stats($dirname_files[$i]);
-		$total_Contigs_all_sets = "";
-		undef %nucleotides;
-		print "\n\n";
-}}
+foreach my $taxa (keys %domino_files) {
+	print "+ Generating some statistics for Assembly file: $domino_files{$taxa}{'FINAL'}[0]\n";
+	my $stats_file = &Contig_Stats($domino_files{$taxa}{'FINAL'}[0]);
+	$domino_files{$taxa}{'FINAL_stats'} = $stats_file;
+	print "\n\n";
+}
 
 ###########################
 ### 	Finish the job	###
 ###########################
-&finish_time_stamp(); print "\n Job done succesfully, exiting the script\n"; exit();
+&finish_time_log(); print "\n Job done succesfully, exiting the script\n"; exit(0);
 
 ##########################
 ##	SUBROUTINES	##
@@ -1068,119 +1076,36 @@ sub change_seq_names {
 	$/ = "\n";
 }
 
-sub check_file_format {
-    
-    my $file = $_[0];
-    my $id;
-    my $count = 3;
-    my $fasta = my $fastq = my $qual = 0;
-    my $format = 'unknown';
-
-    open(FILE, $file) or &printError("Could not open file $file");
-    while (<FILE>) {
-        if($count-- == 0) { last;
-        } elsif(!$fasta && /^\>\S+\s*/o) { $fasta = 1; $qual = 1;
-        } elsif($fasta == 1 && (/^[ACGTURYKMSWBDHVNXacgturykmswbdhvnx-]+/o)) { $fasta = 2;
-        } elsif($qual == 1 && /^\s*\d+/) { $qual = 2;
-        } elsif(!$fastq && /^\@(\S+)\s*/) { $id = $1; $fastq = 1;
-        } elsif($fastq == 1 && (/^[ACGTURYKMSWBDHVNXacgturykmswbdhvnx-]+/o)) { $fastq = 2;
-        } elsif($fastq == 2 && /^\+(\S*)\s*/o) {
-            $fastq = 3 if($id eq $1 || /^\+\s*$/o);
-    }}
-
-    if($fasta == 2) { $format = 'fasta';
-    } elsif($qual == 2) { $format = 'qual';
-    } elsif($fastq == 3) { $format = 'fastq'; }
-    return $format;
-}
-
 sub check_file {
-	## Populate %taxa_hash with the ids of each file
+	## Populate %domino_files with the ids of each file
 	my $file_to_check = $_[0];
 	if (-e -r -s $file_to_check) { 
-		my $name; my $pair_int;
-		if ($file_to_check =~ /.*id\-.*/) {
-			if ($file_to_check =~ /.*id\-(.*)\_R(\d+)\.f.*q$/) { ## [xxx]id-[yyy](_R[*]).fastq
-				$name = $1; $pair_int = $2;
-			} elsif ($file_to_check =~ /.*id\-(.*)\.f.*q$/) {			
+		my $name; my $pair_int; my $typePair;
+		if ($file_type == 7) {
+			if ($file_to_check =~ /.*id\-(.*)\_(R\d+)\.(fastq|fq)$/) { ## [xxx]id-[yyy](_R[*]).fastq
+				($pair_int, $typePair) = DOMINO::check_paired_file($file_to_check, "fastq");
 				$name = $1;
-		}} else {
-			my $tmp_name;
-			if ($file_to_check =~ /(.*)\_R(\d+)\.f.*q$/) { ## [xxx]id-[yyy](_R[*]).fastq
-				$tmp_name = $1; $pair_int = $2;
-			} elsif ($file_to_check =~ /(.*)\.f.*q$/) {			
-				$tmp_name = $1;
-			}
-			my @tmp_file_path = split ("/", $tmp_name);
-			$name = $tmp_file_path[-1];		
-		}
-		my $format_returned = &check_file_format($file_to_check);
-		my $pair;
-		if ($pair_int) {
-			if ($pair_int == 1) { $pair = "Left reads file";	
-			} elsif ($pair_int == 2) { $pair = "Right reads file";	
-			} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\nPair: $pair_int"); &printFormat_message(); &dieNicely();
-		}}
-		
-		if ($format_returned =~ /fastq/) {
-			&print_DOMINO_details("\t$file_to_check\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format_returned." ...OK\n\t\tIt also contains an identifier ($name) in the name for later analysis...OK\n");
-			if ($pair) { 
-				&print_DOMINO_details("\t\tPaired end file = ".$pair." ...OK\n");	
-				my $string2push = $pair_int."----".$file_to_check;
-				push (@{ $taxa_hash{$name} }, $string2push);
-			} else { 
-				$taxa_hash{$name} = $file_to_check;
-		}} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); &printFormat_message(); &dieNicely();
-	}} else { &printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); &printFormat_message(); &dieNicely();
-	}
-	&print_DOMINO_details("\n");
-}
-
-sub check_paired_file {
-
-	my $file = $_[0];
-	my ($count, $tmp_id, $pair, $pair_return, @pair);
-	open (F1, "$file") or &printError("Could not open file $file");;
-	my $nLines;
-	while (<F1>) { $nLines++; }
-	close(F1);
-	my $isEOF = 1;
-	if($nLines/4 > 0) { $isEOF = 0; }
-	my $lineCount = 0;
-	open (F1, "$file");
-	while(!$isEOF) {
-		my @Read = ();
-		for(my $i=0; $i<4; $i++) { $Read[$i] = <F1>; }
-		chomp(my $QualLine = $Read[3]);
-		chomp(my $SeqLine = $Read[1]);
-		chomp(my $id = $Read[0]);
-		## TODO: add the different types of PE reads if MIRA allows them
-		if ($id =~ /(.*)\/(\d+|\w+)/) {
-			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/2
-			$tmp_id = $1; $pair = $2;
-			$count++;
-			push(@pair, $pair);
-		} elsif ($id =~ /(\S*)(\d+)\:N\:\.*/) {
-			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918 2:N:0:CCGTCC
-			$tmp_id = $1; $pair = $2;
-			$count++;
-			push(@pair, $pair);
-		} elsif ($id =~ /(.*)\/(\R|\L)/) {
-			## @MG00HS16:404:C3W8UACXX:7:1101:1572:1918/L
-			$tmp_id = $1; $pair = $2;
-			$count++;
-			push(@pair, $pair);
-		}
-		if ($count == 5) { last; }
-	}
-	close(F1);
-	for (my $i = 1; $i < scalar @pair; $i++) {
-		if ($pair[0] == $pair[$i]) {
-			$pair_return = $pair[$i];
+				push (@{ $domino_files{$name}{'original'}}, $file_to_check); 
+			}		
 		} else {
-			&printError("Some error ocurred when parsing the paired ends files..."); &dieNicely();
-	}}
-	return $pair_return;
+			if ($file_to_check =~ /.*id\-(.*)\.(fastq|fq)$/) {			
+				$name = $1;
+				push (@{ $domino_files{$name}{'original'}}, $file_to_check); 
+			}
+		}	
+		my $format_returned = DOMINO::check_file_format($file_to_check);
+		if ($format_returned =~ /fastq/) {
+			DOMINO::printDetails("\t$file_to_check\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format_returned." ...OK\n\t\tIt also contains an identifier ($name) in the name for later analysis...OK\n", $param_Detail_file);
+			if ($file_type == 7) { 
+				DOMINO::printDetails("\t\tPaired end file = ".$pair_int." ...OK\n", $param_Detail_file);	
+			}
+		} else { 
+			&printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); DOMINO::printFormat_message(); DOMINO::dieNicely();
+		}
+	} else { 
+		&printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); DOMINO::printFormat_message(); DOMINO::dieNicely();
+	}
+	DOMINO::printDetails("\n", $param_Detail_file);
 }
 
 sub clean_assembling_folders {
@@ -1193,7 +1118,7 @@ sub clean_assembling_folders {
 	##########################################################################
 	
 	chdir $dirname;
-	my $files_ref = &read_dir($dirname);
+	my $files_ref = DOMINO::readDir($dirname);
 	my @files = @$files_ref;
 	print "+ Removing temporary files and folders...\n";
 	for (my $i = 0; $i < scalar @files; $i++) {
@@ -1205,7 +1130,9 @@ sub clean_assembling_folders {
 			remove_tree($dirname."/".$files[$i]);
 		} elsif ($files[$i] eq "MIRA_assemblies") {
 			remove_tree($dirname."/".$files[$i]);
-}}}
+		}
+	}
+}
 
 sub Contig_Stats { 
 	
@@ -1219,7 +1146,7 @@ sub Contig_Stats {
 	my $outFile = $name[0]."-statistics.txt";
 	open(OUT, ">$outFile");
 	my @parts = (500, 1000, 2000, 5000, 10000, 50000); my %parts_array;
-	open(FILE, $fasta_file) or &printError("Could not open the $fasta_file ...\n") and &dieNicely();
+	open(FILE, $fasta_file) or &printError("Could not open the $fasta_file ...\n") and DOMINO::dieNicely();
 	$/ = ">"; ## Telling perl where a new line starts
 	while (<FILE>) {		
 		next if /^#/ || /^\s*$/;
@@ -1302,6 +1229,8 @@ sub Contig_Stats {
 		printf "%-25s %0.2f\n", "N95: ", $n95;											printf OUT "%-25s %0.2f\n", "N95: ", $n95;	
 	}
 	close(OUT);
+	
+	return $outFile;
 }
 
 sub debugger_print {
@@ -1327,7 +1256,7 @@ sub extractReadRepeats {
     my $folder = $_[4];
 
     chdir $folder;
-	my $clean_folder_path = &get_earliest("clean_data", $path_abs_folder);
+	my $clean_folder_path = DOMINO::get_earliest("clean_data", $path_abs_folder);
 	unless (-d $clean_folder_path) {mkdir $clean_folder_path, 0755;}
 	my $preclean_folder = $clean_folder_path."/preRepeatScanner_DOMINO_clean_data";
 	unless (-d $preclean_folder) { mkdir $preclean_folder, 0755; }
@@ -1389,9 +1318,8 @@ sub extractReadRepeats {
 		if (-z $accns_file_reads) {
 			print "\n+ No reads discarded as there were no repeats identified during MIRA assembly...\n";		
 		} else {
-			my $line = $mothur_path." '#set.dir(output=$abs_path); remove.seqs(accnos=$accns_file_reads, fastq=$file_abs_path)'";
 			print "\n+ Calling mothur executable for discarding reads in file $file...\n\n";
-			my $system_call = system($line);
+			DOMINO::mothur_remove_seqs($file_abs_path, 'YES', $abs_path, $accns_file_reads, $mothur_path);
 			my @array = split(".fastq", $file); my $filtered_file = $array[0].".pick.fastq";
 			File::Copy::move($file_abs_path, $preclean_folder); File::Copy::move($filtered_file, $file_abs_path);
 	}}
@@ -1401,9 +1329,8 @@ sub extractReadRepeats {
 		print "+ No contigs discarded as there were no repeats identified during MIRA assembly...\n";
 		$contigs2cluster = $assembled_contigs;		
 	} else {
-		my $line = $mothur_path." '#set.dir(output=$abs_path); remove.seqs(accnos=$accns_file_contigs, fasta=$assembled_contigs)'";
 		print "\n+ Calling mothur executable for discarding contigs in file $assembled_contigs...\n";
-		my $system_call = system($line);
+		DOMINO::mothur_remove_seqs($assembled_contigs, 'NO', $abs_path, $accns_file_contigs, $mothur_path);
 		my @array_name = split("/", $assembled_contigs);
 		my @array = split(".fasta", $array_name[-1]);
 		my $filtered_file = $array[0].".pick.fasta";
@@ -1411,15 +1338,15 @@ sub extractReadRepeats {
 	}	
 	
 	## Use BLAST for clustering sequences
-	print "\n\n+ Generate a BLAST database for $contigs2cluster...\n"; &makeblastdb($contigs2cluster);
-	print "+ BLAST search now...\n"; &blastn($contigs2cluster);
-	
-	my $contig_length_Ref = &read_FASTA_hash($contigs2cluster);
+	print "\n\n+ Generate a BLAST database for $contigs2cluster...\n"; my $db_generated = DOMINO::makeblastdb($contigs2cluster, $BLAST, $error_log);
+	my $blast_search = "blast_search.txt";
+	print "+ BLAST search now...\n"; my $blastn = DOMINO::blastn($contigs2cluster, $db_generated, $blast_search, $BLAST);
+	if ($blastn != 0) { &printError("BLASTN failed...\n"); exit(); } 
+	my $contig_length_Ref = DOMINO::readFASTA_hash($contigs2cluster);
 	my $perc_aln_desired = 0.85; my $iden_desired = 85;
 	
 	## Filter BLAST results
 	print "+ Filtering BLAST search now...\n";
-	my $blast_search = "blast_search.txt";
 	my (%contigs_keep, @contigs_seen);
 	my $first_hit = 0;
 	open (BLAST, $blast_search); while (<BLAST>) {
@@ -1454,93 +1381,23 @@ sub extractReadRepeats {
 			my $len = length( $$contig_length_Ref{$seq} );
 			if ($len > $largest) { $largest = $len; $largest_id = $seq; }
 		} 
-		print CLN ">$largest_id\n$$contig_length_Ref{$largest_id}\n"; 
+		print CLN ">$largest_id\n$$contig_length_Ref{$largest_id}"; 
 	}
 	close(CLN);	
 	print "+ Done...\n\n";
 }
 
-sub fetch_qual_singlets {
-	
-	my $fasta = $_[0];
-	my $singlets_file = $fasta.".cap.singlets";
-	my $qual_file = $fasta.".qual";
-	my $singlets_qual_file = $singlets_file.".qual";
-	
-	print "Fetching qual singlets for $fasta\n";
-	print $singlets_file."\n";	
-	
-	my %hash_identifiers;
-	$/ = ">"; ## Telling perl where a new line starts
-	open (QUAL, $qual_file);
-	open (OUT, ">$singlets_qual_file");
-	while (<QUAL>) {
-		next if /^#/ || /^\s*$/;
-		chomp;
-    	my ($seq_id, $sequence) = split(/\n/,$_,2);
-    	next unless ($sequence && $seq_id);
-    	$seq_id = ">".$seq_id;		
-		$hash_identifiers{$seq_id} = $sequence;
-	} #while
-	close (QUAL);
-	
-	open (FILE, $singlets_file) or &printError("Could not open file.") and &dieNicely;
-	# Get the idenfitiers of the singlet file, all of them
-	while (<FILE>) {
-		next if /^#/ || /^\s*$/;
-		chomp;
-    	my ($seq_id, $sequence) = split(/\n/,$_,2);
-    	next unless ($sequence && $seq_id);
-		$seq_id = ">".$seq_id;		
-		if ($hash_identifiers{$seq_id}) {
-			print OUT $seq_id."\n".$hash_identifiers{$seq_id}."\n";
-		}
-	}
-	close (FILE); close (OUT);
-}
+sub finish_time_log {
 
-sub get_fastq_files {
-
-	##########################################################################################
-	##	 																					##
-	##  This function gets the FASTQ files generated in the previous cleaning step			##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 08/05/2014 jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
-
-	my $clean_folder = &get_earliest("clean_data", $path_abs_folder);
-	if ($clean_folder eq 'NO') {
-		&printError("No Clean Data folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); &dieNicely();
-	}
-	opendir(DIR, $clean_folder) or &printError("$clean_folder is not readdable or not accesible...\n") and &dieNicely();
-	my @files = readdir(DIR);
-	my $flag=0;
-	for (my $i = 0; $i < scalar @files; $i++) {
-		if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-		if ($files[$i] eq "preRepeatScanner_DOMINO_clean_data") { $flag = 1;}
-	}
-	if ($flag == 1) {
-		##
-		print "+ A pre assembly folder correcting the repeats have been, using the original clean files...\n";
-		my $pre_assembly_dir = $clean_folder."/preRepeatScanner_DOMINO_clean_data";
-		opendir(PREDIR, $pre_assembly_dir) or &printError("$pre_assembly_dir is not readdable or not accesible...\n") and &dieNicely();
-		my @pre_files = readdir(PREDIR);
-		for (my $h=0; $h < scalar @pre_files; $h++) {
-			if ($pre_files[$h] eq ".DS_Store" || $pre_files[$h] eq "." || $pre_files[$h] eq ".." ) { next; }
-			File::Copy::move($pre_assembly_dir."/".$pre_files[$h], $clean_folder);
-		}
-		remove_tree($pre_assembly_dir);
-	}
-	for (my $i = 0; $i < scalar @files; $i++) {
-		if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-		if ($files[$i] =~ /.*id-.*fastq/) {
-			if ($files[$i] =~ /.*MIDtag\.fastq/) { next; }
-			push (@fastq_files, $files[$i]);  ## Push only the names			
-			push (@file_abs_path, $clean_folder."/".$files[$i]); ## push the whole file path			
-			my $file_path = $clean_folder."/".$files[$i];	
-			system("ln -s $file_path");		
-	}}
+	my $finish_time = time;
+	print "\n\n"; DOMINO::printHeader("","+"); 
+	DOMINO::printHeader(" ANALYSIS FINISHED ","+"); 
+	DOMINO::printHeader("","+"); 
+	print DOMINO::time_stamp."\t";
+	my $secs = $finish_time - $start_time; 
+	my $hours = int($secs/3600); $secs %= 3600; 	
+	my $mins = int($secs/60); $secs %= 60; 
+	printf ("Whole process took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
 }
 
 sub Generate_manifest_file {
@@ -1550,312 +1407,58 @@ sub Generate_manifest_file {
 	##	Jose Fco. Sanchez Herrero, 10/06/2014 jfsanchezherrero@ub.edu						##
 	##########################################################################################
 
-	my $individual_fastq_file = $_[0];
-	my $technology = $_[1];
-	my $name_of_project;
-	if ($individual_fastq_file =~ /.*(id\-.*)\.f*/) { $name_of_project = $1; }
-	&print_Header(" Generate MIRA manifest file for $name_of_project","%"); 
-	print "- Generating the manifest file now for $individual_fastq_file...\n";
+	my $name_of_project = $_[0]; my $technology = $_[1];
+	my $fastq_file = $_[2];	my $fastq_file2 = $_[3];
 	
+	DOMINO::printHeader(" Generate MIRA manifest file for $name_of_project","%"); 
 	my $manifest_file = "manifest_$name_of_project.txt";
+	print "- Generating the manifest file $manifest_file...\n";
+	
 	open (OUT, ">$manifest_file");
 	print OUT "# Manifest file for $technology Project $name_of_project to use MIRA\n";
 	print OUT "# First part: defining some basic things\n";
 	print OUT "project = $name_of_project\n";
 	print OUT "job = genome, denovo, accurate\n";
+	
 	my $parameter = "parameters = --hirep_something -NW:cnfs=warn\\\n";  
 	$parameter .= "\tCOMMON_SETTINGS -GE:not=$noOfProcesses:amm=on:kpmf=20 -OUT:ors=no:orc=no:otc=no:orw=no:rtd=yes -CL:ascdc=no\\\n";
-	if ($technology eq "454") { $parameter .= "\t454_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
-	} else { $parameter .= "\tSOLEXA_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";}
-	print OUT $parameter."\nreadgroup = ".$individual_fastq_file."_reads\ndata = $individual_fastq_file\n";
-	if ($technology eq "454") { print OUT "technology = 454\n";
-	} else { print OUT "technology = solexa\n"; }
+
+	if ($technology eq "454") { 
+		$parameter .= "\t454_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
+	} else { 
+		$parameter .= "\tSOLEXA_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
+	}
+
+	if ($fastq_file2) { ## PE reads
+		print OUT "readgroup = ".$name_of_project."_reads\nautopairing\n";
+		print OUT "data = $fastq_file $fastq_file2\n";
+	} else {
+		print OUT $parameter."\nreadgroup = ".$name_of_project."_reads\ndata = $fastq_file\n";
+	}
+
+	if ($technology eq "454") { 
+		print OUT "technology = 454\n";
+	} else { 
+		print OUT "technology = solexa\n"; }
 	close (OUT);
+	
 	return $manifest_file;	
 }
 
-sub Generate_manifest_file_pair_end {
-	
-	##########################################################################################
-	##  This function generates a manifest file for Illumina or 454 for MIRA assembler	##
-	##	Jose Fco. Sanchez Herrero, 10/06/2014 jfsanchezherrero@ub.edu			##
-	##########################################################################################
-
-	my $left_pair_fastq_file = $_[0];
-	my $right_pair_fastq_file = $_[1];
-	my $tmp;
-	if ($left_pair_fastq_file =~ /.*id\-(.*)\_R\d+\.f*/) { $tmp = $1; }
-	my $name_of_project = $tmp;
-	&print_Header(" Generate MIRA manifest file for $tmp ","%"); 
-	print "- Generating the manifest file now for $left_pair_fastq_file and $right_pair_fastq_file...\n";
-	my $manifest_file = "manifest_$name_of_project.txt";
-	open (OUT, ">$manifest_file");
-	print OUT "# Manifest file for Solexa Paired End Project $name_of_project to use MIRA\n";
-	print OUT "# First part: defining some basic things\n";
-	print OUT "project = $name_of_project\n";
-	print OUT "job = genome, denovo, accurate\n";
-	my $parameter = "parameters = --hirep_something -NW:cnfs=warn\\\n";  
-	$parameter .= "\tCOMMON_SETTINGS -GE:not=$noOfProcesses:amm=on:kpmf=20 -OUT:ors=no:orc=no:otc=no:orw=no:rtd=yes -CL:ascdc=no\\\n";
-	$parameter .= "\tSOLEXA_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
-	print OUT $parameter."\n";
-	print OUT "readgroup = ".$name_of_project."_reads\nautopairing\n";
-	print OUT "data = $left_pair_fastq_file $right_pair_fastq_file\n";
-	print OUT "technology = solexa\n";
-	close (OUT);
-	return ($manifest_file, $name_of_project);	
-}
-
-sub get_earliest {
-	
-	my $option = $_[0];
-	my $folder = $_[1];
-	#$option == "clean_data, assembly, mapping" 
-	
-	my $array_files_ref=&read_dir($folder);
-	my @array_files = @$array_files_ref;
-	my (%mapping_dirs, $earliest);
-	for (my $i=0; $i<scalar @array_files;$i++) {
-		if ($array_files[$i] eq "." || $array_files[$i] eq ".." || $array_files[$i] eq ".DS_Store") {next;}
-		if ($array_files[$i] =~ /(\d+)\_DM\_$option.*/) {
-			my $time_stamp=$1;
-			if (!$earliest) { $earliest=$time_stamp; } else { if ($time_stamp > $earliest) {$earliest=$time_stamp}}
-			$mapping_dirs{$time_stamp} = $folder."/".$array_files[$i];
-	}}
-	if (!exists $mapping_dirs{$earliest}) { return 'NO';
-	} else {  return $mapping_dirs{$earliest}; }	
-}
-
-sub get_contigs_Assembly {
-
-	my $fasta = $_[0];
-	my $singlets_file = $fasta.".cap.singlets";
-	my $contigs_file = $fasta.".cap.contigs";
-	my $qual_contigs_file = $fasta.".cap.contigs.qual";
-	my $singlets_qual_file = $singlets_file.".qual";
-	
-	my @tmp = split ("\.contigs\-MIRA\.fasta.*", $fasta);
-	my $contigs_singlets_file_fasta = $tmp[0].".contigs.fasta";
-	my $contigs_singlets_file_qual = $tmp[0].".contigs.qual";
-	
-	my $tmp_fasta = "tmp.fasta";
-	my $tmp_qual = "tmp.qual";
-	open (OUT_fasta, ">$tmp_fasta"); open (OUT_qual, ">$tmp_qual");
-	open (CONTIGS, $contigs_file); while (<CONTIGS>) { print OUT_fasta $_; } close (CONTIGS);
-	open (SINGLETS, $singlets_file); while (<SINGLETS>) { print OUT_fasta $_; } close (SINGLETS);close (OUT_fasta);
-	open (CONTIGS_qual, $qual_contigs_file); while (<CONTIGS_qual>) { print OUT_qual $_; } close (CONTIGS_qual);
-	open (SINGLETS_qual, $singlets_qual_file); while (<SINGLETS_qual>) { print OUT_qual $_; } close (SINGLETS_qual); close (OUT_qual);
-	
-	my $taxa_id;
-	if ($contigs_singlets_file_fasta =~ /.*id\-(.*)\.contigs.fasta/) { $taxa_id = $1; }
-	&change_seq_names($tmp_fasta, $contigs_singlets_file_fasta, $taxa_id);
-	return ($contigs_singlets_file_fasta);
-}
-
-sub qualfa2fq_modified_bwa {
-
-	##########################################################################################
-	##	 																					##
-	##  This is a modified version of the perl script provided in the bwa-0.7.8 package		##	
-	## 	to convert fasta+qual files into fastq files										##
-	## 																						##
-	##	Jose Fco. Sanchez Herrero, 06/05/2014 jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
-	
-	my ($fhs, $fhq, $q, $a);
-	my $name = $_[2];
-	open($fhs, ($_[0])); #fasta_file
-	open($fhq, ($_[1])); #qual_file
-	my @temp_name = split ("fasta", $_[0]);
-	my $fastq_file;
-	if ($name) {
-		$fastq_file = $temp_name[0]."fastq_".$name;
-	} else {
-		$fastq_file = $temp_name[0]."fastq";
-	}
-	open (FASTQ_out, ">$fastq_file");	
-	print "+ Generating a fastq file $fastq_file now...\n";
-	
-	$/ = ">"; <$fhs>; <$fhq>; $/ = "\n";
-	while (<$fhs>) {
-		my $id = <$fhq>;
-  		print FASTQ_out "\@".$id;
-  		$/ = ">";
-  		$a = <$fhs>; $q = <$fhq>;
-  		chomp($q); chomp($a);
-		my @array_seq = split ("\n", $a);
-		my $seq;
-		for (my $i = 0; $i < scalar @array_seq; $i++) { $seq .= $array_seq[$i]; }
-		print FASTQ_out $seq."\n+".$id;
-		my @array_qual = split (" ", $q);
-		my $qual;
-		for (my $j = 0; $j < scalar @array_qual; $j++) {
-			if ($array_qual[$j] > 80) {
-				$array_qual[$j] = $array_qual[$j] - 30;
-			}
-			$qual .= $array_qual[$j]." ";
-		}
-  		$qual =~ s/\s*(\d+)\s*/chr($1+33)/eg; # Convert ASCII characters
-  		print FASTQ_out $qual."\n";
-  		$/ = "\n";
-	}
-	close($fhs); close($fhq); close(FASTQ_out);
-	$/ = "\n"; ## Telling Perl where a new line starts
-	return $fastq_file;
-}
-
-sub read_FASTA_hash {
-
-	my $file = $_[0];
-	my %hash;
-	open(FILE, $file) || die "Could not open the $file ...\n";
-	$/ = ">"; ## Telling perl where a new line starts
-	while (<FILE>) {		
-		next if /^#/ || /^\s*$/;
-		chomp;
-    	my ($titleline, $sequence) = split(/\n/,$_,2);
-    	next unless ($sequence && $titleline);
-   		$sequence =~ s/\n//g;
-    	$hash{$titleline} = uc($sequence);
-	}
-	close(FILE);
-	$/ = "\n";
-	my $hashRef = \%hash;
-	return $hashRef;
-}
-
-sub read_FASTA_hash_length {
-
-	my $file = $_[0];
-	my %hash;
-	open(FILE, $file) || die "Could not open the $file ...\n";
-	$/ = ">"; ## Telling perl where a new line starts
-	while (<FILE>) {		
-		next if /^#/ || /^\s*$/;
-		chomp;
-    	my ($titleline, $sequence) = split(/\n/,$_,2);
-    	next unless ($sequence && $titleline);
-    	$titleline =~ s/ /\t/g;
-    	my @array_titleline = split("\t",$titleline);    	
-    	for (my $i=0; $i < scalar @array_titleline; $i++) {
-    		chomp $sequence;
-    		$sequence =~ s/\n//g;
-    		my $size = length($sequence);
-		   	$hash{$array_titleline[$i]} = $size;
-		   	last;
-		}
-	}
-	close(FILE);
-	$/ = "\n";
-	my $hashRef = \%hash;
-	return $hashRef;
-}
-
-
-
-## To include in DM_subroutines.pm
-sub print_DOMINO_details {
-	my $string = $_[0];
-	open (PARAM, ">>$param_Detail_file");
-	print PARAM $string;
-	print STDOUT $string;
-	close(PARAM);
-}
 sub printError {
     my $msg = $_[0];
-	print "\n\n";&print_Header(" ERROR ","!!"); print "\n";
+	print "\n\n";DOMINO::printHeader(" ERROR ","!!"); print "\n";
     print $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n";
-	print "\n\n"; &print_Header("","!!"); &print_Header("","!!"); 
-    &printError_log($msg);
+	print "\n\n"; DOMINO::printHeader("","!!"); DOMINO::printHeader("","!!"); 
+    DOMINO::printError_log($msg, $error_log);
 }
-sub printError_log {
-	my $message = $_[0];
-	open (ERR, ">>$error_log");
-	print ERR $message."\n";
-	close (ERR);
-	#print STDERR $message."\n";
-}
-sub time_stamp {
+
+sub time_log {	
 	my $current_time = time;
-	print "[ ".(localtime)." ]\t";
+	print DOMINO::time_stamp."\t";
 	my $secs = $current_time - $step_time; 
 	my $hours = int($secs/3600); $secs %= 3600; 
 	my $mins = int($secs/60); $secs %= 60; 
 	$step_time = $current_time;
 	printf ("Step took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
-}
-sub finish_time_stamp {
-
-	my $finish_time = time;
-	print "\n\n"; &print_Header("","+"); 
-	&print_Header(" ANALYSIS FINISHED ","+"); 
-	&print_Header("","+"); 
-	print "[".(localtime)." ]\t";
-	my $secs = $finish_time - $start_time; 
-	my $hours = int($secs/3600); $secs %= 3600; 	
-	my $mins = int($secs/60); $secs %= 60; 
-	printf ("Whole process took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
-}
-sub dieNicely { pod2usage(-exitstatus => 1, -verbose => 0); }
-sub blastn {
-
-	##########################################################################################
-	##											##
-	##  This function uses BLASTN to check for the putative contaminants			##
-	##	Jose Fco. Sanchez Herrero, 20/02/2014 	jfsanchezherrero@ub.edu			##
-	##########################################################################################
-
-	my $file = $_[0];
-	my $db;
-	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
-	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-5 -db ".$db." -out blast_search.txt -outfmt 6";
-	my $blastn = system($filter);
-	if ($blastn != 0) { die "BLASTN failed...\n"; } 	
-}
-sub makeblastdb {
-
-	##########################################################################################
-	##	 																					##
-	##  This function makes a valid BLAST db for each file given using makeblastdb			##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 20/02/2014 jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
-	
-	my $file = $_[0];
-	my $db;
-	my $make_blast_db = $BLAST."makeblastdb";
-	$make_blast_db .= " -in ".$file;
-	$make_blast_db .= " -dbtype nucl";
-	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
-	$make_blast_db .= " -out ".$db;
-	$make_blast_db .= " -logfile ".$db.".log";
-	
-	my $makeblastresult = system($make_blast_db);
-	if ($makeblastresult != 0) {
-		die "Generating the database failed when trying to proccess the file...\n";
-	}
-}
-sub print_Header {
-	my $sentence = $_[0];
-	my $symbol = $_[1];	
-	my @length_array = ($symbol) x 97;
-	my @array_sentence = split("",$sentence);
-	my $length = scalar @array_sentence;
-	my $start = 49 - ($length/2);
-	for (my $i = 0; $i < scalar @array_sentence; $i++) {
-		$length_array[$start+$i] = $array_sentence[$i];
-	}
-	my $string = join("", @length_array);
-	print $string."\n";
-}
-sub read_dir {
-	my $dir = $_[0];
-	opendir(DIR, $dir);
-	my @dir_files = readdir(DIR);
-	my $array_ref = \@dir_files;
-	return $array_ref;
-}
-sub printFormat_message {
-	print "\n\nPlease tag your files using: [xxx](id-)[yyy](_R[*]).fastq\nWhere:\n\txxx: any character or none.Please avoid using dots (.)\n\tid-: Optional. If xxx is too long, please provide 'id-' to identify the name provided with [yyy]\n\tyyy: is any desired name for identifying the taxa reads in these file\n\t(_R[*]): if paired end files, please tag left file using R1 and right using R2\n\n\n";
 }

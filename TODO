@@ -4,18 +4,19 @@ ALL:
 add SAMTOOLS new version and implement threads in sort etc
 add bowtie2 new version and implement threads in build step
 
-DM_Assembly_v1.0.0.pl
-	Write a debug message if importing any module fails
-	use debugger_print for printing Debugging messages
-	
-	line 944: Implement threads for copying files...
-	line 987: print each QC thread analysis into a file not to show so many confusing messages
-	
 DM_Clean_v1.0.0.pl
 	Write a debug message if importing any module fails
 	implements threads when copying files
 	Print contaminants ($array[0]) to a file (cat | uniq ) to show user not the reads but the contaminants found
 
+	line 944: Implement threads for copying files...
+	line 987: print each QC thread analysis into a file not to show so many confusing messages
+
+DM_Assembly_v1.0.0.pl
+	Write a debug message if importing any module fails
+	use debugger_print for printing Debugging messages
+	
+	
 DM_MarkerScan_v1.0.0.pl
 	Write a debug message if importing any module fails
 	use debugger_print for printing Debugging messages
