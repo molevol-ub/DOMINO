@@ -5,7 +5,6 @@
 # This package provides multiple subroutines for the DOMINO package 
 
 package DOMINO;
-use Data::Dumper;
 
 sub blastn {
 	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
@@ -239,7 +238,6 @@ sub printDump {
 	}}} close (DUMP);
 }
 
-
 sub printError_log {
 	my $message = $_[0]; my $error_log = $_[1];
 	open (ERR, ">>$error_log");
@@ -430,9 +428,7 @@ sub readFASTQ_IDSfile {
 		last if($id=~ /^\n$/);
 
 		## Read each entry of the FASTQ file; 1) @Seq_id 2) Sequence 3) +Seq_id  4) Qual
-		for(my $i=0; $i<3; $i++) { 
-			$Read[$i] = <F1>;
-		}
+		for(my $i=0; $i<3; $i++) { $Read[$i] = <F1>; }
 		chomp(my $QualLine = $Read[2]);
 		chomp(my $SeqLine = $Read[0]);
 		my $pair; my $seq_id;

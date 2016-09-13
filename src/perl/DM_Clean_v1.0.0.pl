@@ -921,7 +921,7 @@ if ($onlyTagging_files) {
 			} close (DUMP_IN);
 	}} # else unique file?
 	&debugger_print("domino_files"); &debugger_print("Ref", \%domino_files);	
-	&create_folder_cleaning_step(); &delete_temp_file(); 
+	&sort_files_and_folders();
 	print "\n+ Exiting the script...\n"; &finish_time_stamp(); exit();	 
 		
 } else {
@@ -1084,15 +1084,9 @@ foreach my $keys (sort keys %domino_files) {
 				File::Copy::move( $domino_files_threads_QC{$keys}{"NGS_QC"}[$i], $domino_files_threads_QC{$keys}{"FINAL"}[$i]);
 			}
 		} else {			
-			my $final_name;
-			my @path_name = split("/", $domino_files_threads_QC{$keys}{"NGS_QC"}[0]);
-			if ($path_name[-1] =~ /.*\_id\-(.*)\.clean\_dust.*/) {
-				for (my $j=0; $j < scalar $#path_name; $j++) {
-					$final_name .= $path_name[$j]."/";
-				} $final_name .= "QC-filtered_id-".$1.".fastq";
-			}
-			push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $final_name);
-			File::Copy::move( $domino_files_threads_QC{$keys}{"NGS_QC"}[0], $final_name);
+			my $final_name = $taxa_dir."/QC-filtered_id-".$keys.".fastq";
+			my $final_file = DOMINO::qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"NGS_QC"}[0], $domino_files_threads_QC{$keys}{"NGS_QC"}[1], $keys, $final_name, $file_type);
+			push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $final_file);
 		}			
 		DOMINO::printHeader(" Cleaning Step 2: BLAST and Vector screen ","#"); 
 		print "+ Skipping the BLAST step for searching against databases for putative contaminants\n";
@@ -1109,8 +1103,7 @@ foreach my $keys (sort keys %domino_files) {
 				push (@{ $domino_files_threads_QC{$keys}{"FASTA4BLAST"} }, $name[0].".filtered.fasta");
 				push (@{ $domino_files_threads_QC{$keys}{"QUAL4BLAST"} }, $name[0].".filtered.qual");
 				push (@reads_db, DOMINO::makeblastdb($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[$i], $BLAST, $error_log));
-			}
-		
+			}		
 		} elsif ($file_type eq "454_fastq" || $file_type eq "454_multiple_fastq" || $file_type eq "454_sff" ) {
 			push (@{ $domino_files_threads_QC{$keys}{"FASTA4BLAST"} }, $domino_files_threads_QC{$keys}{"NGS_QC"}[0]);
 			push (@{ $domino_files_threads_QC{$keys}{"QUAL4BLAST"} }, $domino_files_threads_QC{$keys}{"NGS_QC"}[1]);
@@ -1162,7 +1155,8 @@ foreach my $keys (sort keys %domino_files) {
 			print "- Reading the BLAST result file $out_file ...\n";
 			$/ = "\n";
 			my $contamination_ReadIds = $taxa_dir."/contaminant_ReadIds_".$keys.".txt";
-			my $contaminants = $taxa_dir."/contaminants_identified_".$keys.".txt";
+			my $contaminants = $taxa_dir."/contaminants_Identified_".$keys.".txt";
+			
 			open (READS, ">$contamination_ReadIds"); open (CONTAMINANTS, ">$contaminants");	
 			open(BLAST_result, "<$out_file") || die "Could not open the $out_file file.\n";
 			while(<BLAST_result>){
@@ -1230,6 +1224,7 @@ foreach my $keys (sort keys %domino_files) {
 				
 				## Get contaminants for each taxa
 				push(@{$domino_files_threads_QC{$keys}{"CONTAMINANTS"} }, $contaminants);
+				push(@{$domino_files_threads_QC{$keys}{"reads_CONTAMINANTS"} }, $contamination_ReadIds);
 				
 			} else { $no_contamination = 1; }
 		} else { $no_contamination = 1; }
@@ -1294,18 +1289,13 @@ foreach my $taxa (keys %domino_files) {
 }}
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
 
-##############################################################
-## 	Check the amount of cleaning done						##
-##############################################################
-#my $hash_reads_Ref = &checking_discarded();
-chdir $dirname; &create_folder_cleaning_step();
-
 ##########################################################################
 ## 		Deleting temporary files and sorting the output files			##
 ##########################################################################
+chdir $dirname; 
 print "\n\n"; DOMINO::printHeader(" Deleting Temporary Files ","#");
 print "+ Deleting or renaming some files...\n"; 
-#&delete_temp_file(); print "\n";
+&sort_files_and_folders(); print "\n";
 
 ##########################################################################
 ## 	Printing some STATISTICS, generating output folders					##
@@ -1412,7 +1402,7 @@ sub convert_ASCII_to_number {
 	return $string_qual_nums;
 }
 
-sub create_folder_cleaning_step {
+sub sort_files_and_folders {
 
 	##########################################################################################
 	##	 																					##
@@ -1439,29 +1429,6 @@ sub create_folder_cleaning_step {
 		
 	my $domino_files_general = $intermediate_folder."/dumper-hash_DOMINO_files.txt";
 	DOMINO::printDump(\%domino_files, $domino_files_general);
-
-}
-
-sub debugger_print {
-	my $string = $_[0];
-	my $ref = $_[1];
-	## Print to a file
-	if ($debugger) {
-	if ($string eq "Ref") {
-		print "DEBUG:\t"; print Dumper $ref; print "\n"; ## if filehandle OUT: print OUT Dumper $ref
-	} else {
-		print "DEBUG:\t".$string."\n";
-}}}
-
-sub delete_temp_file {
-
-	##########################################################################################
-	##	 																					##
-	##  This function deletes the temporary files generated 								##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 20/02/2014 jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
 
 	print "+ Deleting temporary files...\n";	
 	my $files_ref = DOMINO::readDir($dirname); my @files = @$files_ref;
@@ -1498,6 +1465,8 @@ sub delete_temp_file {
 				@array_final = @{ $domino_files{$tags}{'EXTRACTED'} };
 			}
 			for (my $i=0; $i < scalar @array_final; $i++) { File::Copy::move($array_final[$i], $clean_folder); }
+			if ($domino_files{$tags}{"CONTAMINANTS"}[0]) { File::Copy::move($domino_files{$tags}{"CONTAMINANTS"}[0], $intermediate_folder); }
+			if ($domino_files{$tags}{"reads_CONTAMINANTS"}[0]) { File::Copy::move($domino_files{$tags}{"reads_CONTAMINANTS"}[0], $intermediate_folder); }
 			
 			## Check each taxa folder
 			my $dir = $domino_files{$tags}{'DIR'}[0];
@@ -1521,7 +1490,21 @@ sub delete_temp_file {
 			remove_tree($dir);
 	}}
 	unless ($avoidDelTMPfiles) { remove_tree($temp_dir); }
+	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+
+	
 }
+
+sub debugger_print {
+	my $string = $_[0];
+	my $ref = $_[1];
+	## Print to a file
+	if ($debugger) {
+	if ($string eq "Ref") {
+		print "DEBUG:\t"; print Dumper $ref; print "\n"; ## if filehandle OUT: print OUT Dumper $ref
+	} else {
+		print "DEBUG:\t".$string."\n";
+}}}
 
 sub download_db {
 	
