@@ -55,13 +55,13 @@ do
 		fi
 		if [ "$folder_tar_gz" = "bowtie" ];
 		then
-			mkdir -p $scripts_folder"/"bowtie2-2.2.3
-			cd bowtie2-2.2.3
+			mkdir -p $scripts_folder"/"bowtie2-2.2.9
+			cd bowtie2-2.2.9
 			make > DOMINO_Error.log			
-			mv bowtie2* $scripts_folder"/"bowtie2-2.2.3
-			mv AUTHORS $scripts_folder"/"bowtie2-2.2.3
-			mv LICENSE $scripts_folder"/"bowtie2-2.2.3
-			mv VERSION $scripts_folder"/"bowtie2-2.2.3
+			mv bowtie2* $scripts_folder"/"bowtie2-2.2.9
+			mv AUTHORS $scripts_folder"/"bowtie2-2.2.9
+			mv LICENSE $scripts_folder"/"bowtie2-2.2.9
+			mv VERSION $scripts_folder"/"bowtie2-2.2.9
 		fi
 
 		if [ "$folder_tar_gz" = "mothur" ];
@@ -102,12 +102,12 @@ do
 		
 		if [ "$folder_tar_gz" = "samtools" ]
 		then
-			mkdir -p $scripts_folder"/"samtools-0.1.19
-			cd samtools-0.1.19
+			mkdir -p $scripts_folder"/"samtools-1.3.1
+			cd samtools-1.3.1
  			make > DOMINO_Error.log
-			mv COPYING $scripts_folder"/"samtools-0.1.19
-			mv AUTHORS $scripts_folder"/"samtools-0.1.19
-			mv samtools $scripts_folder"/"samtools-0.1.19
+			mv COPYING $scripts_folder"/"samtools-1.3.1
+			mv AUTHORS $scripts_folder"/"samtools-1.3.1
+			mv samtools $scripts_folder"/"samtools-1.3.1
 		fi			
 	done
 	cd $tmp_dir_path"/"binaries
@@ -149,6 +149,7 @@ echo "##############################################"
 echo ""
 echo "+ Copying DOMINO scripts"
 cp DM_*pl $scripts_folder
+cp DOMINO.pm $scripts_folder"/"lib
 cp LICENSE.txt $scripts_folder
 cp DM_*pl $perl_code
 mv db_default.tar.gz $scripts_folder

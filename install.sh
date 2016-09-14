@@ -96,6 +96,18 @@ do
 		tar -zxvf $tar_gz
 		rm $tar_gz
 
+		if [ "$folder_tar_gz" = "SPADES" ];
+		then
+			if [ $OpSys = "Linux" ]
+			then
+				mkdir -p $scripts_folder"/SPAdes-3.8.1-Linux"
+				ls "SPADES/*" | while read files
+				do
+					cp -r "SPADES/$files" $scripts_folder"/SPAdes-3.8.1-Linux"
+				done
+			fi
+		fi
+
 		if [ "$folder_tar_gz" = "CAP3" ];
 		then
 			mkdir -p $scripts_folder"/"cap3"/"bin
@@ -115,13 +127,13 @@ do
 
 		if [ "$folder_tar_gz" = "bowtie" ];
 		then
-			mkdir -p $scripts_folder"/"bowtie2-2.2.3
-			cd bowtie2-2.2.3
-			make
-			mv bowtie2* $scripts_folder"/"bowtie2-2.2.3
-			mv AUTHORS $scripts_folder"/"bowtie2-2.2.3
-			mv LICENSE $scripts_folder"/"bowtie2-2.2.3
-			mv VERSION $scripts_folder"/"bowtie2-2.2.3
+			mkdir -p $scripts_folder"/"bowtie2-2.2.9
+			cd bowtie2-2.2.9
+ 			make > DOMINO_Error.log
+			mv bowtie2* $scripts_folder"/"bowtie2-2.2.9
+			mv AUTHORS $scripts_folder"/"bowtie2-2.2.9
+			mv LICENSE $scripts_folder"/"bowtie2-2.2.9
+			mv VERSION $scripts_folder"/"bowtie2-2.2.9
 		fi
 		
 		if [ "$folder_tar_gz" = "mothur" ];
@@ -170,8 +182,8 @@ do
 			if [ $OpSys = "Linux" ]
 			then
 				cd ncbi-blast-2.2.28+-src"/"c++
-				sh ./configure
-				make
+				sh ./configure > DOMINO_Error.log
+	 			make > DOMINO_Error.log
 				mv *"/"*bin"/"blastn $scripts_folder"/"NCBI_BLAST_v2.2.28
 				mv *"/"*bin"/"makeblastdb $scripts_folder"/"NCBI_BLAST_v2.2.28
 			
@@ -183,12 +195,12 @@ do
 				
 		if [ "$folder_tar_gz" = "samtools" ]
 		then
-			mkdir -p $scripts_folder"/"samtools-0.1.19
-			cd samtools-0.1.19
- 			make
-			mv COPYING $scripts_folder"/"samtools-0.1.19
-			mv AUTHORS $scripts_folder"/"samtools-0.1.19
-			mv samtools $scripts_folder"/"samtools-0.1.19
+			mkdir -p $scripts_folder"/"samtools-1.3.1
+			cd samtools-1.3.1
+ 			make > DOMINO_Error.log
+			mv COPYING $scripts_folder"/"samtools-1.3.1
+			mv AUTHORS $scripts_folder"/"samtools-1.3.1
+			mv samtools $scripts_folder"/"samtools-1.3.1
 		fi			
 	done
 	cd $tmp_dir_path"/"binaries
@@ -223,4 +235,6 @@ ls "$current_dir/src/perl/" | while read files
 do
 	cp "$current_dir/src/perl/$files" $install_dir"/bin"
 done
+
+cp "$current_dir/src/perl/DOMINO.pm" $install_dir"/bin/lib"
 ) 2>>DOMINO_error.log
