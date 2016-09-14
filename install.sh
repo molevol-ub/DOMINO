@@ -100,11 +100,7 @@ do
 		then
 			if [ $OpSys = "Linux" ]
 			then
-				mkdir -p $scripts_folder"/SPAdes-3.8.1-Linux"
-				ls "SPAdes-3.8.1-Linux/*" | while read files
-				do
-					cp -r "SPAdes-3.8.1-Linux/$files" $scripts_folder"/SPAdes-3.8.1-Linux"
-				done
+				mv SPAdes-3.8.1-Linux $scripts_folder
 			fi
 		fi
 
@@ -236,6 +232,6 @@ do
 	cp "$current_dir/src/perl/$files" $install_dir"/bin"
 done
 
-mv "$current_dir/src/perl/DOMINO.pm" $install_dir"/bin/lib"
+mv "$install_dir/bin/DOMINO.pm" $install_dir"/bin/lib"
 
 ) 2>>DOMINO_error.log
