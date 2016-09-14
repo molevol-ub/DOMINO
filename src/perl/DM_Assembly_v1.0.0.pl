@@ -32,7 +32,7 @@
 ##      ## Others
 ##
 ##      [-p|--processes int_value] [-mrs|--min_relative_score int_value]
-##      [-input_files file] [-TempFiles]
+##      [-input_files file] [-TempFiles] [-SPAdes]
 ##
 use strict;
 use warnings;
@@ -172,7 +172,7 @@ perl DM_Assembly_v1.0.0.pl
 
 ## Others
 
-[-p|--processes int_value] [-mrs|--min_relative_score int_value] [-input_files file] [-TempFiles] 
+[-SPAdes] [-p|--processes int_value] [-mrs|--min_relative_score int_value] [-input_files file] [-TempFiles] 
 
 =item B<>
 
@@ -220,6 +220,8 @@ Furthermore, if the taxa panel has been designed in a convenient phylogenetic co
 DOMINO performs separate assemblies, one for each panel taxon, using MIRA v4.0.2 with the pre-processed reads from the previous step or with those supplied by the user. 
 
 Although the default parameter values vary in function of the particular sequencing technology, the majority of them are shared (see the DOMINO manual). 
+
+There are two strategies for this assembly phase. User can use as default MIRA and a second scaffolding step using CAP3 (optional) or user can choose to use SPAdes, but we will assume, in this version, the user is using a Linux server with enough CPUs and RAM for assembly.
 
 In order to avoid including repetitive and chimeric regions, all contigs (and the corresponding reads) identified as HAF6, HAF7 and MNRr by the MIRA algorithm are discarded from the mapping/alignment phase. 
 
@@ -672,8 +674,7 @@ DOMINO::printDetails("+ Errors occurred during the process would be print into f
 ## Assembly
 if ($flagSpades) {
 
-	## If user provides Spades flag, we will assume, in this version, he is using a Linux server with
-	## enough CPUs and RAM for assembly	
+	## If Spades flag, we will assume, in this version, it is using a Linux server with enough CPUs and RAM for assembly	
 	## We would use "cat /proc/meminfo " in order to check the available memory, if greater than 30GiB
 	## we would split in a reasonable amount of processes to proceed in parallel with the assembly 
 	
