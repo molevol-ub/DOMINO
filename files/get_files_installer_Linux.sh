@@ -28,6 +28,7 @@ cd $1
 
 echo "+ Copying necessary files"
 cp ."/"src"/perl/"*pl $DOMINO_installer_folder
+cp ."/"src"/perl/DOMINO.pm" $DOMINO_installer_folder
 cp -r ."/"src"/"Qt-c++ $DOMINO_installer_folder"/"
 
 cp ."/"files"/"db_default.tar.gz $DOMINO_installer_folder
