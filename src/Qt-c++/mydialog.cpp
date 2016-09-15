@@ -57,12 +57,13 @@ void MyDialog::aboutDOMINO() {
 
     "Furthermore, if the taxa panel has been designed in a convenient phylogenetic context and the user asks for highly conserved regions flanking to be included in the developed markers, these markers should be suitable for further surveys of variation in an extended set of phylogenetically related taxa, i.e. “focal taxa”.\n\n"
 
-    "AUTHORS\n\n"
+    "CITATION\n\n"
 
-     "Cristina Frias-Lopez, Jose F. Sanchez-Herrero, Miquel A. Arnedo, Alejandro Sanchez-Gracia and Julio Rozas.\n\n"
+     "Cristina Frías-López, José F. Sánchez-Herrero, Sara Guirao-Rico, Elisa Mora, Miquel A. Arnedo, Alejandro Sánchez-Gracia, and Julio Rozas. DOMINO: development of informative molecular markers for phylogenetic and genome-wide population genetic studies in non-model organisms\n\n"
+
+     "Bioinformatics, first published online August 16, 2016. doi:10.1093/bioinformatics/btw534\n\n"
 
      "Evolutionary Genomics and Bioinformatics Group, Departament de Genètica, Microbiologia i Estadística and Institut de Recerca de la Biodiversitat (IRBio), Universitat de Barcelona, Av. Diagonal 643, Barcelona 08028, Spain\n\n"
-
 
      "BUGS & COMMENTS:\n\n"
 

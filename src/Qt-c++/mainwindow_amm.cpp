@@ -440,6 +440,15 @@ void MainWindow_AMM::on_actionManual_triggered() {
     QDesktopServices::openUrl(QUrl(website_link ));
 }
 
+void MainWindow_AMM::on_actionCite_DOMINO_triggered() {
+    // ###############################################
+    // ## Open a web browser showing a DOMINO paper ##
+    // ###############################################
+    QString website_link = "http://bioinformatics.oxfordjournals.org/content/early/2016/09/02/bioinformatics.btw534";
+    QDesktopServices::openUrl(QUrl(website_link ));
+}
+
+
 void MainWindow_AMM::on_actionAbout_DOMINO_triggered(){
     about_dialog = new MyDialog(this);
     about_dialog->setFixedSize(1206, 628);

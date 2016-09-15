@@ -155,8 +155,8 @@ private slots:
     void on_pushButton_clicked();
     void on_actionAbout_DOMINO_triggered();
     void on_actionLicense_triggered();
-
     void on_actionDebug_Mode_triggered();
+    void on_actionCite_DOMINO_triggered();
 
 private:
     Ui::MainWindow_AMM *ui;

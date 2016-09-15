@@ -2217,6 +2217,7 @@ DOMINO</string>
     <addaction name="separator"/>
     <addaction name="actionAbout_DOMINO"/>
     <addaction name="actionAbout_Qt"/>
+    <addaction name="actionCite_DOMINO"/>
    </widget>
    <widget class="QMenu" name="menuReset_GUI">
     <property name="title">
@@ -2339,6 +2340,11 @@ DOMINO</string>
    </property>
    <property name="text">
     <string>Debug Mode</string>
+   </property>
+  </action>
+  <action name="actionCite_DOMINO">
+   <property name="text">
+    <string>Cite DOMINO</string>
    </property>
   </action>
  </widget>
