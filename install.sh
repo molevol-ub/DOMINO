@@ -125,7 +125,7 @@ do
 		then
 			mkdir -p $scripts_folder"/bowtie2-2.2.9"
 			cd bowtie2-2.2.9
- 			#make > DOMINO_Error.log
+ 			make > DOMINO_Error.log
 			mv bowtie2* $scripts_folder"/"bowtie2-2.2.9
 			mv AUTHORS $scripts_folder"/"bowtie2-2.2.9
 			mv LICENSE $scripts_folder"/"bowtie2-2.2.9
@@ -186,7 +186,7 @@ do
 		then
 			mkdir -p $scripts_folder"/samtools-1.3.1"
 			cd samtools-1.3.1
- 			#make > DOMINO_Error.log
+ 			make > DOMINO_Error.log
 			mv COPYING $scripts_folder"/"samtools-1.3.1
 			mv AUTHORS $scripts_folder"/"samtools-1.3.1
 			mv samtools $scripts_folder"/"samtools-1.3.1
