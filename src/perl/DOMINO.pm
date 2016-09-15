@@ -133,6 +133,18 @@ sub check_paired_file {
 	return ($pair_return, $type);
 }
 
+sub convert_ASCII_to_number {
+
+	my $qual_ASCII_string =	$_[0];
+	my @qual_array_Ascii = split("", $qual_ASCII_string);
+	my $string_qual_nums;
+	for (my $q = 0; $q < scalar @qual_array_Ascii; $q++) {
+		my $tmp = ord($qual_array_Ascii[$q]) - 33; ## ord: basic perl function: returns number given ASCII
+		$string_qual_nums .= $tmp." ";
+	}
+	return $string_qual_nums;
+}
+
 sub dieNicely {
 	print DOMINO::time_stamp();	print "\n\nTry perl $0 -man for more information\n\n";
 	Pod::Usage::pod2usage( -exitstatus => 0, -verbose => 0 );
@@ -159,14 +171,14 @@ sub get_earliest {
 }
 
 sub makeblastdb {
-	my $file = $_[0]; my $make_blast_db = $_[1]; my $error_log = $_[2];
+	my $file = $_[0]; my $BLAST_path = $_[1]; my $error_log = $_[2];
 	my $db;
-	$make_blast_db .= "makeblastdb -in ".$file;
+	my $make_blast_db = $BLAST_path."makeblastdb -in ".$file;
 	$make_blast_db .= " -dbtype nucl";
 	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
 	$make_blast_db .= " -out ".$db." -logfile ".$db.".log 2> $error_log";	
 	my $makeblastresult = system($make_blast_db);
-	if ($makeblastresult != 0) { print "Generating the database failed when trying to proccess the file... DOMINO would not stop in this step...\n"; }
+	if ($makeblastresult != 0) { print "Generating the database failed when trying to proccess the file... DOMINO would not stop in this step...\n"; return 1; }
 	return $db;
 }
 
@@ -214,11 +226,22 @@ sub printHeader {
 }
 
 sub printDetails {
-	my $string = $_[0]; my $param_Detail_file = $_[1];
-	open (PARAM, ">>$param_Detail_file");
-	print PARAM $string;
-	print $string;
-	close(PARAM);
+	my $string = $_[0]; 
+	my $param_Detail_file = $_[1];
+	my $file2 = $_[2];
+	
+	my @files;
+	if ($file2) {
+		@files = ($param_Detail_file, $file2);
+	} else {
+		push (@files, $param_Detail_file);
+	}
+	for (my $i=0; $i < scalar @files; $i++) {
+		open (PARAM, ">>$files[$i]");
+		print PARAM $string;
+		close(PARAM);
+	}
+	print $string;		
 }
 
 sub printDump {

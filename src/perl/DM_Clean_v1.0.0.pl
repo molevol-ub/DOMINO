@@ -1390,18 +1390,6 @@ sub checking_names {
 	close(DIR);
 }
 
-sub convert_ASCII_to_number {
-
-	my $qual_ASCII_string =	$_[0];
-	my @qual_array_Ascii = split("", $qual_ASCII_string);
-	my $string_qual_nums;
-	for (my $q = 0; $q < scalar @qual_array_Ascii; $q++) {
-		my $tmp = ord($qual_array_Ascii[$q]) - 33; ## ord: basic perl function: returns number given ASCII
-		$string_qual_nums .= $tmp." ";
-	}
-	return $string_qual_nums;
-}
-
 sub sort_files_and_folders {
 
 	##########################################################################################
@@ -1560,7 +1548,7 @@ sub extracting_fastq {
 		
 		## Print into fasta and qual files		
 		my @seq_id = split ("\@", $id);
-		my $qual_string = &convert_ASCII_to_number($QualLine);
+		my $qual_string = DOMINO::convert_ASCII_to_number($QualLine);
 		print FASTA ">".$seq_id[1]."\n".$SeqLine."\n";
 		print QUAL ">".$seq_id[1]."\n".$qual_string."\n";
 	} close(F1); close (FASTA); close (QUAL);
