@@ -106,7 +106,7 @@ do
 
 		if [ "$folder_tar_gz" = "CAP3" ];
 		then
-			mkdir -p $scripts_folder"/"cap3"/"bin
+			mkdir -p $scripts_folder"/cap3/bin"
 			if [ $OpSys = "Linux" ]
 			then
 				mv CAP3"/"cap3 $scripts_folder"/"cap3"/"bin
@@ -123,9 +123,9 @@ do
 
 		if [ "$folder_tar_gz" = "bowtie" ];
 		then
-			mkdir -p $scripts_folder"/"bowtie2-2.2.9
+			mkdir -p $scripts_folder"/bowtie2-2.2.9"
 			cd bowtie2-2.2.9
- 			make > DOMINO_Error.log
+ 			#make > DOMINO_Error.log
 			mv bowtie2* $scripts_folder"/"bowtie2-2.2.9
 			mv AUTHORS $scripts_folder"/"bowtie2-2.2.9
 			mv LICENSE $scripts_folder"/"bowtie2-2.2.9
@@ -134,7 +134,7 @@ do
 		
 		if [ "$folder_tar_gz" = "mothur" ];
 		then 
-			mkdir -p $scripts_folder"/"MOTHUR_v1.32.0
+			mkdir -p $scripts_folder"/MOTHUR_v1.32.0"
 			mv mothur"/"mothur $scripts_folder"/"MOTHUR_v1.32.0
 			mv mothur"/"LICENSE $scripts_folder"/"MOTHUR_v1.32.0
 		fi
@@ -148,7 +148,7 @@ do
 
 		if [ "$folder_tar_gz" = "MIRA" ]
 		then
-			mkdir -p $scripts_folder"/"mira_v4.0"/"bin
+			mkdir -p $scripts_folder"/mira_v4.0/bin"
 				if [ $OpSys = "Linux" ]
 			then
 				mira_folder=mira_4.0.2_linux-gnu_x86_64_static
@@ -168,32 +168,25 @@ do
 
 		if [ "$folder_tar_gz" = "NGSQC" ]
 		then
-			mkdir -p $scripts_folder"/"NGSQCToolkit_v2.3.1
+			mkdir -p $scripts_folder"/NGSQCToolkit_v2.3.1"
 			mv NGSQCToolkit_v2.3.3"/"* $scripts_folder"/"NGSQCToolkit_v2.3.1
 		fi
 
 		if [ "$folder_tar_gz" = "NCBI" ]
 		then
-			mkdir -p $scripts_folder"/"NCBI_BLAST_v2.2.28
-			if [ $OpSys = "Linux" ]
-			then
-				cd ncbi-blast-2.2.28+-src"/"c++
-				sh ./configure > DOMINO_Error.log
-	 			make > DOMINO_Error.log
-				mv *"/"*bin"/"blastn $scripts_folder"/"NCBI_BLAST_v2.2.28
-				mv *"/"*bin"/"makeblastdb $scripts_folder"/"NCBI_BLAST_v2.2.28
-			
-			elif [ $OpSys = "Mac" ]
-			then
-				mv * $scripts_folder"/"NCBI_BLAST_v2.2.28
-			fi
+			mkdir -p $scripts_folder"/NCBI_BLAST"
+			cd blast
+			ls | while read files
+			do
+				cp $files $scripts_folder"/NCBI_BLAST"
+			done
 		fi
 				
 		if [ "$folder_tar_gz" = "samtools" ]
 		then
-			mkdir -p $scripts_folder"/"samtools-1.3.1
+			mkdir -p $scripts_folder"/samtools-1.3.1"
 			cd samtools-1.3.1
- 			make > DOMINO_Error.log
+ 			#make > DOMINO_Error.log
 			mv COPYING $scripts_folder"/"samtools-1.3.1
 			mv AUTHORS $scripts_folder"/"samtools-1.3.1
 			mv samtools $scripts_folder"/"samtools-1.3.1

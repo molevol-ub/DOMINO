@@ -519,7 +519,7 @@ my $scripts_path;
 for (my $j = 0; $j < $#script_path_array; $j++) { $scripts_path .= $script_path_array[$j]."/"; }
 my $MIRA_exec = $scripts_path."mira_v4.0/bin/mira";
 my $CAP3_exec = $scripts_path."cap3/bin/cap3";
-my $BLAST = $scripts_path."NCBI_BLAST_v2.2.28/";
+my $BLAST = $scripts_path."NCBI_BLAST/";
 my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
 
 ## Checking if the Directory already exists because a previous analysis

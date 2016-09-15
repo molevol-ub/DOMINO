@@ -86,12 +86,12 @@ do
 
 		if [ "$folder_tar_gz" = "NCBI" ]
 		then
-			mkdir -p $scripts_folder"/"NCBI_BLAST_v2.2.28
-			cd ncbi-blast-2.2.28+-src"/"c++
-			sh ./configure > DOMINO_Error.log
- 			make > DOMINO_Error.log
-			mv *"/"*bin"/"blastn $scripts_folder"/"NCBI_BLAST_v2.2.28
-			mv *"/"*bin"/"makeblastdb $scripts_folder"/"NCBI_BLAST_v2.2.28
+			mkdir -p $scripts_folder"/NCBI_BLAST"
+			cd blast
+			ls | while read files
+			do
+				cp $files $scripts_folder"/NCBI_BLAST"
+			done
 		fi
 				
 		if [ "$folder_tar_gz" = "samtools" ]

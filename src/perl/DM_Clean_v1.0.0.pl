@@ -621,7 +621,7 @@ DOMINO::printDetails("Starting the process: [ ".(localtime)." ]\n\n", $param_Det
 
 ## Getting scripts path variable
 my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
-my $BLAST = $scripts_path."NCBI_BLAST_v2.2.28/";
+my $BLAST = $scripts_path."NCBI_BLAST/";
 my $db_dirname_default = $scripts_path."db_default"; # Default databases provided
 my $db_dirname = $dirname."/db";
 
