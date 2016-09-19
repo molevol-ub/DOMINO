@@ -1,3 +1,129 @@
+commit 3cbccd730c7ea3814402a2be1693d88d039480b0
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Sep 19 13:30:35 2016 +0200
+
+    Version fixed after publication
+
+commit 7f9d4882a958d28f973234fde3586d4c3fb4f848
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Sep 16 13:11:26 2016 +0200
+
+    Fixing some bugs but still missing
+
+commit 020d72c4ec53a92b496206c480aa85e8f71e7b25
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Sep 15 18:08:59 2016 +0200
+
+    DOMINO.pm for DM_Markers
+
+commit 23d56d8c6147a65d837c2ce415732be52bc85f08
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Sep 15 18:08:26 2016 +0200
+
+    Added DOMINO.pm to installers
+
+commit b0ace73b4cc302b94f3fb4d4bd711d4e2557a1df
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Sep 15 11:10:30 2016 +0200
+
+    debugging control
+
+commit 53fdb95879e5a26342f0882f423c5eacb3cb9603
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Sep 15 11:09:22 2016 +0200
+
+    Added a binary for NCBI-blast
+
+commit 6a5582fadcd77492a1b59a21d910468d39ac0c54
+Author: JF <jfsanchezherrero@gmail.com>
+Date:   Thu Sep 15 10:20:28 2016 +0200
+
+    Added citation to GUI
+
+commit dbb04c5854b6addb7df3bbfd70e68c8c397f280a
+Author: molevol <jfsanchezherrero@ub.edu>
+Date:   Wed Sep 14 17:39:15 2016 +0200
+
+    Fixed some bugs when installing
+
+commit 34cf13e1f01094e392305b9d9050991a10fd99e8
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Sep 14 16:52:01 2016 +0200
+
+    Fixing bugs in installers
+
+commit b3a44e62daab7040d756c1ff3ea014315ede1a2b
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Sep 14 16:30:13 2016 +0200
+
+    Add installation steps for new implementations
+
+commit 6ecc7d0bc102709b888616cf57ea169613db41ed
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Sep 14 16:11:07 2016 +0200
+
+    Added htslib to samtools
+
+commit 92a4126d8ac2d1e21108c74a4ee341d00581e2e1
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Sep 14 15:13:46 2016 +0200
+
+    Added bowtie2.2.9, spades and samtools.1.3.1
+
+commit 827696a40ae728d0fa4144f2a75b4ff16eaf5a36
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Sep 13 19:01:11 2016 +0200
+
+    Applying DOMINO.pm
+
+commit a8130c83d5c3655b5837d02d855da3ff89e299ba
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Sep 12 18:55:08 2016 +0200
+
+    Updating and applying DOMINO.pm
+
+commit 72243cf5409a22462ed31372d5d24bb6907f4b55
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Sep 9 15:58:11 2016 +0200
+
+    Some TODOs fixed
+
+commit 16b456f5733ea8066f5dc2543937896adb047c72
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Sep 8 17:45:17 2016 +0200
+
+    Updating and fixing to use DOMINO.pm
+
+commit d2da019f730d30a34bde57a850ff452679516f17
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Tue Sep 6 16:54:18 2016 +0200
+
+    Update README.md
+
+commit 4c5d76ac34275b4da066774c77c2dd4ba4fbc198
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Aug 4 13:55:07 2016 +0200
+
+    Splitter subs added
+
+commit 60705bccc43136b9b4ffbacad8860b215b83416a
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Aug 4 13:47:22 2016 +0200
+
+    DM_subroutines perl package added but not implemented neither fixed
+
+commit bf07d11cbef957f1973a8a6f235b60c251d3c734
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jul 14 19:00:39 2016 +0200
+
+    Fixed a bug: retrieving files from assembly and mapping steps
+
+commit 3c14798152ad16bb5be1109bddfff0b0444e2ea4
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jul 8 10:33:13 2016 +0200
+
+    Making a difference: Subprocesses and CPUs; Update Change.Log
+
 commit 88bc115bca48613607e937876a03c16fabac09fe
 Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
 Date:   Fri Jul 8 09:57:51 2016 +0200
