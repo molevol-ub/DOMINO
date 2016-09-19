@@ -39,7 +39,7 @@
                     <platforms>all</platforms>
                     <distributionFileList>
                         <distributionDirectory>
-                            <origin>/home/molevol/git_domino/release/DOMINO_installer_folder</origin>
+                            <origin>/home/molevol/git_domino/github_domino/developers/DOMINO_installer_folder</origin>
                         </distributionDirectory>
                     </distributionFileList>
                     <shortcutList>
