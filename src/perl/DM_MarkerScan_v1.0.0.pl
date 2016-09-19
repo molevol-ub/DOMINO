@@ -1284,7 +1284,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 		my $reference = "reference_".$reference_identifier;
 		print "- Reference: $contigs_fasta...\n";
 		my $bowtie_index_call = $bowtie_path."bowtie2-build --threads $num_proc_user -f ".$contigs_fasta." ".$reference;   
-		print "BOWTIE command: ".$bowtie_index_call."\n";
+		&debugger_print("BOWTIE command: ".$bowtie_index_call."\n");
 		my $index_result = system ($bowtie_index_call);
 		if ($index_result != 0) {
 			&printError("Exiting the script. Some error happened when calling bowtie for indexing the file...\n"); DOMINO::dieNicely();
@@ -1347,7 +1347,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 				} else {
 					$botwie_system .= " -x ".$reference." -q -U ".$mapping_file." -S ".$sam_name." ".$R_group_id.$R_group_name.$threads.$mismatches." --no-unal".$read_gap_open.$ref_gap_open.$mismatch_penalty;   
 			}} 
-			print "BOWTIE command: ".$botwie_system."\n";
+			print "BOWTIE command: ".$botwie_system."\n"; &debugger_print("BOWTIE command: ".$botwie_system."\n"); 
 			my $system_bowtie_call = system ($botwie_system);
 			if ($system_bowtie_call != 0) {
 				&printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); DOMINO::dieNicely();
@@ -1374,7 +1374,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 		#################################
 		print "\n"; DOMINO::printHeader("", "%"); DOMINO::printHeader(" Obtain information of the Reference sequence ", "%"); DOMINO::printHeader("", "%"); print "\n";
 		print "- Reading the reference fasta file...\n";
-		my $reference_hash_fasta_ref = DOMINO::readFASTA_hashLength($contigs_fasta); ## Obtain reference of a hash
+		my ($reference_hash_fasta_ref, $message) = DOMINO::readFASTA_hashLength($contigs_fasta); ## Obtain reference of a hash
 		
 		###################################################################
 		## Generate sorted bam files in order to be able to get coverage ##
@@ -1389,7 +1389,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 		print "- Indexing the reference fasta file $contigs_fasta...\n";
 		## Index contig file using samtools faidx
 		my $samtools_index_system = $samtools_path." faidx ".$contigs_fasta;
-		print "SAMTOOLS command: ".$samtools_index_system."\n";
+		&debugger_print("SAMTOOLS command: ".$samtools_index_system."\n");
 		my $samtools_index_system_call = system($samtools_index_system);
 		if ($samtools_index_system_call != 0) {
 			&printError("Exiting the script. Some error happened when calling SAMtools for indexing the file $contigs_fasta...\n"); DOMINO::dieNicely();
@@ -1405,7 +1405,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 			my @tmp_bam_name = split ("\.sorted.bam", $sorted_bam[$i]);
 			my $coverage_file = $tmp_bam_name[0]."_coverage_stats.txt";
 			my $coverage_samtools_command = $samtools_path." depth ".$sorted_bam[$i]." > ".$coverage_file;
-			print "SAMTOOLS command: $coverage_samtools_command\n";
+			&debugger_print("SAMTOOLS command: $coverage_samtools_command\n");
 			my $system_coverage_call = system ($coverage_samtools_command);
 			if ($system_coverage_call != 0) {
 				&printError("Exiting the script. Some error happened when calling SAMtools for obtaining coverage of file $sorted_bam[$i]...\n"); DOMINO::dieNicely();
@@ -1420,6 +1420,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 			undef %discard_contigs; undef %max_cov; ## Initialize some hashes
 			print "\n"; &time_log();	print "\n";
 		}
+		
 		undef %mapping_contigs;
 		unless ($avoidDelete_tmp_files) {
 			############################
@@ -1533,7 +1534,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 		}
 		
 		if ($select_markers) {
-			chdir $folder_abs_path;
+			chdir $folder_abs_path; &debugger_print("Changing dir to $folder_abs_path");
 			remove_tree($align_dirname);
 			remove_tree($marker_dirname);
 			remove_tree($mapping_parameters); 
@@ -1689,7 +1690,7 @@ if ($option eq "msa_alignment") {
 		File::Copy::move($marker_dirname, $marker_dirname."_old_".$random_number);
 		DOMINO::printDetails("+ Changing an old folder named as $marker_dirname to $marker_dirname"."_old_"."$random_number...OK\n", $param_Detail_file_markers);     						
 	} 
-	mkdir $marker_dirname, 0755; chdir $marker_dirname;
+	mkdir $marker_dirname, 0755; chdir $marker_dirname; &debugger_print("Changing dir to $marker_dirname");
 	my $profile_dir = $marker_dirname."/PROFILES";	mkdir $profile_dir, 0755;
 	my $msa_dir = $marker_dirname."/MSA_markers"; mkdir $msa_dir, 0755;
 	my $tmp_dir;
@@ -1878,7 +1879,7 @@ foreach my $keys_hash (sort keys %MID_species_hash) { ## For each taxa specified
 		print "Checking: \t$ref_taxa\n\n";
 		$dir = $marker_dirname."/markers_Ref_".$ref_taxa;
 	}	
-	mkdir $dir, 0755; chdir $dir;
+	mkdir $dir, 0755; chdir $dir; &debugger_print("Changing dir to $dir");
 	
 	## Initialize some variables
 	undef %coord_contig; undef %coord_markers; undef %putative_markers; undef $merge_bam_all_sp;
@@ -2042,6 +2043,7 @@ foreach my $keys_hash (sort keys %MID_species_hash) { ## For each taxa specified
 	my $tmp_PILEUP_merge_folder = "PROFILE_merge_species";
 	my $PILEUP_merged_folder_abs_path = $folder."/".$tmp_PILEUP_merge_folder;
 	mkdir $tmp_PILEUP_merge_folder, 0755; chdir $tmp_PILEUP_merge_folder; 
+	&debugger_print("Changing dir to $tmp_PILEUP_merge_folder");
 	my $array_all_species_abs_path = $folder."/".$array_all_species;
 	open (ARRAY,"<$array_all_species_abs_path");
 	$/ = ">"; ## Telling perl where a new line starts
@@ -2059,8 +2061,7 @@ foreach my $keys_hash (sort keys %MID_species_hash) { ## For each taxa specified
 	close(ARRAY); $/ = "\n";
 	&sliding_window_conserve_variable($PILEUP_merged_folder_abs_path);
 	print "\n"; &time_log(); print "\n";
-	chdir $folder;
-	
+	chdir $folder; &debugger_print("Changing dir to $folder");	
 	my $ref_array_folder_files = DOMINO::readDir($tmp_PILEUP_merge_folder);
 	my @array_folder_files = @$ref_array_folder_files;
 
@@ -2112,16 +2113,16 @@ foreach my $keys_hash (sort keys %MID_species_hash) { ## For each taxa specified
 		##########################################
 		&get_shared_coordinates(\@coordinates_each_contig, $coordinate_merge_file, $ref_taxa);
 	}
-	chdir $folder; print "\n"; &time_log();	print "\n";
+	chdir $folder; &debugger_print("Changing dir to $folder"); print "\n"; &time_log();	print "\n";
 
 	#################################################################
 	## Get the information ready for the user to visualize contigs ##
 	#################################################################
 	print "\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" Getting the information ready to present ", "#"); DOMINO::printHeader("", "#"); 
 	&get_ready_to_view_putative_markers($ref_taxa, $contigs_fasta, $ref_array_folder_files, $tmp_PILEUP_merge_folder, $ref_arrays_pileups);
-	print "\n"; &time_log();	print "\n";
-	
-	chdir $folder;
+	print "\n"; &time_log(); print "\n";
+	chdir $folder; &debugger_print("Changing dir to $folder");
+
 	###########################
 	## Delete temporary file ##
 	###########################
@@ -2144,7 +2145,7 @@ if ($genome_fasta) {
 #############################################################
 print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" Clustering markers for unique results ", "#"); DOMINO::printHeader("", "#");
 my $blast_dir = $marker_dirname."/clustering";
-mkdir $blast_dir, 0755; chdir $blast_dir;
+mkdir $blast_dir, 0755; chdir $blast_dir; 	&debugger_print("Changing dir to $blast_dir");
 # read dir
 my $files_dir_ref = DOMINO::readDir($marker_dirname);
 my @markers_folders = @$files_dir_ref;
@@ -2165,14 +2166,14 @@ for (my $h = 0; $h < scalar @markers_folders; $h++) {
 
 ## Use BLAST for clustering sequences
 print "+ Generate a BLAST database...\n"; 
-my $blast_DB = &makeblastdb($all_coordinates_file, $BLAST, $mapping_markers_errors_details);
-if ($blast_DB == 1) {
+my $blast_DB = DOMINO::makeblastdb($all_coordinates_file, $BLAST, $mapping_markers_errors_details);
+if ($blast_DB eq "1") {
 	&printError("Early termination of the DOMINO Marker Scan...");
 	my $msg= "\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"; 
 	print $msg; DOMINO::printError_log($msg); &finish_time_stamp();  exit();
 } 
-my $blast_search = "blast_search.txt";
-print "+ BLAST search now...\n"; &blastn($all_coordinates_file, $blast_DB, $blast_search, $BLAST);
+my $blast_search = "blast_search.txt"; print "+ BLAST search now...\n"; 
+DOMINO::blastn($all_coordinates_file, $blast_DB, $blast_search, $BLAST);
 
 ## Filter BLAST results
 print "+ Filtering BLAST search now...\n";
@@ -2203,6 +2204,7 @@ foreach my $keys (keys %$contig_length_Ref) { unless (grep /$keys/, @markers_see
 ## Printing definitely Results
 my $definitely_results_dirname = $marker_dirname."/DOMINO_markers_Results";
 mkdir $definitely_results_dirname, 0755; chdir $definitely_results_dirname;
+&debugger_print("Changing dir to $definitely_results_dirname");
 
 my $sam_merged_DOMINO_markers;
 unless ($option eq "msa_alignment") {
@@ -3711,14 +3713,13 @@ sub generate_bam {
 	my $avoid = $_[1];
 	my @temp = split ("\.sam", $sam_file);
 	my $name = $temp[0]; my $bam_file = $name.".bam";
-	DOMINO::printHeader(" Generating a BAM file ", "%"); 	
+	print "- Generating a BAM file for $sam_file\n"; 	
 	my $system_samtools_sam2bam = $samtools_path." view -@ $num_proc_user -bS -o $bam_file $sam_file";
-	print "SAMTOOLS command: $system_samtools_sam2bam\n";
+	&debugger_print("SAMTOOLS command: $system_samtools_sam2bam\n");	
 	my $system_call = system ($system_samtools_sam2bam);
 	if ($system_call != 0) {
 		if (!$avoid) { &printError("Some error happened when calling SAMTOOLs for SAM -> BAM conversion $sam_file to $bam_file...."); DOMINO::dieNicely(); }
 	}
-	print "Done...\n\n";
 	my $sorted = &generate_sorted_bam($bam_file);	
 	return $sorted;
 }
@@ -3727,15 +3728,14 @@ sub generate_sorted_bam {
 	my $bam_file = $_[0];
 	my @temp = split ("\.bam", $bam_file);
 	my $name = $temp[0];
-	DOMINO::printHeader(" Sorting the BAM file ", "%");
+	print "- Sorting the BAM file: $bam_file\n"; 	
 	my $sorted_bam = $name.".sorted.bam";	
 	my $system_samtools_sort = $samtools_path." sort -@ $num_proc_user -o $sorted_bam $bam_file";
-	print "SAMTOOLS command: ".$system_samtools_sort."\n";
+	&debugger_print("SAMTOOLS command: ".$system_samtools_sort."\n");
 	my $system_call_2 = system ($system_samtools_sort);
 	if ($system_call_2 != 0) {
 		&printError("Some error happened when calling SAMTOOLs for sorting BAM file...."); DOMINO::dieNicely();
 	}
-	print "Sorting...\nDone...\n\n";
 	return $sorted_bam;
 }
 
@@ -3743,22 +3743,21 @@ sub generate_sam {
 	my $bam_file = $_[0];
 	my @temp = split ("\.bam", $bam_file);
 	my $name = $temp[0];
-	DOMINO::printHeader(" Generating a SAM file for $bam_file ", "%"); 	
+	print "- Generating a SAM file for $bam_file\n"; 	
 	my $system_samtools_bam2sam = $samtools_path." view -@ $num_proc_user -h ".$bam_file." -o ".$name.".sam";
-	print "SAMTOOLS command: $system_samtools_bam2sam\n";
+	&debugger_print("SAMTOOLS command: $system_samtools_bam2sam\n");
 	my $system_call = system ($system_samtools_bam2sam);
 	if ($system_call != 0) {
 		&printError("Some error happened when calling SAMTOOLs for BAM -> SAM conversion....");  DOMINO::dieNicely();
 	}
-	print "Done...\n\n";
 	return $name.".sam";
 }
 
 sub generate_index_bam {
 	my $bam_file = $_[0];
-	DOMINO::printHeader(" Generating an index file for $bam_file ", "%"); 	
+	print "- Generating an index bam file for $bam_file\n"; 	
 	my $index_system = $samtools_path." index ".$bam_file;
-	print "SAMTOOLS command: ".$index_system."\n";
+	&debugger_print("SAMTOOLS command: ".$index_system."\n");
 	my $index_call = system($index_system);
 	if ($index_call != 0) {
 		&printError("Some error happened when calling SAMTOOLs for indexing the BAM file [$bam_file]...."); DOMINO::dieNicely();
@@ -3777,25 +3776,28 @@ sub generate_filter_PILEUP {
 	my $reference_hash_fasta = $_[2];
 	my $reference_id = $_[3];
 	
+	my $dir_path = $align_dirname."/".$reference_id;
+	
 	my @temp_name = split ("\.sorted.bam", $sorted_bam);
 	my ($ID, @sam);
 	my $input_pileup = $temp_name[0].".profile";
+	my $input_pileup_path = $dir_path."/".$input_pileup;
 
     DOMINO::printHeader(" Generate a PILEUP for $sorted_bam ", "%");
 	my $pileup_command = $samtools_path." mpileup -f ".$contig_file." -o ".$input_pileup." ".$sorted_bam;
-	print "SAMTOOLS command: ".$pileup_command."\n";
+	&debugger_print("SAMTOOLS command: ".$pileup_command."\n");
 	my $sytem_command_pileup = system ($pileup_command);
 	if ($sytem_command_pileup != 0) {
 		&printError("Exiting the script. Some error happened when calling SAMtools for generating the PILEUP for the file $contig_file...\n"); DOMINO::dieNicely();
 	}
 	print "Done...\n\n";
-
-	my $folder = abs_path();
-	my $tmp = "ARRAY_files_$input_pileup"; mkdir $tmp, 0755; chdir $tmp;
+	
+	my $tmp = $dir_path."/ARRAY_files_$input_pileup"; mkdir $tmp, 0755; chdir $tmp;
+	&debugger_print("Changing dir to $tmp");
     DOMINO::printHeader(" Filtering the PILEUP generated ", "%");
 	print "- Splitting the PILEUP file $input_pileup...\n";
 	my ($previous_contig, $previous_fasta_contig, @array_positions, @fasta_positions);
-	open (PILEUP,"<$input_pileup");
+	open (PILEUP,"<$input_pileup_path");
 	while (<PILEUP>){
 		my $line = $_;
 		chomp $line;
@@ -3956,7 +3958,11 @@ sub generate_filter_PILEUP {
 	&print_coordinates(\@array_positions, \$previous_contig, $reference_id);
 	&print_fasta_coordinates(\@fasta_positions, \$previous_contig, $reference_id); ## Print array into file $previous_contig
 
-	chdir $folder;
+	## Return
+	#printDebug $dir_path."\n";
+	chdir $dir_path;
+	&debugger_print("Changing dir to $dir_path");
+
 	
 	sub check_array {
 		my $ref_base = $_[0];
@@ -4165,7 +4171,7 @@ sub merge_sam {
 	## Merge the different bam files
 	DOMINO::printHeader(" Merging the BAM files ", "%");
 	my $system_samtools_merge = $samtools_path." merge -r -@ $num_proc_user -h header.sam ".$name."merged.bam ".$sorted_bam;
-	print "SAMTOOLS command: ".$system_samtools_merge."\n";
+	&debugger_print("SAMTOOLS command: ".$system_samtools_merge."\n");
 	my $merge_system_command = system ($system_samtools_merge);
 	if ($merge_system_command != 0) {
 		&printError("Exiting the script. Some error happened when calling SAMtools for merging the different BAM Files...\n"); DOMINO::dieNicely();
@@ -4855,7 +4861,7 @@ sub time_log {
 	my $mins = int($secs/60); 
 	$secs %= 60; 
 	$step_time = $current_time;
-	printf ("Step took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
+	printf ("\tStep took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
 }
 
 

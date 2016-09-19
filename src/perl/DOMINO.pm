@@ -178,7 +178,7 @@ sub makeblastdb {
 	if ($file =~ /(.*)\.fasta/ ) { $db = $1 ; } 
 	$make_blast_db .= " -out ".$db." -logfile ".$db.".log 2> $error_log";	
 	my $makeblastresult = system($make_blast_db);
-	if ($makeblastresult != 0) { print "Generating the database failed when trying to proccess the file... DOMINO would not stop in this step...\n"; return 1; }
+	if ($makeblastresult != 0) { print "Generating the database failed when trying to proccess the file... DOMINO would not stop in this step...\n"; return "1"; }
 	return $db;
 }
 

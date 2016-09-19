@@ -373,7 +373,7 @@ Minimum Overlap percent identity cutoff (>65) for CAP3 assembly. [Default: 97]
 
 =item B<-use_CAP3> 
 
-Use CAP3 for a second assembly round. [Default: Off].
+Use CAP3 for a second assembly round. Not recommended. [Default: Off].
 
 =item B<>
 
@@ -390,6 +390,8 @@ Number of threads/cores to be used. [Default: 2]
 =item B<--SPAdes>
 
 Use SPAdes Genome Assembler for a better assembly. It is mandatory a Linux server and at least 30GiB of free Memory RAM.
+
+Available option for Illumina reads (single or paired-end reads). 454 is not supported anymore. 
 
 =item B<>
 
@@ -413,6 +415,10 @@ Use SPAdes Genome Assembler for a better assembly. It is mandatory a Linux serve
 =item B<Illumina: DOMINO Multiple fastq files>
 
  perl DM_Assembly_v1.0.0.pl -o test_folder -DOMINO_files -type_file 5
+
+=item B<Illumina: DOMINO Multiple fastq files -- SPAdes >
+
+ perl DM_Assembly_v1.0.0.pl -o test_folder -DOMINO_files -type_file 5 -SPAdes
 
 =item B<Illumina Paired-end Files: DOMINO Multiple Paired-end FASTQ files>
 
@@ -1007,7 +1013,7 @@ if ($flagSpades) {
 				next unless ($sequence && $seq_id);
 				if ($hash_identifiers{$seq_id}) { 
 					print OUT ">".$seq_id."\n".$sequence;
-					print ">".$seq_id."\n";
+					#print ">".$seq_id."\n";
 					}
 			} $/ = "\n";
 			close (QUAL); close (OUT);
@@ -1026,7 +1032,6 @@ if ($flagSpades) {
 			&debugger_print("DOMINO files"); &debugger_print("Ref", \%domino_files);
 			print "\n\n"; DOMINO::printHeader("","#"); 
 			DOMINO::printHeader(" CAP3 Assembly Step Started ","#"); DOMINO::printHeader("","#"); print "\n\n";
-			
 			my @tmp_array = split("/", $contigsMIRA_Fasta_file);
 			my $fasta_name_contigsMIRA = $tmp_array[-1];
 			my $command_CAP3 = $CAP3_exec." ".$fasta_name_contigsMIRA." -o ".$overlap_CAP3." -p ".$similar_CAP3." 2> $error_log";
@@ -1036,7 +1041,6 @@ if ($flagSpades) {
 			###########################################
 			### Get contigs and singlets assembled 	###
 			###########################################
-			## Get the contigs + singlets
 			my $singlets_file_CAP3 = $fasta_name_contigsMIRA.".cap.singlets"; push (@{$domino_files{$taxa}{'singletsCAP3'}}, $singlets_file_CAP3);
 			my $contigs_file_CAP3 = $fasta_name_contigsMIRA.".cap.contigs"; push (@{$domino_files{$taxa}{'contigsCAP3'}}, $contigs_file_CAP3);
 
@@ -1048,49 +1052,13 @@ if ($flagSpades) {
 			&change_seq_names($tmp_fasta, $FINAL_fasta_file, $taxa);
 			File::Copy::move($FINAL_fasta_file, $dirname);
 			print "\n"; &time_log();			
-			
-			#my $qual_file = $fasta_name.".qual";
-			#print "Fetching qual singlets for $singlets_file\n";
-			#my $hash_identifiers = DOMINO::readFasta_hash($qual_file);
-			#my $singlets_qual_file = $singlets_file.".qual";
-			#open (OUT_singlets, ">$singlets_file");
-			#open (FILE, $singlets_file) or &printError("Could not open file.") and DOMINO::dieNicely;
-			# Get the idenfitiers of the singlet file, all of them
-			#while (<FILE>) {
-			#	next if /^#/ || /^\s*$/;
-			#	chomp;
-			#	my ($seq_id, $sequence) = split(/\n/,$_,2);
-			#	next unless ($sequence && $seq_id);
-			#	$seq_id = ">".$seq_id;		
-			#	if ($$hash_identifiers{$seq_id}) {
-			#		print OUT_singlets $seq_id."\n".$$hash_identifiers{$seq_id}."\n";
-			#}}
-			#close (FILE); close (OUT_singlets);
-			
-			#my $qual_contigs_file = $fasta_name.".cap.contigs.qual";
-			#my $tmp_qual = "tmp.qual"; #open (OUT_qual, ">$tmp_qual");
-			#open (CONTIGS_qual, $qual_contigs_file); while (<CONTIGS_qual>) { print OUT_qual $_; } close (CONTIGS_qual);
-			#open (SINGLETS_qual, $singlets_qual_file); while (<SINGLETS_qual>) { print OUT_qual $_; } close (SINGLETS_qual); close (OUT_qual);
-
 		} else { 
 			&change_seq_names($contigsMIRA_Fasta_file, $FINAL_fasta_file, $taxa);
-		}
-	}
-}
-print "\n"; &time_log();
+}}} print "\n"; &time_log();
 
 &debugger_print("DOMINO files"); &debugger_print("Ref", \%domino_files);
 my $dump_hash = $dirname_tmp."/dumper_assembly_files.txt";
 DOMINO::printDump(\%domino_files, $dump_hash);
-
-###########################################
-### Cleaning or renaming some files	###
-###########################################
-print "\n\n";
-unless ($avoidDelTMPfiles) {
-	DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
-	&clean_assembling_folders(); print "\n\n";
-}
 
 ###############################
 ## Generating some statistics #
@@ -1109,6 +1077,15 @@ foreach my $taxa (keys %domino_files) {
 	my $stats_file = &Contig_Stats($domino_files{$taxa}{'FINAL'}[0]);
 	$domino_files{$taxa}{'FINAL_stats'} = $stats_file;	
 	print "\n\n";
+}
+
+###########################################
+### Cleaning or renaming some files	###
+###########################################
+print "\n\n";
+unless ($avoidDelTMPfiles) {
+	DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
+	&clean_assembling_folders(); print "\n\n";
 }
 
 ###########################
