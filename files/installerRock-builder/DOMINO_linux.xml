@@ -1,7 +1,7 @@
 <project>
     <shortName>DOMINO</shortName>
     <fullName>DOMINO</fullName>
-    <version>1.0</version>
+    <version>1.0.1</version>
     <readmeFile>/home/molevol/git_domino/github_domino/DOMINO/README.md</readmeFile>
     <licenseFile>/home/molevol/git_domino/github_domino/DOMINO/LICENSE</licenseFile>
     <leftImage>/home/molevol/git_domino/github_domino/DOMINO/docs/LOGO/DOMINO_icon-small.png</leftImage>
