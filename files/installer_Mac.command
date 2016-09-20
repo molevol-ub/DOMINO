@@ -173,6 +173,7 @@ mv $current_dir"/Qt-c++/"* $qt_code
 mv $current_dir"/"starter_Mac.command $install_dir"/"bin
 mv $install_dir"/"scripts $install_dir"/"bin
 ln -s $install_dir"/"bin"/"DOMINO.app ~/Desktop/
+ln -s $install_dir"/"bin"/"DOMINO.app $install_dir
 mv uninstaller.command $install_dir"/"bin
 
 echo "+ Copying necessary files..."

@@ -166,6 +166,7 @@ cd $current_dir
 mv $current_dir"/Qt-c++/"DOMINO $install_dir"/"bin
 mv $current_dir"/Qt-c++/"* $qt_code
 mv $current_dir"/"starter_Linux.sh $install_dir"/"bin
+ln -s $install_dir"/bin/DOMINO" $install_dir
 cp uninstaller.sh $install_dir"/"
 
 echo "+ Removing temporary files..."

@@ -1,3 +1,21 @@
+commit 591bc5f740eb4912ee1675433cb9e059b9b5b467
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Sep 20 13:16:55 2016 +0200
+
+    Fixed a bug when using -NPG option in the Marker phase
+
+commit 603d882423a839b0f7f8c1b78d0122f850bb7663
+Author: molevol <jfsanchezherrero@ub.edu>
+Date:   Mon Sep 19 19:18:30 2016 +0200
+
+    Release DOMINO v1.0
+
+commit 8c4b6dcea424b7d379e7dc3e23a89abd06c67abb
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Sep 19 18:03:52 2016 +0200
+
+    Release DOMINO v1.0
+
 commit 3cbccd730c7ea3814402a2be1693d88d039480b0
 Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
 Date:   Mon Sep 19 13:30:35 2016 +0200
