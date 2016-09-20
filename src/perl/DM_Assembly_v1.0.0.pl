@@ -610,7 +610,7 @@ if ($user_files) { ## If users provides files for the assembly either than the D
 		} else {
 			for (my $i = 0; $i < scalar @file_abs_path_user; $i++) {
 				&check_file($file_abs_path[$i]);
-				system("ln -s $file_abs_path[$i]");
+				&debugger_print("ln -s $file_abs_path[$i]"); system("ln -s $file_abs_path[$i]");
 	}}}
 } else {
 	## Go to DOMINO_clean_data and get the files
@@ -634,7 +634,7 @@ if ($user_files) { ## If users provides files for the assembly either than the D
 		if ($$files_ref[$i] =~ /.*MIDtag\.fastq/) { next; }
 		if ($$files_ref[$i] =~ /.*id\-.*fastq/) {
 			my $file_path = $clean_folder."/".$$files_ref[$i];	
-			&check_file($file_path); system("ln -s $file_path");		
+			&check_file($file_path); &debugger_print("ln -s $file_path"); system("ln -s $file_path");		
 	}}
 }
 print "\n"; &time_log();
@@ -685,6 +685,7 @@ if ($flagSpades) {
 	## we would split in a reasonable amount of processes to proceed in parallel with the assembly 
 	
 	# Get memory
+	&debugger_print("cat /proc/meminfo > memory_server.txt");
 	system("cat /proc/meminfo > memory_server.txt");	
 	my $memory_server_file = $assembly_directory."/memory_server.txt";
 	my $total_available;
@@ -767,10 +768,11 @@ if ($flagSpades) {
 					$spades_path .= "-s ".$domino_files{$keys}{'original'}[0];
 				}
 				$spades_path .= " -t $noOfProcesses_SPAdes";
-				print "Sending command:\n".$spades_path."\n";
 				unless ($debugger) {
 					$spades_path .= " > /dev/null"; ## discarding SPAdes output		
 				}
+				&debugger_print("Sending command: $spades_path\n");
+				print "Sending SPAdes command...\n";
 				my $system_call = system($spades_path);
 				if ($system_call != 0) {
 					&printError("Something happened when calling SPAdes for assembly reads..."); DOMINO::dieNicely();
@@ -848,14 +850,15 @@ if ($flagSpades) {
 		
 		my $abs_path_manifest_file = $assembly_directory."/".$MIRA_manifest_file;
 		push (@{ $domino_files{$keys}{'manifest'}}, $abs_path_manifest_file);
-		
-		print $abs_path_manifest_file."\n- Calling MIRA now for $keys assembly...\n- It might take a while...\n";
+		&debugger_print("MIRA manifest: $abs_path_manifest_file\n");
+		print "- Calling MIRA now for $keys assembly...\n- It might take a while...\n";
 		my $mira_exe = $MIRA_exec." -t $noOfProcesses ".$abs_path_manifest_file;
 		if ($debugger) { $mira_exe .= " 2> $error_log"; ## show on screen or maybe print to a file
 		} else { $mira_exe .= " > /dev/null 2> $error_log"; ## discarding MIRA output
 		}
 	
-		print $mira_exe."\n\n"; my $system_call = system($mira_exe);
+		print "- Sending MIRA command for $keys...\n"; &debugger_print("MIRA command: $mira_exe\n\n"); 
+		my $system_call = system($mira_exe);
 		if ($system_call != 0) { &printError("Something happened when calling MIRA for assembly reads..."); DOMINO::dieNicely(); }
 		print "\n"; &time_log();
 		push(@{ $domino_files{$keys}{'contigs_fasta'}}, $domino_files{$keys}{'DIR'}[0]."/".$keys."_d_results/".$keys."_out.unpadded.fasta");
@@ -932,9 +935,13 @@ if ($flagSpades) {
 		}	
 		
 		## Use BLAST for clustering sequences
-		print "\n\n+ Generate a BLAST database for $contigs2cluster...\n"; my $db_generated = DOMINO::makeblastdb($contigs2cluster, $BLAST, $error_log);
+		print "\n\n+ Generate a BLAST database for $contigs2cluster...\n"; 
+		my ($db_generated, $db_generated_message) = DOMINO::makeblastdb($contigs2cluster, $BLAST, $error_log);
+		&debugger_print($db_generated_message);
 		my $blast_search = "blast_search.txt";
-		print "+ BLAST search now...\n"; my $blastn = DOMINO::blastn($contigs2cluster, $db_generated, $blast_search, $BLAST);
+		print "+ BLAST search now...\n"; 
+		my ($blastn, $blastn_message) = DOMINO::blastn($contigs2cluster, $db_generated, $blast_search, $BLAST);
+		&debugger_print($blastn);
 		if ($blastn != 0) { &printError("BLASTN failed...\n"); exit(); } 
 		my $contig_length_Ref = DOMINO::readFASTA_hash($contigs2cluster);
 		my $perc_aln_desired = 0.85; my $iden_desired = 85;
@@ -1021,8 +1028,8 @@ if ($flagSpades) {
 			## Generate directories
 			my $MID_directory = $CAP3_directory."/".$taxa;
 			unless (-d $MID_directory) { mkdir $MID_directory, 0755; }                                               
-			system("ln -s $contigsMIRA_Fasta_file $MID_directory/"); 
-			system("ln -s $contigsMIRA_qual_file $MID_directory/"); 
+			&debugger_print("ln -s $contigsMIRA_Fasta_file $MID_directory/"); system("ln -s $contigsMIRA_Fasta_file $MID_directory/"); 
+			&debugger_print("ln -s $contigsMIRA_qual_file $MID_directory/"); system("ln -s $contigsMIRA_qual_file $MID_directory/"); 
 			push(@{$domino_files{$taxa}{'CAP3_dir'}}, $MID_directory);
 			chdir $MID_directory;
 				
@@ -1035,7 +1042,7 @@ if ($flagSpades) {
 			my @tmp_array = split("/", $contigsMIRA_Fasta_file);
 			my $fasta_name_contigsMIRA = $tmp_array[-1];
 			my $command_CAP3 = $CAP3_exec." ".$fasta_name_contigsMIRA." -o ".$overlap_CAP3." -p ".$similar_CAP3." 2> $error_log";
-			print $command_CAP3."\n"; my $system_CAP3 = system($command_CAP3);
+			&debugger_print("CAP3 command: $command_CAP3\n"); my $system_CAP3 = system($command_CAP3);
 			if ($system_CAP3 != 0) { &printError("Some error happened when calling CAP3 for assembly reads..."); DOMINO::dieNicely(); }
 			
 			###########################################

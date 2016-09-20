@@ -1,7 +1,7 @@
 <project>
     <shortName>DOMINO</shortName>
     <fullName>DOMINO</fullName>
-    <version>1.0</version>
+    <version>1.0.0</version>
     <readmeFile>/Users/jfsh/GIT_REPOS/domino_github/README.md</readmeFile>
     <licenseFile>/Users/jfsh/GIT_REPOS/domino_github/LICENSE</licenseFile>
     <leftImage>/Users/jfsh/GIT_REPOS/developers/DOMINO_installer_folder/DOMINO_icon-small.png</leftImage>

@@ -1059,7 +1059,7 @@ foreach my $keys (sort keys %domino_files) {
 		# Setting the minimum cutoff for PHRED quality, default 20 
 	
 	## Sending command
-	print "NGS QC Toolkit command: ".$NGS_QC_call."\n";
+	&debugger_print("NGS QC Toolkit command: $NGS_QC_call\n");
 	my $NGSQC_result = system($NGS_QC_call);
 	if ($NGSQC_result != 0) { &printError("Cleaning step failed when calling NGSQC for file $dust_clean_reads..."); exit(); }	
 	print "\n"; &time_log();
@@ -1102,18 +1102,22 @@ foreach my $keys (sort keys %domino_files) {
 				&extracting_fastq($domino_files_threads_QC{$keys}{"NGS_QC"}[$i], $name[0], "YES");
 				push (@{ $domino_files_threads_QC{$keys}{"FASTA4BLAST"} }, $name[0].".filtered.fasta");
 				push (@{ $domino_files_threads_QC{$keys}{"QUAL4BLAST"} }, $name[0].".filtered.qual");
-				push (@reads_db, DOMINO::makeblastdb($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[$i], $BLAST, $error_log));
+				my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[$i], $BLAST, $error_log);
+				&debugger_print($blast_DB_message); push (@reads_db, $blast_DB);
 			}		
 		} elsif ($file_type eq "454_fastq" || $file_type eq "454_multiple_fastq" || $file_type eq "454_sff" ) {
 			push (@{ $domino_files_threads_QC{$keys}{"FASTA4BLAST"} }, $domino_files_threads_QC{$keys}{"NGS_QC"}[0]);
 			push (@{ $domino_files_threads_QC{$keys}{"QUAL4BLAST"} }, $domino_files_threads_QC{$keys}{"NGS_QC"}[1]);
-			push (@reads_db, DOMINO::makeblastdb($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[0], $BLAST, $error_log));
+			my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[0], $BLAST, $error_log);
+			&debugger_print($blast_DB_message); push (@reads_db, $blast_DB);
+
 		} else {
 			my @name = split("\.fastq_filtered", $domino_files_threads_QC{$keys}{"NGS_QC"}[0]);
 			&extracting_fastq($domino_files_threads_QC{$keys}{"NGS_QC"}[0], $name[0], "YES");
 			push (@{ $domino_files_threads_QC{$keys}{"FASTA4BLAST"} }, $name[0].".filtered.fasta");
 			push (@{ $domino_files_threads_QC{$keys}{"QUAL4BLAST"} }, $name[0].".filtered.qual");
-			push (@reads_db, DOMINO::makeblastdb($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[0], $BLAST, $error_log));
+			my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[0], $BLAST, $error_log);
+			&debugger_print($blast_DB_message); push (@reads_db, $blast_DB);
 		}
 		print "\n"; &time_log(); print "\n";
 		&debugger_print("domino_files_threads_QC"); &debugger_print("Ref", \%domino_files_threads_QC);
@@ -1122,7 +1126,8 @@ foreach my $keys (sort keys %domino_files) {
 		print "\n"; DOMINO::printHeader(" Database Search: BLAST ","%"); 
 		my $out_file = $taxa_dir."/blast_search.txt";
 		my $db; for (my $j=0; $j < scalar @reads_db; $j++) { $db .= $reads_db[$j]." "; } chop $db;
-		my $blastn = DOMINO::blastn($merge_fasta_database, $db, $out_file, $BLAST);
+		my ($blastn, $blastn_message) = DOMINO::blastn($merge_fasta_database, $db, $out_file, $BLAST);
+		&debugger_print($blastn_message);
 		if ($blastn != 0) { &printError("BLASTN failed...\n"); exit(); } 
 		print "\n"; &time_log(); print "\n"; print "+ Parsing the BLAST results for $keys...\n"; 
 
@@ -1631,6 +1636,7 @@ sub mothur_sffinfo {
 
 	## The '#' is necessary to be in the first place when calling mothur with a given set of commands
 	my $mothur_call = $mothur_path." '#set.dir(output=$directory); sffinfo(sff='".$file."'); trim.seqs(fasta="."$file_name".".fasta, qfile=".$file_name.".qual, oligos=ROCHE.oligos, bdiffs=$bdiffs, processors=$noOfProcesses)'";
+	&debugger_print("MOTHUR command (sff info): $mothur_call\n");
 	my $mothur_result = system($mothur_call);
 	if ($mothur_result != 0) { &printError("MOTHUR failed when trying to proccess the file..."); exit(); } else { print "Done...OK\n\n"; }	
 }
@@ -1643,8 +1649,8 @@ sub mothur_trim_fastq {
 
 	## The '#' is necessary to be in the first place when calling mothur with a given set of commands
 	my $mothur_call = $mothur_path." '#set.dir(output=".$directory."); trim.seqs(fasta=".$file_name.".fasta, qfile=".$file_name.".qual, oligos=ROCHE.oligos, bdiffs=".$bdiffs.", processors=".$noOfProcesses.")'";
-	print "+ Triming the reads according to MID tag\n$mothur_path\n";
-
+	&debugger_print("MOTHUR command (trim fastq): $mothur_call\n");
+	print "+ Triming the reads according to MID tag\n";
 	my $mothur_result = system($mothur_call);
 	if ($mothur_result != 0) { 	&printError("MOTHUR failed when trying to proccess the file..."); exit(); } else { print "Done...OK\n\n"; }
 }
@@ -1676,8 +1682,8 @@ sub prinseq_dust {
 	}
 	$prinseq_dust_command .= " -out_good ".$out_good." -out_bad ".$out_bad." -lc_method dust -lc_threshold ".$thr; 
 	$prinseq_dust_command .= " -ns_max_n 1 -noniupac 2> $error_log";
-	print "PRINSEQ command:\n".$prinseq_dust_command."\n";
-	my $dust_result = system ($prinseq_dust_command);	
+	&debugger_print("PRINSEQ command:\n$prinseq_dust_command\n");
+	my $dust_result = system($prinseq_dust_command);	
 	if ($dust_result != 0) { &printError("DUST cleaning step failed when trying to proccess the file... DOMINO would not stop in this step...");  }
 	return ($out_good, $out_bad);	
 }

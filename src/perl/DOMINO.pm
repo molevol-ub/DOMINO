@@ -9,8 +9,9 @@ package DOMINO;
 sub blastn {
 	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
 	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-10 -db '".$db."' -out $results -outfmt 6";
-	print "BLASTN command: $filter\n"; my $blastn = system($filter);
-	return $blastn;
+	my $message = "BLASTN command: $filter\n"; 
+	my $blastn = system($filter);
+	return ($blastn, $message);
 }
 
 sub check_ID_length {
@@ -179,7 +180,7 @@ sub makeblastdb {
 	$make_blast_db .= " -out ".$db." -logfile ".$db.".log 2> $error_log";	
 	my $makeblastresult = system($make_blast_db);
 	if ($makeblastresult != 0) { print "Generating the database failed when trying to proccess the file... DOMINO would not stop in this step...\n"; return "1"; }
-	return $db;
+	return ($db, $make_blast_db);
 }
 
 sub mothur_remove_seqs {	

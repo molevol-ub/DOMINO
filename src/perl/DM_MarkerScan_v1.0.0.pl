@@ -926,7 +926,12 @@ if ($avoid_mapping) {
 	);
 	## DOMINO would check for the latest mapping in order to find if parameters are the same.
 	my $path_returned = DOMINO::get_earliest("mapping", $folder_abs_path);
-	if ($path_returned eq 'mapping') {
+	
+	&debugger_print("DOMINO::get_earliest subroutine: "); &debugger_print($path_returned);
+	
+	if ($path_returned eq 'NO') {
+		undef $avoid_mapping;
+	} elsif ($path_returned eq 'mapping') {
 		undef $avoid_mapping;
 		DOMINO::printDetails("+ Generation of new profile of variation would be done as it has been previously done with different parameters or it was incomplete...OK\n", $mapping_parameters, $param_Detail_file_markers);
 	} else {
@@ -1284,7 +1289,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 		my $reference = "reference_".$reference_identifier;
 		print "- Reference: $contigs_fasta...\n";
 		my $bowtie_index_call = $bowtie_path."bowtie2-build --threads $num_proc_user -f ".$contigs_fasta." ".$reference;   
-		&debugger_print("BOWTIE command: ".$bowtie_index_call."\n");
+		&debugger_print("BOWTIE2 command: ".$bowtie_index_call."\n");
 		my $index_result = system ($bowtie_index_call);
 		if ($index_result != 0) {
 			&printError("Exiting the script. Some error happened when calling bowtie for indexing the file...\n"); DOMINO::dieNicely();
@@ -1347,7 +1352,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {	## We would use Bowtie2 fo
 				} else {
 					$botwie_system .= " -x ".$reference." -q -U ".$mapping_file." -S ".$sam_name." ".$R_group_id.$R_group_name.$threads.$mismatches." --no-unal".$read_gap_open.$ref_gap_open.$mismatch_penalty;   
 			}} 
-			print "BOWTIE command: ".$botwie_system."\n"; &debugger_print("BOWTIE command: ".$botwie_system."\n"); 
+			&debugger_print("BOWTIE2 command: ".$botwie_system."\n"); 
 			my $system_bowtie_call = system ($botwie_system);
 			if ($system_bowtie_call != 0) {
 				&printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); DOMINO::dieNicely();
@@ -2166,14 +2171,16 @@ for (my $h = 0; $h < scalar @markers_folders; $h++) {
 
 ## Use BLAST for clustering sequences
 print "+ Generate a BLAST database...\n"; 
-my $blast_DB = DOMINO::makeblastdb($all_coordinates_file, $BLAST, $mapping_markers_errors_details);
+my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($all_coordinates_file, $BLAST, $mapping_markers_errors_details);
+&debugger_print($blast_DB_message);
 if ($blast_DB eq "1") {
 	&printError("Early termination of the DOMINO Marker Scan...");
 	my $msg= "\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"; 
 	print $msg; DOMINO::printError_log($msg); &finish_time_stamp();  exit();
 } 
 my $blast_search = "blast_search.txt"; print "+ BLAST search now...\n"; 
-DOMINO::blastn($all_coordinates_file, $blast_DB, $blast_search, $BLAST);
+my ($blastn, $blastn_message) = DOMINO::blastn($all_coordinates_file, $blast_DB, $blast_search, $BLAST);
+&debugger_print($blastn_message);
 
 ## Filter BLAST results
 print "+ Filtering BLAST search now...\n";
