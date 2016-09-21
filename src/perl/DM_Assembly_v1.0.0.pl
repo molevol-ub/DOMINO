@@ -96,7 +96,7 @@ GetOptions(
 	"p|number_cpu=i" => \$noOfProcesses,
 	
 	"SPAdes" => \$flagSpades,
-	"check_Threads" => $check_threads,
+	"check_Threads" => \$check_threads,
 	
 	"Debug" => \$debugger,	
 );
