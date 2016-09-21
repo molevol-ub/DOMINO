@@ -61,7 +61,7 @@ BEGIN {
 my ($helpAsked, %domino_files, $avoidDelTMPfiles, $file_type, $cap3flag,
 $manual, $abs_folder, $mrs, $debugger, $flagSpades, $noOfProcesses, $version,
 @user_files, $DOMINO_files, $overlap_CAP3, $similar_CAP3, $user_files, $further_information,
-@file_abs_path, $step_time, %nucleotides, 
+@file_abs_path, $step_time, %nucleotides, $check_threads,
 
 $total_Contigs_all_sets);
 
@@ -96,6 +96,7 @@ GetOptions(
 	"p|number_cpu=i" => \$noOfProcesses,
 	
 	"SPAdes" => \$flagSpades,
+	"check_Threads" => $check_threads,
 	
 	"Debug" => \$debugger,	
 );
@@ -739,8 +740,8 @@ if ($flagSpades) {
 				$noOfProcesses_SPAdes = $noOfProcesses;
 				$subProcesses = 1;
 			} 
-
 			print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa\ninto different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
+			if ($check_threads) { &debugger_print("Exiting as -check_Threads flag provided, only checking availability of server...\n"); 	exit(); }
 				
 			DOMINO::printHeader(" SPAdes Assembly of each taxa ","#");
 			## Call spades for the assembly and send threads for each taxa
