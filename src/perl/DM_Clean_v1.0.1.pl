@@ -145,7 +145,7 @@ DM_Clean_v1.0.0.pl
 
 =item B<>
 
-DOMINO v1.0.0
+DOMINO v1.0.1
 
 =back
 
@@ -537,6 +537,9 @@ Keep all intermediate files.
 Cristina Frias-Lopez, Jose F. Sanchez-Herrero, Miquel A. Arnedo, Alejandro Sanchez-Gracia and Julio Rozas.
 	
 Evolutionary Genomics and Bioinformatics Group, Departament de Genètica, Microbiologia i Estadística and Institut de Recerca de la Biodiversitat (IRBio), Universitat de Barcelona, Av. Diagonal 643, Barcelona 08028, Spain
+
+Availability: 
+DOMINO is freely available from www.ub.edu/softevol/domino or via github (https://github.com/molevol-ub/DOMINO)
 	
 Bugs & Comments
 
@@ -574,7 +577,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 =over 2
 
-1 - 04 - 2016
+21 - 09 - 2016
 
 =back	
 
@@ -582,7 +585,8 @@ You should have received a copy of the GNU General Public License along with thi
 
 =over 2
 
-To add Reference when available
+Bioinformatics first published online August 16, 2016 
+doi:10.1093/bioinformatics/btw534 
 
 =back
 
