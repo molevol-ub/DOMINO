@@ -537,6 +537,8 @@ sub file_splitter {
 
 sub fasta_file_splitter {
 	# Splits fasta file and takes into account to add the whole sequence if it is broken
+	my $file;
+	open (FH, "<$file") or die "Could not open source file. $!";
 	print "\n\nSplitting file into blocks of $block characters...\n";
 	my $j = 0; my @files;
 	while (1) {
