@@ -25,7 +25,7 @@ MyDialog::~MyDialog() {
 void MyDialog::DOMINOlicense() {
     QString dir = QDir::currentPath();
     QString License;
-    License = QString(dir + "/scripts/LICENSE.txt");
+    License = QString(dir + "../LICENSE");
     QFile file(License);
     if(!file.open(QIODevice::ReadOnly)) {
         cout << "Error: LICENSE.txt file could not be read...\n";
