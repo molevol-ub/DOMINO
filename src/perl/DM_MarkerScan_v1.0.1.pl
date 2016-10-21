@@ -92,7 +92,7 @@ $debugger,
 ## others
 %domino_files, $step_time, %discard_contigs, $pyRAD_file, $stacks_file, $radseq_like_data, 
 @contigs_fasta_files, %max_cov, %coord_contig, %putative_markers, 
-%coord_markers, $merge_bam_all_sp, $number_sp, $genome_fasta, $genome_id,
+%coord_markers, $merge_bam_all_sp, $number_sp, $genome_fasta,
 $scripts_path, %msa_all_taxa_files, $dnaSP_flag,
 
 %mapping_contigs
@@ -828,8 +828,9 @@ my @script_path_array = split ("/", $pipeline_path);
 for (my $j = 0; $j < $#script_path_array; $j++) {
 	$scripts_path .= $script_path_array[$j]."/";
 } 
-my $mapping_parameters_short = $folder_abs_path."/".$datestring."_tmp.txt";
+my $mapping_parameters_short = $folder_abs_path."/".$datestring."_param.txt";
 open (MP_SHORT, ">$mapping_parameters_short");
+
 ## General variables
 my $samtools_path = $scripts_path."samtools-1.3.1/samtools";
 my $bowtie_path = $scripts_path."bowtie2-2.2.9/";
@@ -941,7 +942,7 @@ if ($avoid_mapping) {
 		$align_dirname = $path_returned;
 		my $time_folder;
 		if ($align_dirname =~ /(\d+)\_DM\_mapping/) { $time_folder = $1; }
-		my $parameters_mapping = $align_dirname."/".$time_folder."_tmp.txt";
+		my $parameters_mapping = $align_dirname."/".$time_folder."_param.txt";
 		my %tmp_hash;
 		my $species_to_check; my $species_to_map;
 		
@@ -1080,15 +1081,37 @@ if ($option eq 'user_assembly_contigs') {
 	if (!$map_contig_files) { &user_cleanRead_files(); }
 
 } elsif ($option eq 'DOMINO_files') {
-	&get_MID_contigs(); ## Get reference contig files (FASTA & FASTQ) and push them into @contigs_fasta_files
-	## Obtain clean reads
-	if (scalar @user_cleanRead_files == 0) { &get_clean_files();	## use clean reads to map
-	} else { &user_cleanRead_files(); } 							## user provides reads to map
-
-} elsif ($option eq 'genome') {
+	unless ($avoid_mapping) {
+		my $assembling_dirname = DOMINO::get_earliest("assembly", $folder_abs_path);
+		if ($assembling_dirname eq 'assembly') {
+			&printError("No assembly folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely();
+		}
+		DOMINO::printDetails("+ DOMINO contigs would be retreived from: $assembling_dirname\n", $mapping_parameters, $param_Detail_file_markers);
+		my $files_dir_ref = DOMINO::readDir($assembling_dirname);
+		my @files = @$files_dir_ref;
+		for (my $i = 0; $i < scalar @files; $i++) {
+			if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
+			if (-d $files[$i]) {next;}
+			my $tmp_file_abs_path = $assembling_dirname."/".$files[$i];
+			if ($files[$i] =~ /.*id\-(.*)\.contigs\.fasta/) {
+				if ($domino_files{$1}{'taxa'}) {
+					push (@{$domino_files{$1}{'contigs'}}, $tmp_file_abs_path);
+	}}}
+		## Obtain clean reads
+		if (scalar @user_cleanRead_files == 0) { 
+			&get_clean_files();	## use clean reads to map
+		} else { &user_cleanRead_files(); 
+		} ## user provides reads to map
+}} elsif ($option eq 'genome') {
 	my $tmp = abs_path($genome_fasta);
-	&check_file($tmp);
 	push (@{ $domino_files{'genome'}{'contigs'}}, $tmp); 
+	if ($genome_fasta =~/.*id-(.*)\.fasta/) {
+		push (@{ $domino_files{'genome'}{'taxa'}}, $1); 
+		&check_file($tmp, $1);
+	} else {
+		push (@{ $domino_files{'genome'}{'taxa'}}, "1"); 
+		&check_file($tmp);
+	}
 	if (scalar @user_cleanRead_files == 0) {
 		&printError("Clean Read files were not provided...\nDOMINO would check in the output folder provided if there is a DOMINO_clean_data containing the FASTQ files for each taxa...."); 
 		&get_clean_files();
@@ -1113,8 +1136,7 @@ if ($option eq 'user_assembly_contigs') {
 		if (-f -e -r -s $msa_file_abs_path) {
 			print "\t-File $msa_file_abs_path\n\t\tFile exists, is readable and non-zero character...OK\n";
  			chdir $align_dirname; system("ln -s $msa_file_abs_path");
-		} else { 
-			&printError("MSA file provided is not valid...\nPlease provide a valid contig MSA file as specified in the DOMINO manual...."); DOMINO::dieNicely();
+		} else { &printError("MSA file provided is not valid...\nPlease provide a valid contig MSA file as specified in the DOMINO manual...."); DOMINO::dieNicely();
 	}} elsif ($msa_fasta_folder) {
 		my $msa_folder_abs_path = abs_path($msa_fasta_folder);
 		my @name_msa_folder = split("/",$msa_fasta_folder);
@@ -1131,10 +1153,8 @@ if ($option eq 'user_assembly_contigs') {
 				my $file_path = $msa_folder_abs_path."/".$$array_files_fasta_msa_ref[$i];
 				unless (-f -e -r -s $file_path) {
 					&printError("File $file_path is not readable or empty. Please discarded from the folder...\n"); DOMINO::dieNicely();
-				} else {
-					push (@{$domino_files{'MSA_folder'}{'files'}}, $$array_files_fasta_msa_ref[$i]);
-			}} 
-			print "\t\t- Files checked and everything seems OK...\n\n";
+				} else { push (@{$domino_files{'MSA_folder'}{'files'}}, $$array_files_fasta_msa_ref[$i]);
+			}} print "\t\t- Files checked and everything seems OK...\n\n";
 		} else { &printError("MSA folder provided is not valid...\n"); DOMINO::dieNicely(); }
 	} else { &printError("MSA folder or file is missing...\n"); DOMINO::dieNicely(); }
 	
@@ -1142,8 +1162,7 @@ if ($option eq 'user_assembly_contigs') {
 		DOMINO::printDetails("+ No option -taxa_names provided.\n", $mapping_parameters, $param_Detail_file_markers);
 		DOMINO::printDetails("+ DOMINO would verify all the taxa available...\n", $mapping_parameters, $param_Detail_file_markers);
 		push (@{$domino_files{'taxa'}{'user_Taxa'}}, "all");		
-	}
-}
+}}
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
 unless (!$MID_taxa_names) {
 	DOMINO::printDetails("\n\n+ Taxa to use for the DOMINO development of molecular markers:\n", $mapping_parameters, $param_Detail_file_markers);
@@ -1179,13 +1198,12 @@ if ($behaviour eq 'selection') {
 if ($variable_divergence) {
 	DOMINO::printDetails("\t- Variable Divergence (VD): $variable_divergence\n", $param_Detail_file_markers);	
 } else {
-	if ($variable_positions_user_min == $variable_positions_user_max) {
-		DOMINO::printDetails("\t- Variable Positions (VP): $variable_positions_user_min (bp)\n", $param_Detail_file_markers);			
-	} elsif ($variable_positions_user_max == 999) {
-		$variable_positions_user_max = 99999999;
-		DOMINO::printDetails("\t- Variable Positions (VP): > $variable_positions_user_min (bp)\n", $param_Detail_file_markers);			
-	} else {
-		DOMINO::printDetails("\t- Variable Positions (VP): $variable_positions_user_min -- $variable_positions_user_max (bp)\n", $param_Detail_file_markers);	
+if ($variable_positions_user_min == $variable_positions_user_max) {
+	DOMINO::printDetails("\t- Variable Positions (VP): $variable_positions_user_min (bp)\n", $param_Detail_file_markers);			
+} elsif ($variable_positions_user_max == 999) {
+	$variable_positions_user_max = 99999999;
+	DOMINO::printDetails("\t- Variable Positions (VP): > $variable_positions_user_min (bp)\n", $param_Detail_file_markers);			
+} else { DOMINO::printDetails("\t- Variable Positions (VP): $variable_positions_user_min -- $variable_positions_user_max (bp)\n", $param_Detail_file_markers);	
 }}
 
 ## Common markers parameters
@@ -1193,9 +1211,7 @@ unless (!$MID_taxa_names) { DOMINO::printDetails("\t- Minimum number of covered 
 if ($polymorphism_user) { 
 	DOMINO::printDetails("\t- Polymorphic variants would be detected (PV)...OK\n", $param_Detail_file_markers); print MP_SHORT "poly:1\n";
 }
-if ($dnaSP_flag) {
-	DOMINO::printDetails("\t- dnaSP option [ON]...OK\n", $param_Detail_file_markers); print MP_SHORT "poly:1\n";
-}
+if ($dnaSP_flag) { DOMINO::printDetails("\t- dnaSP option [ON]...OK\n", $param_Detail_file_markers); print MP_SHORT "dnaSP:1\n"; }
 ## Others parameters
 DOMINO::printDetails("\n+ Miscellaneous parameters:\n",$mapping_parameters, $param_Detail_file_markers);
 DOMINO::printDetails("\t- Threads: ".$num_proc_user."\n",$mapping_parameters, $param_Detail_file_markers);
@@ -1212,7 +1228,8 @@ $mapping_markers_errors_details = $folder_abs_path."/".$datestring."_Markers_ERR
 DOMINO::printDetails("\t- DM markers parameters details would be print into file:\n\t\t$param_Detail_file_markers...\n", $param_Detail_file_markers);
 DOMINO::printDetails("\t- DM markers errors occurred during the process would be print into file:\n\t\t$mapping_markers_errors_details...\n\n", $param_Detail_file_markers);
 print "\n"; &time_log(); print "\n";
-
+close(MP_SHORT);
+	
 ################################################################################################
 ################# 		Mapping/Alignment of the contigs 		################################
 ################################################################################################
@@ -1258,8 +1275,8 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 		DOMINO::printHeader(" Indexing Contig File for mapping Reference ", "%");
 		# Index contig reference file using Bowtie
 		my $reference_tag = "reference_".$reference_identifier;
-		print "- Reference: $contigs_fasta...\n";
-		my $bowtie_index_call = $bowtie_path."bowtie2-build --threads $num_proc_user -f ".$contigs_fasta." ".$reference_tag;   
+		print "- Reference: $ref_Fasta...\n";
+		my $bowtie_index_call = $bowtie_path."bowtie2-build --threads $num_proc_user -f ".$ref_Fasta." ".$reference_tag;   
 		&debugger_print("BOWTIE2 command: ".$bowtie_index_call);
 		my $index_result = system ($bowtie_index_call);
 		if ($index_result != 0) {
@@ -1279,7 +1296,10 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 		} else { ## Map DOMINO clean reads
 			print "+ Clean reads files would be mapped\n";
 		}
-		
+		print "+ Obtain information of the reference sequences\n";
+		my ($reference_hash_fasta_ref, $message) = DOMINO::readFASTA_hashLength($contigs_fasta); ## Obtain reference of a hash
+		push (@{ $domino_files{$reference_identifier}{"hash_reference"} }, \$reference_hash_fasta_ref);
+
 		foreach my $reads (sort keys %domino_files) {
 			chdir $domino_files{$reference_identifier}{'dir'}[0];
 			&debugger_print("Change dir to: ".$domino_files{$reference_identifier}{'dir'}[0]);
@@ -1298,12 +1318,13 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 			if ($bowtie_local) { $botwie_system .= " --local"; }
 			my $sam_name = $dir."/".$reference_tag."-taxa_".$reads.".sam";
 			
+			print "+ Aligning reads for $reads against $reference_identifier as reference\n";
 			if ($input_type eq 'pair_end') {
 				my $second_Read_file = $domino_files{$reads}{'reads'}[1];
-				print "+ Aligning reads for $mapping_file and $second_Read_file ...\n";
+				print "+ Reads 1: $mapping_file\n+ Reads 2: $second_Read_file\n";
 				$botwie_system .= " -x ".$reference_tag." -q -1 $mapping_file -2 $second_Read_file -S ".$sam_name." ".$R_group_id.$R_group_name.$threads.$mismatches." --no-unal".$read_gap_open.$ref_gap_open.$mismatch_penalty;   
 			} elsif ($input_type eq 'single_end') { ## Illumin single end, 454
-				print "+ Aligning reads for $mapping_file file...\n";
+				print "+ Reads 1: $mapping_file...\n";
 				if ($map_contig_files) { ## Mapping contigs
 					$botwie_system .= " -x ".$reference_tag." -f -U ".$mapping_file." -S ".$sam_name." ".$R_group_id.$R_group_name.$threads.$mismatches." --no-unal".$read_gap_open.$ref_gap_open.$mismatch_penalty;   
 				} else {
@@ -1319,17 +1340,14 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 			if ($system_bowtie_call != 0) {
 				&printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); DOMINO::dieNicely();
 			} 			
-			push (@{$domino_files{$reference_identifier}{'sam'}}, $sam_name);
+			push (@{$domino_files{$reads}{"SAM::Ref:".$reference_identifier}}, $sam_name);
 			print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n";
-			print "\n\n+ Mapping finished for taxa $reads against $reference_identifier\n"; &time_log();
-		
+			print "\n\n+ Mapping finished for taxa $reads against $reference_identifier\n"; &time_log();		
 			
 			#################################
 			## Get the the reference fasta ##
 			#################################
 			print "\n+ Checking mapping reads in ".$sam_name."...\n";
-			print "+ Obtain information of the reference sequences\n";
-			my ($reference_hash_fasta_ref, $message) = DOMINO::readFASTA_hashLength($contigs_fasta); ## Obtain reference of a hash
 			
 			## Generate a sam for each contig
 			my @temp = split ("\.sam", $sam_name);
@@ -1341,13 +1359,13 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 			my $scalar = scalar @number_contigs;
 			print "+ This SAM file contains $scalar referense sequences...\n";
 			system("ln -s $sam_name"); my @temp_name = split ("/", $sam_name);
-			
-			my $sorted_bam_file = &generate_bam($temp_name[-1]); &generate_index_bam($sorted_bam_file);
+			my $sorted_bam_file = &generate_bam($temp_name[-1]);
+			&generate_index_bam($sorted_bam_file);
 
-			print "+ Splitting SAM file into several parts to speed the computation...\n"; 	
-			my $parts = int($scalar/$num_proc_user); ## threads
-			my @commands;
-			my $iteration = 0; 
+			print "+ Splitting SAM file into several parts to speed the computation...\n"; 
+			print "+ Using parallel threads ($num_proc_user CPUs)...\n";
+			my $parts = int($scalar/$num_proc_user); ## Split SAM into as many CPUs provided
+			my @commands; my $iteration = 0; 
 			while (1) {
 				if (@number_contigs) {
 					my @array1 = splice(@number_contigs, 0, $parts);
@@ -1356,14 +1374,14 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 					my @temp_2 = split ("/", $temp_1[0]);
 					my $sam_file_part = $dir_tmp."/".$temp_2[-1]."_part-".$iteration.".sam";
 					my $command = $samtools_path." view -@ $num_proc_user -Sh -o $sam_file_part $sorted_bam_file $string";
-					push (@{ $domino_files{$reference_identifier}{'parts_'.$reads} }, $sam_file_part);
+					push (@{ $domino_files{$reads}{"SAM_Parts::Ref:".$reference_identifier} }, $sam_file_part);
 					push (@commands, $command); $iteration++; 
 			} else { last; }}
 						
 			my $pm_SAM_split =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
 			$pm_SAM_split->run_on_finish( 
 				sub { my ($pid, $exit_code, $ident) = @_; 
-					print "\t- Child process finished for file $ident; PID=$pid & ExitCode=$exit_code\n\n"; 
+					print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; 
 			} );
 			$pm_SAM_split->run_on_start( sub { my ($pid,$ident)=@_; print "\t- SAMTOOLS command for file $ident and PID=$pid started\n"; } );
 			for (my $a=0; $a < scalar @commands; $a++) {
@@ -1373,35 +1391,44 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 				$pm_SAM_split->finish($a); # pass an exit code to finish
 			}
 			$pm_SAM_split->wait_all_children;
-			print "****************************************\n";
-			print "**** All SAMTOOLS commands finished ****\n";
-			print "****************************************\n\n";
+			print "\n**********************************************\n";
+			print "**** All SAMTOOLS child commands finished ****\n";
+			print "**********************************************\n\n";
 			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
 
 			### Remove multimapping reads	### 
 			##  DOMINO checks the SAM files generated and discards bad reads mapping, unmapping reads or multimapping reads. ##
 			
-			my @array_files_split = @{ $domino_files{$reference_identifier}{'parts_'.$reads}};
-			print "+ Cleaning reads now...\n"; 
-
-			## To Fix when implementing threads
-			my $discard_reads = 0; my $good_reads = 0; my $total_reads = 0;
-			push (@{ $domino_files{$reference_identifier}{'max_cov_'.$reads} }, $domino_files{$reference_identifier}{'dir'}[0]."/max_coverage_reads_".$reads.".txt");
-		
-			## Implement threads
+			my @array_files_split = @{ $domino_files{$reads}{"SAM_Parts::Ref:".$reference_identifier}};
+			print "+ Cleaning reads now in parallel threads ($num_proc_user CPUs)...\n";
+			## Get files for later dump
 			for (my $i=0; $i < scalar @array_files_split; $i++) {
-				print "\n+ Checking: $array_files_split[$i]\n";
+				my $file2dump = $dir_tmp."/dump_file_split_".$reads."_Part_".$i.".txt";
+				#print "File to dump: ".$file2dump."\n";
+				push (@{ $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier} }, $file2dump);
+			}		
+
+			my $pm_SAM_parts =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
+			$pm_SAM_parts->run_on_finish( 
+				sub { my ($pid, $exit_code, $ident) = @_; 
+					print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; 
+			} );
+			$pm_SAM_parts->run_on_start( sub { my ($pid,$ident)=@_; print "+ Child process sent for checking file $ident with PID=$pid...\n"; } );
+			for (my $i=0; $i < scalar @array_files_split; $i++) {
+				my @basename = split("/", $array_files_split[$i]);
+				my @name = split(".sam", $basename[-1]);
+				my $pid = $pm_SAM_parts->start($name[0]) and next;
+				my %domino_files_SAM_parts; my $discard_reads = 0; my $good_reads = 0; my $total_reads = 0;
 				open (SAM, "<$array_files_split[$i]");
 				my @temp = split ("\.sam", $array_files_split[$i]);
 				my $output_sam = $temp[0]."_clean.sam"; 
-				push (@{ $domino_files{$reference_identifier}{'parts_'.$reads.'_clean'} }, $output_sam);
+				push (@{ $domino_files_SAM_parts{$reads}{"CLEAN_SAM_Parts::Ref:".$reference_identifier} }, $output_sam);
 				open (SAM_OUT, ">$output_sam");	
 				while (<SAM>) {
 					chomp; my $line = $_;
 					if ($line =~ /^\@.*/) { print SAM_OUT $line."\n"; next; }		
 					my @sam = split ("\t", $line); 
-					$total_reads++;
-				
+					$total_reads++;				
 					if ($line =~ /.*SA:Z:.*/) {   ## Discard Multimapping reads
 						$discard_reads++; 
 					} elsif ($sam[2] eq '*') { ## Discard unmapped reads
@@ -1446,13 +1473,13 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 							$discard_reads++;
 				}}} close(SAM); close(SAM_OUT); 
 
-				&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
+				&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files_SAM_parts); 
 			
 				###################################################################
 				## Generate sorted bam files in order to be able to get coverage ##
 				###################################################################
 				my $clean_sorted_bam = &generate_bam($array_files_split[$i]);
-				push (@{ $domino_files{$reference_identifier}{'parts_'.$reads.'_clean_sorted_bam'} }, $clean_sorted_bam);
+				push (@{ $domino_files_SAM_parts{$reads}{"clean_BAM_Parts::Ref:".$reference_identifier} }, $clean_sorted_bam);
 
 				%discard_contigs = (); %max_cov = (); ## Initialize some hashes
 				print "\t- Generating coverage statistics for $clean_sorted_bam\n";
@@ -1460,7 +1487,7 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 				## Generate Coverage statistics for the alignment file
 				my @tmp_bam_name = split ("\.sorted.bam", $clean_sorted_bam);
 				my $coverage_file = $tmp_bam_name[0]."_coverage_stats.txt";
-				push (@{ $domino_files{$reference_identifier}{'parts_'.$reads.'_coverage_file'} }, $coverage_file);
+				push (@{ $domino_files_SAM_parts{$reads}{"coverage_Parts::Ref:".$reference_identifier} }, $coverage_file);
 
 				my $coverage_samtools_command = $samtools_path." depth ".$clean_sorted_bam." > ".$coverage_file;
 				my $system_coverage_call = system ($coverage_samtools_command); &debugger_print("SAMTOOLS command: $coverage_samtools_command");
@@ -1468,7 +1495,6 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 					&printError("Exiting the script. Some error happened when calling SAMtools for obtaining coverage of file $sorted_bam[$i]...\n"); DOMINO::dieNicely();
 				}
 				print "\t- Filtering Coverage Stats...\n\n";
-
 				my ($sum_coverage_each, $total_positions_each);
 				my %max_cov;
 				open (COVERAGE, "<$coverage_file");
@@ -1488,20 +1514,51 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 				close(COVERAGE);
 				
 				## Print max coverage to a file
-				open (OUT_COV, ">>$domino_files{$reference_identifier}{'max_cov_'.$reads}[0]");
+				my $max_cov_file = $coverage_file."_max_coverage";
+				push (@{$domino_files_SAM_parts{$reads}{"max_coverage_Parts::Ref:".$reference_identifier} }, $max_cov_file);
+				open (OUT_COV, ">$max_cov_file");
 				foreach my $contig (keys %max_cov) {
 					print OUT_COV $contig.":".$max_cov{$contig}."\n";
 				} close (OUT_COV);
 				undef %max_cov;
+				
+				## Push useful info
 				my $coverage_each = $sum_coverage_each.":".$total_positions_each;
-				push (@{ $domino_files{$reference_identifier}{'coverage_parts_'.$reads} }, $coverage_each);
-			}
-			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
+				push (@{ $domino_files_SAM_parts{$reads}{"mean_coverage_Parts::Ref:".$reference_identifier} }, $coverage_each);
+				push (@{$domino_files_SAM_parts{$reads}{"discard_reads::Ref:".$reference_identifier} }, $discard_reads);
+				push (@{$domino_files_SAM_parts{$reads}{"good_reads::Ref:".$reference_identifier} }, $good_reads);
+				push (@{$domino_files_SAM_parts{$reads}{"total_reads::Ref:".$reference_identifier} }, $total_reads);
 
+				# Dump info into file
+				DOMINO::printDump(\%domino_files_SAM_parts, $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier}[$i]);
+				$pm_SAM_parts->finish($name[0]); # pass an exit code to finish
+			}
+			$pm_SAM_parts->wait_all_children;
+			print "\n";
+			print "************************************************\n";
+			print "*** All SAM parsing child commands finished ****\n";
+			print "************************************************\n\n";
+			
+			my @dump_files1 = @{ $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier} };
+			&retrieve_info(\@dump_files1, \%domino_files);
+						
+			## Get total reads: discard, good and total
+			my $discard_reads = 0; my $good_reads = 0; my $total_reads = 0; my @array;
+			push (@array, $domino_files{$reads}{"discard_reads::Ref:".$reference_identifier});
+			push (@array, $domino_files{$reads}{"good_reads::Ref:".$reference_identifier});
+			push (@array, $domino_files{$reads}{"total_reads::Ref:".$reference_identifier});
+			for (my $i=0; $i < scalar @array; $i++) {
+				my @array_2 = @{$array[$i]};
+				for (my $j=0; $j < scalar @array_2; $j++) {
+					if ($i==0) { $discard_reads += $array_2[$j];
+					} elsif ($i==1) { $good_reads += $array_2[$j];
+					} else { $total_reads += $array_2[$j];
+			}}}		
+			
 			##############################################################################################	
 			## Calculate the probability of being under a poisson distribution with the mean of our data
 			##############################################################################################
-			my @stats = @{ $domino_files{$reference_identifier}{'coverage_parts_'.$reads}};
+			my @stats = @{ $domino_files{$reads}{"mean_coverage_Parts::Ref:".$reference_identifier}};
 			my ($sum_coverage, $total_positions);
 			for (my $i=0; $i < scalar @stats; $i++) {
 				my @stats_each = split(":", $stats[$i]);
@@ -1509,44 +1566,56 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 				$total_positions += $stats_each[1];
 			}
 			my $mean_coverage = $sum_coverage/$total_positions;
-			
-			## Get stats for the whole SAM file
 			my $mean = sprintf ("%.3f", $mean_coverage);
 
-			## If there is only one contig or a genome provided, it would be 
-			## possible that it is discarded because of high coverage areas.
+			my @max_cov_files = @{ $domino_files{$reads}{"max_coverage_Parts::Ref:".$reference_identifier} };
 			my $num_contigs; my %discard_contigs; my $contigs_discarded;
-			## Read Coverage file
-			open (COV_READ, $domino_files{$reference_identifier}{'max_cov_'.$reads}[0]);
-			while (<COV_READ>) {
-				chomp;
-				my $line = $_;
-				my @array = split(":", $line); ## $contig.":".$max_cov{$contig}
-				$num_contigs++; # $array[0] contig id in case we need
-				
-				my $prob_poisson;
-				if ($array[1] > 169) { ## Factorial would be out of range!
-					$prob_poisson = 0;	
-				} else { $prob_poisson = &Poisson_distribution($array[1], $mean_coverage); }
-	
-				if ($prob_poisson < $level_significance_coverage_distribution) { # Discard
-					$contigs_discarded++; $discard_contigs{$array[0]}++;
-				} elsif ($prob_poisson eq 'nan') { # Discard
-					$contigs_discarded++; $discard_contigs{$array[0]}++;
-				} elsif ($array[1] == 0) {  # Discard
-					$contigs_discarded++; $discard_contigs{$array[0]}++;
-			}}
+			for (my $h=0; $h < scalar @max_cov_files; $h++) {
+				## Read Coverage file
+				open (COV_READ, $max_cov_files[$h]);
+				while (<COV_READ>) {
+					chomp;
+					my $line = $_;
+					my @array = split(":", $line); ## $contig.":".$max_cov{$contig}
+					$num_contigs++; # $array[0] contig id in case we need					
+					my $prob_poisson;
+					if ($array[1] > 169) { ## Factorial would be out of range!
+						$prob_poisson = 0;	
+					} else { $prob_poisson = &Poisson_distribution($array[1], $mean_coverage); }		
+					if ($prob_poisson < $level_significance_coverage_distribution) { # Discard
+						$contigs_discarded++; $discard_contigs{$array[0]}++;
+					} elsif ($prob_poisson eq 'nan') { # Discard
+						$contigs_discarded++; $discard_contigs{$array[0]}++;
+					} elsif ($array[1] == 0) {  # Discard
+						$contigs_discarded++; $discard_contigs{$array[0]}++;
+			}}}
 
 			my $percentage_discard_Reads; my $h; my $perc_contig; my $h_cont;
 			if ($discard_reads) { $percentage_discard_Reads = (1 - ($discard_reads/$total_reads))*100; $h = sprintf ("%.3f", $percentage_discard_Reads);} else { $h=100; $discard_reads=0;}
 			if ($contigs_discarded) { $perc_contig = (1 - ($contigs_discarded/$num_contigs))*100; $h_cont = sprintf ("%.3f", $perc_contig); } else { $contigs_discarded = 0; $h_cont = 100; }
 			
 			## Adjust SAM files
-			print "+ Adjusting the SAM/BAM files...\n+ Splitted files would be used...\n";
+			print "+ Adjusting the SAM/BAM files using parallel threads ($num_proc_user CPUs)\n+ Splitted files would be used...\n";
+			my @parts_clean_sam = @{ $domino_files{$reads}{"CLEAN_SAM_Parts::Ref:".$reference_identifier}};
 
-			my @parts_clean_sam = @{ $domino_files{$reference_identifier}{'parts_'.$reads.'_clean'}};
+			## Get files for later dump
+			for (my $i=0; $i < scalar @parts_clean_sam; $i++) {
+				my $file2dump = $dir_tmp."/dump_file_split_".$reads."_Part2_".$i.".txt";
+				#print "File to dump: ".$file2dump."\n";
+				push (@{ $domino_files{$reads}{"DUMP2_Parts::Ref:".$reference_identifier} }, $file2dump);
+			}	
+			
+			my $pm_SAM_PILEUP =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
+			$pm_SAM_PILEUP->run_on_finish( 
+				sub { my ($pid, $exit_code, $ident) = @_; 
+					print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; 
+			} );
+			$pm_SAM_PILEUP->run_on_start( sub { my ($pid,$ident)=@_; print "+ Child process sent for checking file $ident with PID=$pid...\n"; } );
 			for (my $j=0; $j < scalar @parts_clean_sam; $j++) {
-				print "\t- Checking: ".$parts_clean_sam[$j]."\n";				
+				my @basename = split("/", $parts_clean_sam[$j]);
+				my @name = split(".sam", $basename[-1]);
+				my $pid = $pm_SAM_PILEUP->start($name[0]) and next;
+				my %domino_files_SAM_PILEUP;
 				my @tmp_sam = split("\.clean.sam", $parts_clean_sam[$j]);
 				my $sam_filter;
 				if ($num_contigs == 1) {
@@ -1566,17 +1635,30 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 					}}}
 					close(SAM_OUT); close(SAM); undef %discard_contigs;
 					print "\t- File checked: Contigs and Reads discarded...\n";
-					push (@{ $domino_files{$reference_identifier}{'filtered_SAM_'.$reads} }, $sam_filter);
+					push (@{ $domino_files_SAM_PILEUP{$reads}{"FILTERED_SAM_Parts::Ref:".$reference_identifier} }, $sam_filter);
+					my $bam_filtered_returned = &generate_bam($sam_filter);
+					push (@{ $domino_files_SAM_PILEUP{$reads}{"FILTERED_BAM_Parts::Ref:".$reference_identifier} }, $bam_filtered_returned);
 					unless ($reads eq $reference_identifier) { ## DO NOT GENERATE FILTER PROFILE FOR REFERENCE
 						print "\t- Generate a PILEUP file for $sam_filter...\n";
-						my $bam_filtered_returned = &generate_bam($sam_filter);
-						push (@{ $domino_files{$reference_identifier}{'filtered_BAM_'.$reads} }, $bam_filtered_returned);
-						&generate_filter_PILEUP($bam_filtered_returned, $domino_files{$reference_identifier}{'contigs'}[0], $reference_hash_fasta_ref, $reference_identifier, $reads);
+						my $dir_returned = &generate_filter_PILEUP($bam_filtered_returned, $domino_files{$reference_identifier}{'contigs'}[0], $reference_hash_fasta_ref, $reference_identifier, $reads);
 						&debugger_print("Finish PILEUP for $bam_filtered_returned");
+						push (@{ $domino_files_SAM_PILEUP{$reads}{"PROFILE::Ref:".$reference_identifier} }, $dir_returned);
 				}}
 				print "\n"; &time_log(); print "\n";
+				
+				# Dump info into file
+				DOMINO::printDump(\%domino_files_SAM_PILEUP, $domino_files{$reads}{"DUMP2_Parts::Ref:".$reference_identifier}[$j]);
+				$pm_SAM_PILEUP->finish($name[0]); # pass an exit code to finish
 			}
-
+			$pm_SAM_PILEUP->wait_all_children;
+			print "\n";
+			print "************************************************\n";
+			print "*** All SAM parsing child commands finished ****\n";
+			print "************************************************\n\n";
+			
+			my @dump_files = @{ $domino_files{$reads}{"DUMP2_Parts::Ref:".$reference_identifier} };
+			&retrieve_info(\@dump_files, \%domino_files);
+						
 			my $stats_file = $dir."/mapping_statistics_Ref_".$reference_identifier."_Reads_".$reads.".txt";
 			push (@{ $domino_files{$reference_identifier}{'stats'} }, $stats_file);
 			DOMINO::printHeader(" Filtering Statistics ", "="); 
@@ -1595,15 +1677,20 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 			print STATS "Reads discarded (multimapping, unmapped, low quality reads): $discard_reads\n";	print "Reads discarded (multimapping, unmapped, low quality reads): $discard_reads\n";
 			print STATS "Reads remaining: $good_reads\t( ".$h." %)\n";										print "Reads remaining: $good_reads\t( ".$h." %)\n";
 			DOMINO::printHeader("", "="); print "\n";
+		
 			#unless ($avoidDelete_tmp_files) { &delete_files_mapping($dir, $reference_identifier); }	
+		
 		} ## foreach reads
 		&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 		
+		open (MP_SHORT, ">>$mapping_parameters_short");
 		if ($genome_fasta) { print MP_SHORT "Mapped:GenomeID:".$reference_identifier."\n";
 		} else { print MP_SHORT "Mapped:".$reference_identifier."\n"; }		
+		close(MP_SHORT);
 		print "\n\n"; DOMINO::printHeader("", "+");DOMINO::printHeader(" Mapping finished for Reference $reference_identifier ", "+");DOMINO::printHeader("", "+"); &time_log(); print "\n";		
 	} # foreach reference
-	close(MP_SHORT);
+	my $file2dump = $align_dirname."/".$datestring."_DUMP.txt";
+	DOMINO::printDump(\%domino_files, $file2dump);	
 
 } elsif ($option eq "msa_alignment" && !$avoid_mapping) {
 
@@ -1853,19 +1940,8 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 			print "\n\n+ Parsing of the $files files has been done...\n"; print "\n"; &time_log(); print "\n";
 	}}
 
-	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-	&debugger_print("Retrieve info from files");
-	if ($domino_files{'all'}{'dump_file_split'}) {
-		my @dump_files = @{ $domino_files{'all'}{'dump_file_split'} };
-		for (my $j=0; $j < scalar @dump_files; $j++) {
-			open (DUMP_IN, "$dump_files[$j]");
-			while (<DUMP_IN>) {
-				my $line = $_; chomp $line;
-				my @array = split("\t", $line);
-				&debugger_print($line);
-				push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
-			} close (DUMP_IN);
-	}	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n"; }
+	my @dump_files = @{ $domino_files{'all'}{'dump_file_split'} };
+	&retrieve_info(\@dump_files, \%domino_files);
 
 	unless ($MID_taxa_names) {
 		print "\n\n"; DOMINO::printHeader("","#"); print "NOTE:\n\n";
@@ -1877,25 +1953,6 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 		}}
 		print "\n\n"; DOMINO::printHeader("","#"); print "\n\n";
 	}
-	
-	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
-	exit();
-
-} else { ## No_Profile_Generation|NPG: just get files
-	########################################################################################
-	###################### NoMapping: just get files #######################################
-	########################################################################################
-
-	if ($option eq 'DOMINO_files') {
-		print "\n"; DOMINO::printHeader("", "+");DOMINO::printHeader(" Mapping has been avoided ", "+");
-		DOMINO::printHeader("", "+"); 
-		print "+ Contig FASTA files would be obtained...\n\n";
-	} elsif ($option eq 'genome') {
-		if ($contigs_fasta_file_abs_path[0] =~ /.*id\-(.*)\.fasta/) {
-			$genome_id = $1;
-		}
-	}
-	
 	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 }
 
@@ -1903,6 +1960,25 @@ if ($option ne "msa_alignment" and !$avoid_mapping) {
 File::Copy::move($mapping_parameters, $align_dirname);
 File::Copy::move($mapping_parameters_short, $align_dirname);
 unless (-z $mapping_markers_errors_details) { File::Copy::move($mapping_markers_errors_details, $align_dirname); }
+
+
+## TODO: Check previous	run and check if it is the same: MERGE with previous control steps
+if ($avoid_mapping) { ## No_Profile_Generation|NPG: just get files
+	########################################################################################
+	###################### NoMapping: just get files #######################################
+	########################################################################################
+
+	print "+ Files would be obtained...\n\n";
+	my $path_returned = DOMINO::get_earliest("mapping", $folder_abs_path);
+	my $file2dump;
+	if ($path_returned =~ /(\d+)\_DM\_mapping/) { 
+		$file2dump = $align_dirname."/".$1."_DUMP.txt";
+	}
+	&debugger_print($path_returned."\n".$file2dump);
+	my @array_files;
+	push (@array_files, $file2dump);
+	my %hash; &retrieve_info(\@array_files, \%domino_files);
+}
 
 ##########################################################################################
 ###################### MARKER DEVELOPMENT ################################################
@@ -2101,7 +2177,6 @@ if ($option eq "msa_alignment") {
 	&finish_time_stamp(); print "\n\n Job done succesfully, exiting the script\n\n\n"; exit(0);
 =cut
 }
-=head
 
 ## Other types of data
 ## Print info about where to print info and error
@@ -2117,39 +2192,54 @@ mkdir $marker_dirname, 0755;
 ###	Check taxa user specified  ### 
 ##################################
 my $genome_marker_bool = 0;
-foreach my $keys_hash (sort keys %MID_species_hash) { ## For each taxa specified, obtain putative molecular markers
+foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obtain putative molecular markers
+	unless ($domino_files{$ref_taxa}{'contigs'}) {next; }
 	if ($genome_marker_bool == 1) {last;}
+	
+	print $ref_taxa."\n";
 	
 	print "\n";
 	## Create a dir for each taxa
 	DOMINO::printHeader(" Checking taxa files user specified ", "#"); 
-	my ($dir, $ref_taxa);
+	my $marker_dir;
 	if ($genome_fasta) {
-		$ref_taxa = $genome_id;
-		print "Checking: \tGenome provided: $ref_taxa\n\n";
+		print "Checking: \tGenome provided: $domino_files{$ref_taxa}{'contigs'}[0]\n\n";
 		$genome_marker_bool = 1;
-		$dir = $marker_dirname."/DOMINO_markers_Genome";
-	} elsif ($option eq "msa_alignment") {
-		$ref_taxa = $keys_hash;
-		print "Checking: \t$ref_taxa\n\n";
-		$dir = $marker_dirname."/markers_Ref_".$ref_taxa;
+		$marker_dir = $marker_dirname."/DOMINO_markers_Genome";
 	} else {
-		$ref_taxa = $keys_hash;
 		print "Checking: \t$ref_taxa\n\n";
-		$dir = $marker_dirname."/markers_Ref_".$ref_taxa;
+		$marker_dir = $marker_dirname."/markers_Ref_".$ref_taxa;
 	}	
-	mkdir $dir, 0755; chdir $dir; &debugger_print("Changing dir to $dir");
+	mkdir $marker_dir, 0755; chdir $marker_dir; &debugger_print("Changing dir to $marker_dir");
 	
 	## Initialize some variables
-	undef %coord_contig; undef %coord_markers; undef %putative_markers; undef $merge_bam_all_sp;
-	my (%pileup_files, $array_all_species, $contigs_fasta, %ref_fasta, @sams_to_parse, @sam_headers_line);
+		undef %coord_contig; undef %coord_markers; undef %putative_markers; undef $merge_bam_all_sp;
+		my (%pileup_files, $array_all_species, $contigs_fasta, %ref_fasta, @sams_to_parse, @sam_headers_line);
 
 	#######################################
 	###		 Copy necessary files		### 
 	#######################################
-	print "+ Copying necessary files\n";
-	my ($reference_bam_file, $ref_arrays_pileups, $ref_clean_sam) = &get_filtered_sam_files($ref_taxa, $dir); ## filtered_sam_files and PILEUP arrays and $reference_bam_file
-	my @pileup_Arrays = @$ref_arrays_pileups;
+	print "+ Retrieve necessary files\n";
+	my (@pileup_Arrays, @reference_bam_files, @reference_sam_files);
+	foreach my $reads (sort keys %domino_files) {
+		unless ($domino_files{$reads}{'taxa'}) {next; }
+		push ( @reference_bam_files, @{ $domino_files{$reads}{"FILTERED_BAM_Parts::Ref:".$ref_taxa} } );
+		push ( @reference_sam_files, @{ $domino_files{$reads}{"FILTERED_SAM_Parts::Ref:".$ref_taxa} } );
+		
+		next if ($reads eq $ref_taxa);
+		push ( @pileup_Arrays, $domino_files{$reads}{"PROFILE::Ref:".$ref_taxa}[0] );
+
+	}
+	#print Dumper \@pileup_Arrays;
+	#print Dumper \@reference_bam_files;
+	#print Dumper \@reference_sam_files;
+
+=head
+	my $reference_bam_file = ;
+	my $ref_clean_sam = 
+	
+	#&get_filtered_sam_files($ref_taxa, $dir); ## filtered_sam_files and PILEUP arrays and $reference_bam_file
+	
 	my @clean_filtered_sam_files = @$ref_clean_sam;
 	if ($genome_fasta) {$reference_bam_file = $ref_taxa.".sorted.bam";}
 
@@ -2389,6 +2479,7 @@ foreach my $keys_hash (sort keys %MID_species_hash) { ## For each taxa specified
 	&clean_tmp_files_marker_dir($dir); print "\n"; &time_log(); print "\n";
 }
 
+=head
 ## Move parameters files
 File::Copy::move($param_Detail_file_markers, $marker_dirname);
 unless (-z $mapping_markers_errors_details) { File::Copy::move($mapping_markers_errors_details, $marker_dirname); }
@@ -2620,8 +2711,10 @@ unless ($avoidDelete_tmp_files) {
 &finish_time_stamp(); print "\n\n Job done succesfully, exiting the script\n\n\n"; 
 &print_instructions(); exit();
 
-
 =cut
+
+
+}
 
 
 ######################################################################################
@@ -3391,27 +3484,6 @@ sub get_coordinates_each_taxa {
 	close(COORD); close(OUT); close(ERR);
 }
 
-sub get_MID_contigs {
-	
-	my $assembling_dirname = DOMINO::get_earliest("assembly", $folder_abs_path);
-	if ($assembling_dirname eq 'assembly') {
-		&printError("No assembly folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely();
-	}
-	DOMINO::printDetails("+ DOMINO contigs would be retreived from: $assembling_dirname\n", $mapping_parameters, $param_Detail_file_markers);
-	my $files_dir_ref = DOMINO::readDir($assembling_dirname);
-	my @files = @$files_dir_ref;
-	for (my $i = 0; $i < scalar @files; $i++) {
-		if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-		if (-d $files[$i]) {next;}
-		my $tmp_file_abs_path = $assembling_dirname."/".$files[$i];
-		if ($files[$i] =~ /.*id\-(.*)\.contigs\.fasta/) {
-			if ($domino_files{$1}{'taxa'}) {
-				push (@{$domino_files{$1}{'contigs'}}, $tmp_file_abs_path);
-			}
-		}
-	}
-}
-
 sub get_filtered_sam_files {
 
 	##########################################################################################
@@ -3856,15 +3928,13 @@ sub generate_filter_PILEUP {
 	if ($sytem_command_pileup != 0) {
 		&printError("Exiting the script. Some error happened when calling SAMtools for generating the PILEUP for the file $contig_file...\n"); DOMINO::dieNicely();
 	}
-	my $tmp = $dir_path."/ARRAY_files_".$taxa."_PROFILE"; mkdir $tmp, 0755; chdir $tmp; &debugger_print("Changing dir to $tmp");
-	push (@{ $domino_files{$reference_id}{'PILEUP_dir_'.$taxa} }, $tmp);
-
+	my $tmp = $dir_path."/ARRAY_files_".$taxa."_PROFILE"; unless (-d $tmp) { mkdir $tmp, 0755; } 
+	chdir $tmp; 
+	
+	&debugger_print("Changing dir to $tmp");
   	print "\t- Filtering the PILEUP generated\n";
 	my ($previous_contig, $previous_fasta_contig, @array_positions, @fasta_positions);
 	open (PILEUP,"<$input_pileup"); while (<PILEUP>){
-
-		# Debug	print $_;
-
 		my $line = $_; chomp $line;
 		next if $line=~ m/^\s*$/o;
 		next if $line=~ /^\#/o;
@@ -4030,6 +4100,7 @@ sub generate_filter_PILEUP {
 	&print_coordinates(\@array_positions, \$previous_contig, $reference_id);
 	&print_fasta_coordinates(\@fasta_positions, \$previous_contig, $reference_id); ## Print array into file $previous_contig
 	chdir $dir_path; &debugger_print("Changing dir to $dir_path");
+	return ($tmp);
 	
 	sub check_array {
 		my $ref_base = $_[0];
@@ -4812,6 +4883,26 @@ sub read_phylip_aln {
 		$region_provided = "";
 	}
 	return \@array_taxa;
+}
+
+sub retrieve_info {
+	
+	my $dump_files_ref = $_[0];
+	my $hash_Ref = $_[1];
+	my %hash = %{$hash_Ref};
+	&debugger_print("HASH to retrieve"); &debugger_print("Ref", \%hash); print "\n";
+	&debugger_print("Retrieve info from files");
+	my @dump_files = @{ $dump_files_ref };
+	for (my $j=0; $j < scalar @dump_files; $j++) {
+		open (DUMP_IN, "$dump_files[$j]");
+		while (<DUMP_IN>) {
+			my $line = $_; chomp $line;
+			my @array = split("\t", $line);
+			&debugger_print($line);
+			push (@{ $hash{$array[0]}{$array[1]}}, $array[2]);
+		} close (DUMP_IN);
+	} 
+	&debugger_print("HASH to retrieve"); &debugger_print("Ref", \%hash); print "\n";
 }
 
 sub sliding_window_conserve_variable {
