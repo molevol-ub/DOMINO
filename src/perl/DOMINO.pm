@@ -151,6 +151,70 @@ sub dieNicely {
 	Pod::Usage::pod2usage( -exitstatus => 0, -verbose => 0 );
 }
 
+sub fasta_file_splitter {
+	# Splits fasta file and takes into account to add the whole sequence if it is broken
+	my $file = $_[0];
+	my $block = $_[1];
+	my $ext = $_[2]; # fasta, fastq, loci, fa
+	my $dir = $_[3];
+
+	open (FH, "<$file") or die "Could not open source file. $!";
+	print "\t- Splitting file into blocks of $block characters...\n";
+	my $j = 0; my @files;
+	while (1) {
+		my $chunk;
+	   	my @tmp = split ("\.".$ext, $file);
+	   	my @name = split("/", $tmp[0]);
+		my $block_file = $dir."/".$name[-1]."_part-".$j."_tmp.".$ext;
+		push (@files, $block_file);
+		open(OUT, ">$block_file") or die "Could not open destination file";
+		if (!eof(FH)) { read(FH, $chunk,$block);  
+			if ($j > 0) { $chunk = ">".$chunk; }
+			print OUT $chunk;
+		} ## Print the amount of chars	
+		if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken	
+		if (!eof(FH)) { 
+			$/ = ">"; ## Telling perl where a new line starts
+			$chunk = <FH>; chop $chunk; print OUT $chunk; 
+			$/ = "\n";
+		} ## print the sequence if it is broken
+		$j++; close(OUT); last if eof(FH);
+	}
+	close(FH);
+	return (\@files);
+}
+
+
+sub file_splitter {
+	
+	my $file = $_[0];
+	my $block = $_[1];
+	my $ext = $_[2]; # fasta, fastq, loci, fa
+	
+	my @files;
+	
+	# Splits a file such a sam or whatever file that could be read for each line
+	open (FH, "<$file") or die "Could not open source file. $!";
+	print "+ Splitting file $file into blocks of $block characters...\n";
+	my $j = 0; 
+	while (1) {
+    	my $chunk;
+    	my @tmp = split (".".$ext, $file);
+		my $file_name = $tmp[0];
+		
+	   	my $block_file = $file_name."_part-".$j."_tmp.".$ext;
+		print "\t- Printing file: ".$block_file."\n";
+    	push (@files, $block_file);
+    	open(OUT, ">$block_file") or die "Could not open destination file";
+    	$j++;
+    	if (!eof(FH)) { read(FH, $chunk,$block);  print OUT $chunk; } ## Print the amount of chars
+    	if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken
+    	close(OUT); last if eof(FH);
+	}
+	close(FH);
+	return (\@files);	
+}
+
 sub get_earliest {
 	
 	my $option = $_[0];
@@ -162,13 +226,73 @@ sub get_earliest {
 	my (%mapping_dirs, $earliest);
 	for (my $i=0; $i<scalar @array_files;$i++) {
 		if ($array_files[$i] eq "." || $array_files[$i] eq ".." || $array_files[$i] eq ".DS_Store") {next;}
-		if ($array_files[$i] =~ /(\d+)\_DM\_$option.*/) {
+		if ($array_files[$i] =~ /(\d+)\_DM\_$option$/) {
 			my $time_log=$1;
 			if (!$earliest) { $earliest=$time_log; } else { if ($time_log > $earliest) {$earliest=$time_log}}
 			$mapping_dirs{$time_log} = $folder."/".$array_files[$i];
 	}}
 	if (!exists $mapping_dirs{$earliest}) { return 'NO';
 	} else {  return $mapping_dirs{$earliest}; }	
+}
+
+sub get_size { # Multiplatform	
+	my $size = -s $_[0]; #To get only size
+	return $size;	
+	# only UNIX
+	# Get lines, words and characters
+	#my $wc_out = `wc $_[0]`;
+	#$wc_out =~ s/\s/-/g;
+	#my $array = &splitter("\-", $wc_out);
+	#my @word_count;
+	#for (my $i=0; $i < scalar @$array; $i++) {
+	#	if ($$array[$i] =~ /\S+/) {
+	#		push (@word_count, $$array[$i]);			
+	#	}
+	#} return \@word_count;
+}
+
+sub line_splitter {
+	# given a separator, splits a given line
+	my $separator = $_[0];
+	my @array = split($separator, $_[1]); 
+	return \@array; 
+}
+
+sub loci_file_splitter {
+	# Splits fasta file and takes into account to add the whole sequence if it is broken
+	my $file = $_[0];
+	my $block = $_[1];
+	my $ext = $_[2]; # fasta, fastq, loci, fa
+
+	open (FH, "<$file") or die "Could not open source file. $!";
+	print "\t- Blocks of $block characters would be generated...\n";
+	my $j = 0; my @files;
+	while (1) {
+		my $chunk;
+	   	my @tmp = split (".".$ext, $file);
+		my $file_name = $tmp[0];
+		my $block_file = $file_name."_part-".$j."_tmp.".$ext;
+		print "\t- Printing file $block_file\n";
+		push (@files, $block_file);
+		open(OUT, ">$block_file") or die "Could not open destination file";
+		if (!eof(FH)) { 
+			read(FH, $chunk,$block);  
+			#if ($j > 0) { $chunk = $chunk; }
+			print OUT $chunk;
+		} ## Print the amount of chars	
+		if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken	
+		if (!eof(FH)) { 
+			$/ = "\/\/"; ## Telling perl where a new line starts
+			$chunk = <FH>; 
+			chop $chunk;
+			print OUT $chunk;
+			print OUT "/\n"; 
+			$/ = "\n";
+			$chunk = <FH>; 
+		} ## print the sequence if it is broken
+		$j++; close(OUT); last if eof(FH);
+	}
+	close(FH); return (\@files);	
 }
 
 sub makeblastdb {
@@ -248,17 +372,19 @@ sub printDetails {
 sub printDump {
 	my $ref = $_[0]; 
 	my $out_file = $_[1];
+	my $simpleHash = $_[2];
+
 	my %tmp_hash = %$ref;
 	
 	open (DUMP, ">>$out_file"); 
 	#&debugger_print("Printing to a file $out_file");
 	foreach my $names (sort keys %tmp_hash) {
+		if ($simpleHash) { print DUMP $names."\t".$tmp_hash{$names}."\n"; next;}
 		my %hash = %{$tmp_hash{$names}};
 		foreach my $tags (sort keys %hash) {
 			my @array = @{ $hash{$tags} };
 			for (my $i=0; $i < scalar @array; $i++) {
 				print DUMP $names."\t".$tags."\t".$hash{$tags}[$i]."\n";
-				#&debugger_print($names."\t".$tags."\t".$hash{$tags}[$i]);
 	}}} close (DUMP);
 }
 
@@ -489,136 +615,9 @@ sub readFASTA_IDSfile {
 
 sub time_stamp { return "[ ".(localtime)." ]"; }
 
-##### TODO
 
 
-sub line_splitter {
-	# given a separator, splits a given line
-	my $separator = $_[0];
-	my @array = split($separator, $_[1]); 
-	return \@array; 
-}
-
-sub get_size { # Multiplatform	
-	my $size = -s $_[0]; #To get only size
-	return $size;	
-	# only UNIX
-	# Get lines, words and characters
-	#my $wc_out = `wc $_[0]`;
-	#$wc_out =~ s/\s/-/g;
-	#my $array = &splitter("\-", $wc_out);
-	#my @word_count;
-	#for (my $i=0; $i < scalar @$array; $i++) {
-	#	if ($$array[$i] =~ /\S+/) {
-	#		push (@word_count, $$array[$i]);			
-	#	}
-	#} return \@word_count;
-}
-
-sub file_splitter {
-	
-	my $file = $_[0];
-	my $block = $_[1];
-	my $ext = $_[2]; # fasta, fastq, loci, fa
-	
-	my @files;
-	
-	# Splits a file such a sam or whatever file that could be read for each line
-	open (FH, "<$file") or die "Could not open source file. $!";
-	print "+ Splitting file $file into blocks of $block characters...\n";
-	my $j = 0; 
-	while (1) {
-    	my $chunk;
-    	my @tmp = split (".".$ext, $file);
-		my $file_name = $tmp[0];
-		
-	   	my $block_file = $file_name."_part-".$j."_tmp.".$ext;
-		print "\t- Printing file: ".$block_file."\n";
-    	push (@files, $block_file);
-    	open(OUT, ">$block_file") or die "Could not open destination file";
-    	$j++;
-    	if (!eof(FH)) { read(FH, $chunk,$block);  print OUT $chunk; } ## Print the amount of chars
-    	if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken
-    	close(OUT); last if eof(FH);
-	}
-	close(FH);
-	return (\@files);	
-}
-
-sub loci_file_splitter {
-	# Splits fasta file and takes into account to add the whole sequence if it is broken
-	my $file = $_[0];
-	my $block = $_[1];
-	my $ext = $_[2]; # fasta, fastq, loci, fa
-
-	open (FH, "<$file") or die "Could not open source file. $!";
-	print "\t- Blocks of $block characters would be generated...\n";
-	my $j = 0; my @files;
-	while (1) {
-		my $chunk;
-	   	my @tmp = split (".".$ext, $file);
-		my $file_name = $tmp[0];
-		my $block_file = $file_name."_part-".$j."_tmp.".$ext;
-		print "\t- Printing file $block_file\n";
-		push (@files, $block_file);
-		open(OUT, ">$block_file") or die "Could not open destination file";
-		if (!eof(FH)) { 
-			read(FH, $chunk,$block);  
-			#if ($j > 0) { $chunk = $chunk; }
-			print OUT $chunk;
-		} ## Print the amount of chars	
-		if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken	
-		if (!eof(FH)) { 
-			$/ = "\/\/"; ## Telling perl where a new line starts
-			$chunk = <FH>; 
-			chop $chunk;
-			print OUT $chunk;
-			print OUT "/\n"; 
-			$/ = "\n";
-			$chunk = <FH>; 
-		} ## print the sequence if it is broken
-		$j++; close(OUT); last if eof(FH);
-	}
-	close(FH); return (\@files);	
-}
-
-sub fasta_file_splitter {
-	# Splits fasta file and takes into account to add the whole sequence if it is broken
-	my $file;
-	open (FH, "<$file") or die "Could not open source file. $!";
-	print "\n\nSplitting file into blocks of $block characters...\n";
-	my $j = 0; my @files;
-	while (1) {
-		my $chunk;
-		print "Processing block $j...\n";
-		my $file_name; my $extension;
-		if ($file =~ /(.*)\.(.*)/) {
-			$file_name = $1;
-			$extension = $2;
-		}
-		my $block_file = $file_name."_part-".$j."_tmp.".$extension;
-		push (@files, $block_file);
-		open(OUT, ">$block_file") or die "Could not open destination file";
-		if (!eof(FH)) { read(FH, $chunk,$block);  
-			if ($j > 0) {
-				$chunk = ">".$chunk;
-			}
-			print OUT $chunk;
-		} ## Print the amount of chars	
-		if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken	
-		if (!eof(FH)) { 
-			$/ = ">"; ## Telling perl where a new line starts
-			$chunk = <FH>; 
-			chop $chunk;
-			print OUT $chunk; 
-			$/ = "\n";
-		} ## print the sequence if it is broken
-		$j++;
-		close(OUT); last if eof(FH);
-	}
-	close(FH);
-}
-
+## TODO
 sub seq_counter {
 	
 	my $file = $_[0];	
