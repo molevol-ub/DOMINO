@@ -159,7 +159,7 @@ sub fasta_file_splitter {
 	my $dir = $_[3];
 
 	open (FH, "<$file") or die "Could not open source file. $!";
-	print "\t- Splitting file into blocks of $block characters...\n";
+	print "\t- Splitting file into blocks of $block characters aprox ...\n";
 	my $j = 0; my @files;
 	while (1) {
 		my $chunk;
