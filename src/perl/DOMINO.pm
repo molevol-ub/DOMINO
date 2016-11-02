@@ -184,7 +184,6 @@ sub fasta_file_splitter {
 	return (\@files);
 }
 
-
 sub file_splitter {
 	
 	my $file = $_[0];
