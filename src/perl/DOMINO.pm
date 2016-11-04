@@ -6,6 +6,11 @@
 
 package DOMINO;
 
+use FindBin;
+use lib $FindBin::Bin."/lib";
+require List::MoreUtils;
+use List::MoreUtils qw(firstidx);
+
 sub blastn {
 	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
 	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-10 -db '".$db."' -out $results -outfmt 6";
@@ -500,9 +505,19 @@ sub readDir {
 	my $dir = $_[0];
 	opendir(DIR, $dir) or die "ERROR: Can not open folder $dir..."; ## FIX ADD TO ERROR-LOG
 	my @dir_files = readdir(DIR);
+
+	## Discard '.', '..' and '.DS_Store'
+	my $idx_dot = firstidx { $_ eq '.' } @dir_files;
+	if ($idx_dot >= 0) { splice(@dir_files, $idx_dot, 1); }
+	my $idx_dot_dot = firstidx { $_ eq '..' } @dir_files;
+	if ($idx_dot_dot >= 0) { splice(@dir_files, $idx_dot_dot, 1); }
+	my $idx_dot_DSStore = firstidx { $_ eq '.DS_Store' } @dir_files;
+	if ($idx_dot_DSStore >= 0) { splice(@dir_files, $idx_dot_DSStore, 1); }
+	
 	my $array_ref = \@dir_files;
 	return $array_ref;
 }
+
 
 sub readFASTA_hash {
 
