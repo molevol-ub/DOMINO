@@ -71,6 +71,8 @@ BEGIN {
 
 use List::MoreUtils qw(firstidx);
 
+## TODO: Control if too many CPU (>6) provided or too many files (>20), do not print too much info
+
 ##################################
 ##	Initializing some variables	##
 ##################################
@@ -2265,7 +2267,7 @@ if ($option eq "msa_alignment") {
 					} close(FILE);
 					if ($pyRAD_file) { print OUT "//\n"; }
 	}}}}
-	close(OUT_coord);
+	close(OUT_coord); close (OUT);
 	
 	## USE THE SUBROUTINE print_Excel and control if radseq_like_data
 	print "+ Done...\n+ Retrieving informative locus has been done...\n+ Generating an Excel file for DOMINO markers identified...\n";
