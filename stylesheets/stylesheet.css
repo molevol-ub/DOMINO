@@ -541,9 +541,19 @@ aside a.button {
   width: 138px;
   padding-left: 64px;
   margin-bottom: 20px;
-  font-size: 21px;
+  font-size: 16px;
   background: transparent url(../images/download-button.png) 0 0 no-repeat;
 }
+
+aside a.button_test {
+  display: block;
+  width: 138px;
+  padding-left: 64px;
+  margin-bottom: 20px;
+  font-size: 16px;
+  background: transparent url(../images/download-mac-button.png) 0 0 no-repeat;
+}
+
 
 code, pre {
   margin-bottom: 30px;
