@@ -1218,7 +1218,6 @@ if ($variable_positions_user_min == $variable_positions_user_max) {
 
 if ($variable_positions_user_min == 0) {
 	$variable_positions_user_min = 1;
-	DOMINO::printDetails("\t- Variable Positions (VP): > 0 (bp)\n", $param_Detail_file_markers);			
 } else { DOMINO::printDetails("\t- Variable Positions (VP): $variable_positions_user_min -- $variable_positions_user_max (bp)\n", $param_Detail_file_markers);	
 }}
 
@@ -1876,9 +1875,7 @@ if (!$avoid_mapping) {
 				print "****************************************************\n\n";		
 			} 
 			print "\n"; &time_log(); print "\n";
-		
 		} else {
-			
 			### MSA file or folder provided
 			#mkdir $msa_dirname, 0755;
 			if ($msa_file) {
@@ -2052,6 +2049,8 @@ if ($option eq "msa_alignment") {
 	my $profile_dir = $marker_dirname."/PROFILES";	mkdir $profile_dir, 0755;
 	my $msa_dir_tmp = $marker_dirname."/MSA_markers_tmp"; mkdir $msa_dir_tmp, 0755;
 	my $dir_Dump_file = $marker_dirname."/DUMP_files"; mkdir $dir_Dump_file, 0755;
+	my $msa_dir = $marker_dirname."/MSA_markers"; mkdir $msa_dir, 0755;
+
 	#my $tmp_dir; #if ($select_markers) { $tmp_dir = $marker_dirname."/tmp_concatenate"; mkdir $tmp_dir, 0755; }
 	
 	my $array_files_fasta_msa_ref = DOMINO::readDir($domino_files{'MSA_files'}{'folder'}[0]);
@@ -2066,7 +2065,7 @@ if ($option eq "msa_alignment") {
 	for (my $i=0; $i < scalar @array_files_fasta_msa; $i++) {
 		if ($array_files_fasta_msa[$i] eq "." || $array_files_fasta_msa[$i] eq ".." || $array_files_fasta_msa[$i] eq ".DS_Store"  ) {next;}
 		$counter++; 
-		if ($stacks_file) {
+		if ($total_files > 100) {
 			my $perc = sprintf( "%.3f", ( $counter/$total_files )*100 );
 			print "\t- Checking each contig: [ $perc % ]...\r";
 		} else { print "\t- Checking each contig: [$counter/$total_files]...\r";}	
@@ -2077,80 +2076,114 @@ if ($option eq "msa_alignment") {
 		unless (-f -e -r -s $file_path) {
 			&printError("File $file_path is not readable or empty. It would be skipped....\nPlease discarded from the folder...\n");
 		} else {
+			my ($region_id, $string2print_ref, $hash_ref_msa);
 			if ($stacks_file) {
-				## TODO
-				#print "- toDo something with alleles...\n";
-				# $string2print_ref; &check_marker_ALL();
-				
-				$pm_MARKER_MSA_files->finish;
-							
-			}
-			## $string2print_ref
-			## taxa_included	var_sites	length	profile	effective_length
-			##	0					1		2		3		4			
-			my $string2print_ref = &check_marker_ALL($file_path); # Check there is a minimun variation
-			if ($string2print_ref eq 'NO' ) { $pm_MARKER_MSA_files->finish;}
-			
-			#print Dumper $string2print_ref;
-			
-			my ($taxa, $var_sites, $length_string, $string_profile, $effective_length) = @{$string2print_ref};
-			my @array_taxa_split = split(",", $taxa);
-			my $region_id;
-			my @path_file = split("/", $array_files_fasta_msa[$i]);
-			if ($path_file[-1] =~ /(.*)\.fasta/) { $region_id = $1; }
-			## Control steps
-			unless ($variable_divergence) { if ($var_sites > $variable_positions_user_max) {$pm_MARKER_MSA_files->finish;} }
+				$hash_ref_msa = DOMINO::readFASTA_hash($file_path);
+				my $filename = $array_files_fasta_msa[$i];	
+				my %hash = %$hash_ref_msa; my ( %hash2fill, %hash2return);
+				foreach my $keys (keys %hash) {
+				if ($keys =~ /(CLocus\_\d+)\_(.*)\_Locus\_(\d+)\_Allele\_(\d+).*/){
+					$region_id = $1; my $sample = $2;
+					my $sequence = $hash{$keys};
+					push (@{ $hash2fill{$sample} }, $keys.":::".$sequence);
+				}}
+				foreach my $keys (keys %hash2fill) {
+					my $alleles = scalar @{ $hash2fill{$keys} };
 
-			if ($select_markers) {
-				## Check marker
-				my $hash_ref_msa = DOMINO::readFASTA_hash($file_path);
-				
+					if ($alleles == 1) {
+						my @array = split(":::", $hash2fill{$keys}[0]);
+						$hash2return{$keys} = $array[1];					
+					} elsif ($alleles == 2){					
+						my @array = split(":::", $hash2fill{$keys}[0]);
+						my @allele1 = split("", $array[1]);
+						my @array2 = split(":::", $hash2fill{$keys}[1]);
+						my @allele2 = split("", $array2[1]);
+
+						my @string;
+						for (my $i=0; $i < scalar @allele1; $i++) {
+							my @tmp;
+							push(@tmp, $allele1[$i]);
+							push(@tmp, $allele2[$i]);
+							my @tmp_uniq = sort @tmp;
+							my @tmp_uniq_sort = uniq(@tmp_uniq);
+							if (scalar @tmp_uniq_sort == 1) {
+								if ($tmp_uniq_sort[0] eq 'N') { 
+									push (@string, 'N');
+								} elsif ($tmp_uniq_sort[0] eq '-') {
+									push (@string, '-');
+								} else {
+									push (@string, $allele1[$i]);
+							}} else {
+								my $hash;
+								$$hash{$allele1[$i]}++;
+								$$hash{$allele2[$i]}++;
+								my $value = &get_amb_code($hash);
+								push (@string, $value);
+						}}
+						my $tmp = join ("", @string);
+						$hash2return{$keys} = $tmp;
+						#print $array[1]."\n"; print $array2[1]."\n"; print $tmp."\n\n";
+					} elsif ($alleles > 2) {
+						&printError("ERROR: $region_id: [ $keys ] contains more than 2 alleles\nDOMINO would not die here but this locus would be skipped....\n");
+						$pm_MARKER_MSA_files->finish;
+					}
+				}
+				undef %hash2fill;
+				unless ($dnaSP_flag) {
+					my $valueReturned = &check_marker_pairwise(\%hash2return);
+					if ($valueReturned != 1) { $pm_MARKER_MSA_files->finish; }
+				}
+				$string2print_ref = &check_marker_ALL(\%hash2return, "Ref"); # Check there is a minimun variation
+				if ($string2print_ref eq 'NO' ) { $pm_MARKER_MSA_files->finish;}
+			} else {
+				my @path_file = split("\.fasta", $array_files_fasta_msa[$i]);
+				$region_id = $path_file[0];
+				$hash_ref_msa = DOMINO::readFASTA_hash($file_path);				
 				my $taxa4marker = scalar keys %{ $hash_ref_msa };
-				#print $taxa4marker."\t".$minimum_number_taxa_covered."\n";
-				
 				if ($taxa4marker < $minimum_number_taxa_covered) { $pm_MARKER_MSA_files->finish; }
 				unless ($dnaSP_flag) {
 					my $valueReturned = &check_marker_pairwise($hash_ref_msa);
 					if ($valueReturned != 1) { $pm_MARKER_MSA_files->finish; }
 				}
+				$string2print_ref = &check_marker_ALL($file_path); # Check there is a minimun variation
+				if ($string2print_ref eq 'NO' ) { $pm_MARKER_MSA_files->finish;}
+			}
+			
+			## $string2print_ref
+			## taxa_included	var_sites	length	profile	effective_length
+			##	0					1		2		3		4			
+			#print Dumper $string2print_ref;
+			my ($taxa, $var_sites, $length_string, $string_profile, $effective_length) = @{ $string2print_ref };
+			my @array_taxa_split = split(",", $taxa);
+			## Control steps
+			unless ($variable_divergence) { if ($var_sites > $variable_positions_user_max) {$pm_MARKER_MSA_files->finish;} }
+
+			if ($select_markers) {
+				## Check marker
+				
 				my $variation_perc = ($var_sites/$effective_length)*100;
 				my $h = sprintf ("%.3f", $variation_perc);
 				my $string = $region_id."\t".$taxa."\t".$var_sites."\t".$effective_length."\t".$h;		
-				push (@{ $domino_files_msa{$region_id}{'string'} }, $string);
-							
+				#push (@{ $domino_files_msa{$region_id}{'string'} }, $string);
+											
 				## Print profile
 				my $profile_dir_file = $profile_dir."/".$region_id."_profile.txt";
 				open (PRF, ">$profile_dir_file"); print PRF ">".$region_id."\n".$string_profile."\n"; close (PRF);
-				push (@{ $domino_files_msa{$region_id}{'profile'} }, $profile_dir_file);
+				#push (@{ $domino_files_msa{$region_id}{'profile'} }, $profile_dir_file);
 			
-				#foreach my $keys (keys %{ $hash_ref_msa }) {
-				#	print $keys."\n".$$hash_ref_msa{$keys}
-				#}
-				
-				print $file_path."\n"; print Dumper \%domino_files_msa;
-
+				#print $file_path."\n"; print Dumper \%domino_files_msa;
 				# Print format: same as input and *mmfas 				
-				#my $msa_fasta = $msa_dir_tmp."/".$region_id.".fasta";
-				#open (MSA, ">$msa_fasta");
-				#my $hash_file_Ref = DOMINO::readFASTA_hash($array_files_fasta_msa[$i]);
-				
-				# Print concatenate
-				#foreach my $keys (keys %MID_species_hash) {
-				#	if ($$hash_file_Ref{$keys}) {
-				#		my $file_concat = $concatenate_tmp_files{$keys};
-				#		open (FILE, ">>$file_concat");
-				#		print MSA ">".$keys."\n".$$hash_file_Ref{$keys}."\n";
-				#		print FILE $$hash_file_Ref{$keys}." ";
-				#		close (FILE);
-				#	} else {
-				#		my $file_concat = $concatenate_tmp_files{$keys};
-				#		open (FILE, ">>$file_concat");
-				#		my @array = ("-") x $length_string;
-				#		my $string2print = join ("", @array);
-				#		print FILE $string2print." ";
-				#		close (FILE);
-				#	}
-				#} close(MSA);
+				my $msa_fasta = $msa_dir."/".$region_id.".fasta";
+				open (OUT_MSA, ">$msa_fasta");
+				print OUT_MSA "STRING:::$string\n";
+				foreach my $keys (keys %{ $hash_ref_msa }) {
+					print OUT_MSA ">".$keys."\n".$$hash_ref_msa{$keys}."\n";
+				}
+				close (OUT_MSA);
+				push (@{ $domino_files_msa{$region_id}{'markers'} }, $msa_fasta);
+				my $dump_folder_files = $dir_Dump_file."/dump_markers_".$region_id.".txt";
+				# Dump into file # print Dumper \%domino_files_msa;
+				DOMINO::printDump(\%domino_files_msa, $dump_folder_files);	
 			
 			} elsif ($identify_markers) { ## Identify markers in MSA alignments
 
@@ -2188,81 +2221,66 @@ if ($option eq "msa_alignment") {
 	print "**********************************************\n";
 	print "**** All checking processes have finished ****\n";
 	print "**********************************************\n\n";	
-	print "\n"; &time_log(); print "\n";
+	print "\n"; &time_log(); print "\n"; chdir $marker_dirname;
 	
-	my $msa_dir = $marker_dirname."/MSA_markers"; mkdir $msa_dir, 0755;
-
-	if ($identify_markers) {	
-		my %hashRetrieve;
-		my $array_files = DOMINO::readDir($dir_Dump_file);
-		my @dump_files = @{ $array_files };
-		for (my $j=0; $j < scalar @dump_files; $j++) {
-			if ($dump_files[$j] eq '.' || $dump_files[$j] eq '..' || $dump_files[$j] eq '.DS_Store') { next;}
-			open (DUMP_IN, "$dir_Dump_file/$dump_files[$j]");
-			while (<DUMP_IN>) {
-				my $line = $_; chomp $line;
-				my @array = split("\t", $line);
-				&debugger_print($line);
-				push (@{ $hashRetrieve{$array[0]}{$array[1]}}, $array[2]);
-		} close (DUMP_IN); }
+	my %hashRetrieve;
+	my $array_files = DOMINO::readDir($dir_Dump_file);
+	my @dump_files = @{ $array_files };
+	for (my $j=0; $j < scalar @dump_files; $j++) {
+		if ($dump_files[$j] eq '.' || $dump_files[$j] eq '..' || $dump_files[$j] eq '.DS_Store') { next;}
+		open (DUMP_IN, "$dir_Dump_file/$dump_files[$j]");
+		while (<DUMP_IN>) {
+			my $line = $_; chomp $line;
+			my @array = split("\t", $line);
+			&debugger_print($line);
+			push (@{ $hashRetrieve{$array[0]}{$array[1]}}, $array[2]);
+	} close (DUMP_IN); }
 		
-		#################################################################################
-		##	Once the coordinates are found, print different files with the information ##
-		#################################################################################	
-		### open Output and Error file
-		my $output_file = "DM_markers-summary.txt";
-		open (OUT,">$output_file")or die "Cannot write the file $output_file";
-		print OUT "Region\t\tTaxa_included\tVariable_Positions\tEffective_length\tVariation(%)\n";
-		print "+ Printing selected markers in $output_file...\n";
-		
+	#################################################################################
+	##	Once the coordinates are found, print different files with the information ##
+	#################################################################################	
+	### open Output and Error file
+	my $output_file_coord = "DM_markers-summary.txt"; open (OUT_coord,">$output_file_coord")or die "Cannot write the file $output_file_coord";
+	print OUT_coord "Region\t\tTaxa_included\tVariable_Positions\tEffective_length\tVariation(%)\n";
+	my $out_file = "DM_markers";
+	if ($pyRAD_file) { $out_file .= ".loci"; } elsif ($stacks_file) {$out_file .= ".fa";} else {$out_file .= ".fasta";}
+	open (OUT, ">$out_file");
+	print "+ Printing selected markers in $output_file_coord and $out_file...\n";
+	
+	if ($identify_markers) {
 		foreach my $regions (keys %hashRetrieve) {
 			if ($hashRetrieve{$regions}{'markers'}) {
 				my @array_coord = @{$hashRetrieve{$regions}{'markers'}};
 				for (my $i=0; $i < scalar @array_coord; $i++) {
-					open (FILE, $array_coord[$i]); while (<FILE>) { print OUT $_; } close(FILE);					
+					open (FILE, $array_coord[$i]); while (<FILE>) { print OUT_coord $_; } close(FILE);					
 			}}
 			if ($hashRetrieve{$regions}{'markers_files'}) {
 				my @array_markers = @{$hashRetrieve{$regions}{'markers_files'}};
 				for (my $j=0; $j < scalar @array_markers; $j++) {
 					File::Copy::move($array_markers[$j], $msa_dir);
+	}}}} else {
+		foreach my $regions (keys %hashRetrieve) {
+			if ($hashRetrieve{$regions}{'markers'}) {
+				my @array_coord = @{$hashRetrieve{$regions}{'markers'}};
+				for (my $i=0; $i < scalar @array_coord; $i++) {
+					open (FILE, $array_coord[$i]); while (<FILE>) { 
+						if ($_ =~/^STRING:::(.*)/) {
+							print OUT_coord $1."\n";
+						} else { print OUT $_; }
+					} close(FILE);
+					if ($pyRAD_file) { print OUT "//\n"; }
 	}}}}
+	close(OUT_coord);
 	
 	## USE THE SUBROUTINE print_Excel and control if radseq_like_data
 	print "+ Done...\n+ Retrieving informative locus has been done...\n+ Generating an Excel file for DOMINO markers identified...\n";
-	#&print_Excel(\@coord_markers_select);
+	#&print_Excel(\@coord_markers_select); ##TODO
 	
-=head
-	my $concatenate_markers = $marker_dirname."/concatenate_markers.fasta";
-	print "+ Concatenating into file $concatenate_markers\n";
-	my $array_ref_dir = DOMINO::readDir($tmp_dir);
-	my @array_dir = @$array_ref_dir;
-	open (OUT, ">$concatenate_markers");
-	for (my $i=0; $i < scalar @array_dir; $i++) {
-		if ($array_dir[$i] eq "." || $array_dir[$i] eq ".." || $array_dir[$i] eq ".DS_Store") { next; }
-		if ($array_dir[$i] =~ /tmp\_(.*)\_concatenate\.fasta/) {
-			my $string;
-			my $file_in = $tmp_dir."/".$array_dir[$i];
-			open (IN, "<$file_in");
-			while (<IN>) {
-				my $line = $_;
-				chomp $line;
-				$string .= $line;
-			} close(IN); 
-			print OUT ">$1\n$string\n";
-	}} close (OUT);
-	## Move parameters files
-	File::Copy::move($param_Detail_file_markers, $marker_dirname);
-	unless (-z $mapping_markers_errors_details) { File::Copy::move($mapping_markers_errors_details, $marker_dirname); }
-	unless ($avoidDelete_tmp_files) { 
-		remove_tree($profile_dir);
-	}
-=cut
-
 	## Finish and exit
 	&finish_time_stamp(); print "\n\n Job done succesfully, exiting the script\n\n\n"; exit(0);
 	exit();
 }
-=head
+
 ## Other types of data
 ##################################
 ###	Check taxa user specified  ### 
@@ -2685,7 +2703,6 @@ foreach my $keys (keys %$contig_length_Ref) { unless (grep /$keys/, @markers_see
 my $definitely_results_dirname = $marker_dirname."/DOMINO_markers_Results";
 mkdir $definitely_results_dirname, 0755; chdir $definitely_results_dirname; &debugger_print("Changing dir to $definitely_results_dirname");
 
-
 my $sam_merged_DOMINO_markers;
 unless ($option eq "msa_alignment") {
 	my @merge_bam_all_sp = split ("/",$merge_bam_all_sp);
@@ -2694,7 +2711,7 @@ unless ($option eq "msa_alignment") {
 	$sam_merged_DOMINO_markers = $tmp_name[0]."_DOMINO_markers.sam";
 }
 
-
+=head
 ## Check for Contigs
 print "+ Clustering markers...\n+ Filtering contigs...\n";
 my %hash = %$contig_length_Ref;
@@ -2837,13 +2854,10 @@ unless ($avoidDelete_tmp_files) {
 	print "\n+ Cleaning temporary files...\n";
 	remove_tree($blast_dir);
 }
-
+=cut
 ## Finish and exit
 &finish_time_stamp(); print "\n\n Job done succesfully, exiting the script\n\n\n"; 
 &print_instructions(); exit();
-
-=cut
-
 
 
 ######################################################################################
@@ -3235,49 +3249,48 @@ sub check_marker_ALL {
 	##########################################################################################
 
 	my $file = $_[0];
-	my (%hash, $length, @taxa);
-	open(FILE, $file) || die "Could not open the $file ...\n";
-	$/ = ">"; ## Telling perl where a new line starts
-	my @length;
-	while (<FILE>) {		
-		next if /^#/ || /^\s*$/;
-		chomp;
-    	my ($titleline, $sequence) = split(/\n/,$_,2);
-    	next unless ($sequence && $titleline);
-    	chomp $sequence;
-		$sequence =~ s/\s+//g; $sequence =~ s/\r//g;
-		$titleline =~ s/\r//g;
-		my @array = split("", $sequence);
-			
-		if ($stacks_file) {
-			if ($titleline =~ /(CLocus\_\d+)\_(.*)\_Locus\_(\d+)\_Allele\_(\d+).*/){
-				my $CLocus = $1; my $sample = $2;
-				if (!$domino_files{$sample}{'taxa'}) {next;}
-			}
-		} else {
+	my $ref = $_[1];
+	
+	my (%hash, $length, @taxa, @length_seqs);
+	if ($ref) { 
+		foreach my $seqs (keys %{ $file }) {
+			my @array = split("", $$file{$seqs});
+			if (!$domino_files{$seqs}{'taxa'}) {next;}
+			push (@{ $hash{$seqs}}, @array);
+			$length = scalar @array;
+			push (@length_seqs, $length);
+			push (@taxa, $seqs);
+		}	
+	} else {
+		open(FILE, $file) || die "Could not open the $file ...\n";
+		$/ = ">"; ## Telling perl where a new line starts
+		while (<FILE>) {		
+			next if /^#/ || /^\s*$/;
+			chomp;
+			my ($titleline, $sequence) = split(/\n/,$_,2);
+			next unless ($sequence && $titleline);
+			chomp $sequence;
+			$sequence =~ s/\s+//g; $sequence =~ s/\r//g;
+			$titleline =~ s/\r//g;
+			my @array = split("", $sequence);
 			if (!$domino_files{$titleline}{'taxa'}) {next;}
-		} 	
-    	push (@{ $hash{$titleline}}, @array);
-    	$length = scalar @array;
-    	push (@length, $length);
-    	push (@taxa, $titleline);
+			push (@{ $hash{$titleline}}, @array);
+			$length = scalar @array;
+			push (@length_seqs, $length);
+			push (@taxa, $titleline);
+		}
+		close(FILE); $/ = "\n";	
 	}
-	close(FILE); $/ = "\n";
 	
 	#print Dumper \%hash;
 	
-	my @tmp_length = sort @length;
+	my @tmp_length = sort @length_seqs;
 	my @tmp_length_uniq = uniq(@tmp_length);	
 	if (scalar @tmp_length_uniq > 1) {
-		print $file."\n";
-		foreach my $seqs ( keys %hash) {
-			print $seqs."\n";
-			my $string = join("", @{ $hash{$seqs} });
-			print $string."\n";
-		}	
-		print "\n";		
+		&printError("There is problem: length of the markers do not match for $file...");
+		return "";
 	} else {
-		$length[0] = $length;
+		$length_seqs[0] = $length;
 	}	
 	
 	my @profile;
@@ -4386,58 +4399,6 @@ sub merge_sam {
 	return $file_merged_sorted;
 }
 
-sub parse_stacks_marker {
-	
-	my $ref_hash = $_[0];
-	my $filename = $_[1];	
-	
-	my %hash = %$ref_hash;
-	my %hash2return;
-	foreach my $sample (keys %hash) {
-		my @array = @{ $hash{$sample} };
-		my $alleles = scalar @array;
-		if ($alleles == 1) {
-			$hash2return{$sample} = $hash{$sample}[0];
-		} elsif ($alleles == 2){
-			my @allele1 = split("", $hash{$sample}[0]);
-			my @allele2 = split("", $hash{$sample}[1]);
-			my @string;
-			for (my $i=0; $i < scalar @allele1; $i++) {
-				my @tmp;
-				push(@tmp,$allele1[$i]);
-				push(@tmp,$allele2[$i]);
-				my @tmp_uniq = sort @tmp;
-				my @tmp_uniq_sort = uniq(@tmp_uniq);
-				if (scalar @tmp_uniq_sort == 1) {
-					if ($tmp_uniq_sort[0] eq 'N') {
-						push (@string, 'N');
-					} elsif ($tmp_uniq_sort[0] eq '-') {
-						push (@string, '-');
-					} else {
-						push (@string, $allele1[$i]);
-				}} else {
-					my $hash;
-					$$hash{$allele1[$i]}++;
-					$$hash{$allele2[$i]}++;
-					my $value = &get_amb_code($hash);
-					push (@string, $value);
-			}}
-			my $tmp = join ("", @string);
-			$hash2return{$sample} = $tmp;
-		} elsif ($alleles > 2) {
-			DOMINO::printError_log("CLocus: ID: $sample contains more than 2 alleles");
-	}}
-	if (!%hash2return) {return;}
-	my $file = $msa_dirname."/".$filename.".fasta";
-	open (OUT, ">$file");
-	foreach my $keys (keys %hash2return) {
-		if ($domino_files{$keys}{'taxa'}) {
-			print OUT ">".$keys."\n".$hash2return{$keys}."\n";
-		}
-	}
-	close (OUT);
-}
-
 sub Poisson_distribution {
 	my ($x, $a) = @_;
 	return unless $a >= 0 && $x >= 0 && $x == int($x); 
@@ -5124,7 +5085,6 @@ sub user_cleanRead_files {
 	my $user_cleanRead_files_ref = \@user_cleanRead_files;
 	&fastq_files($user_cleanRead_files_ref);
 }
-
 
 __END__
 

@@ -530,10 +530,10 @@ sub readFASTA_hash {
 		chomp;
     	my ($titleline, $sequence) = split(/\n/,$_,2);
     	next unless ($sequence && $titleline);
+    	chop $sequence;
     	$hash{$titleline} = $sequence;
 	}
-	close(FILE);
-	$/ = "\n";
+	close(FILE); $/ = "\n";
 	my $hashRef = \%hash;
 	return $hashRef;
 }

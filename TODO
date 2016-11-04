@@ -3,18 +3,14 @@
 DM_Clean_v1.0.1.pl
 	Sort and get uniq contaminants if contaminants found
 	
-	Implement threads when converting FASTQ -> FASTA 
-	Implement threads when blasting against databases
-
 DM_Assembly_v1.0.0.pl
 	SPAdes for Mac?
 	
 DM_MarkerScan_v1.0.0.pl
-	Threads for several points along the flow
+	Print excel
+	set CONS_inc and VAR_inc as variables?
 	
-	
-Implement package and fix bugs
- - To check if it is possible to add some more common subroutines
- 
- 
- 
+	Explain new parameters implemented
+	Update manual and documentation
+
+DOMINO.pm 
