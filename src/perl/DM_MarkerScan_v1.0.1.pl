@@ -1252,7 +1252,6 @@ if (!$avoid_mapping) {
 	
 	if ($option ne "msa_alignment") {
 
-=head
 		## We would use Bowtie2 for mapping the reads		
 		DOMINO::printHeader("", "#");	DOMINO::printHeader(" Mapping Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
 		
@@ -1706,8 +1705,7 @@ if (!$avoid_mapping) {
 			print "\n\n"; DOMINO::printHeader("", "+");DOMINO::printHeader(" Mapping finished for Reference $reference_identifier ", "+");DOMINO::printHeader("", "+"); &time_log(); print "\n";		
 			undef $reference_hash_fasta_ref;
 		} # foreach reference
-	
-=cut
+
 	} elsif ($option eq "msa_alignment") {
 	
 		mkdir $msa_dirname, 0755; chdir $align_dirname;
@@ -1739,15 +1737,13 @@ if (!$avoid_mapping) {
 	
 			for (my $i=0; $i < scalar @$files_ref; $i++) {
 				my $file2dump = $align_dirname."/dump_file_split_Part_".$i.".txt";
-				#print "File to dump: ".$file2dump."\n";
 				push (@{ $domino_files{'all'}{'dump_file_split'} }, $file2dump);
 			}
 	
 			## Implement threads
 			print "\n+ For each loci a MSA file would be generated...\n";
 			print "+ Parsing splitted files...\n+ Using parallel threads ($num_proc_user CPUs)...\n";
-			if ($pyRAD_file) {
-		
+			if ($pyRAD_file) {		
 				&debugger_print("pyRAD file provided...");
 				### RADSEQ like data ####
 				## Parse pyRAD loci file provided
@@ -1775,8 +1771,7 @@ if (!$avoid_mapping) {
 							foreach my $keys (keys %hash) { 
 								if ($domino_files{$keys}{'taxa'} || $domino_files{'taxa'}{'user_Taxa'}[0] eq 'all') {
 									open (OUT, ">>$file"); print OUT ">".$keys."\n".$hash{$keys}."\n"; close(OUT);
-								}
-							} $counter++; undef %hash; next;
+							}} $counter++; undef %hash; next;
 						}
 						$line =~ s/\s+/\t/g; 
 						$line =~ s/\%/>/g; ## Sometimes there is this symbol or at least in my test set
