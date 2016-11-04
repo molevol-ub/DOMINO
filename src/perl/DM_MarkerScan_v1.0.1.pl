@@ -2305,7 +2305,7 @@ foreach my $ref_taxa (keys %domino_files) { ## For each taxa specified, obtain p
 	if ($option eq "msa_alignment") { 
 		push ( @{ $domino_files{$ref_taxa}{'array_all_taxa'} }, $marker_dir."/merged.profile_ARRAY.txt");
 	} else {
-	=head
+=head
 		# DO NOT MERGE right now...
 		#################################################
 		## Merging the sam according to the user input ##
@@ -2314,7 +2314,7 @@ foreach my $ref_taxa (keys %domino_files) { ## For each taxa specified, obtain p
 		#$merge_bam_all_sp = &merge_sam(\@sams_to_parse, \@sam_headers_line);
 		#print "\n"; &time_log(); print "\n";
 		#my @tmp = split ("_sorted\.bam", $merge_bam_all_sp);
-	=cut			
+=cut			
 		my @taxa = sort @{ $domino_files{'taxa'}{'user_Taxa'} };
 		my @uniq_sort_taxa = uniq(@taxa);
 		my $name = join("_", @uniq_sort_taxa);
@@ -2698,6 +2698,7 @@ foreach my $keys (keys %$contig_length_Ref) { unless (grep /$keys/, @markers_see
 my $definitely_results_dirname = $marker_dirname."/DOMINO_markers_Results";
 mkdir $definitely_results_dirname, 0755; chdir $definitely_results_dirname; &debugger_print("Changing dir to $definitely_results_dirname");
 
+=head
 my $sam_merged_DOMINO_markers;
 unless ($option eq "msa_alignment") {
 	my @merge_bam_all_sp = split ("/",$merge_bam_all_sp);
@@ -2706,7 +2707,6 @@ unless ($option eq "msa_alignment") {
 	$sam_merged_DOMINO_markers = $tmp_name[0]."_DOMINO_markers.sam";
 }
 
-=head
 ## Check for Contigs
 print "+ Clustering markers...\n+ Filtering contigs...\n";
 my %hash = %$contig_length_Ref;

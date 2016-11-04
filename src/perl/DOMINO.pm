@@ -512,8 +512,7 @@ sub readDir {
 	my $idx_dot_dot = firstidx { $_ eq '..' } @dir_files;
 	if ($idx_dot_dot >= 0) { splice(@dir_files, $idx_dot_dot, 1); }
 	my $idx_dot_DSStore = firstidx { $_ eq '.DS_Store' } @dir_files;
-	if ($idx_dot_DSStore >= 0) { splice(@dir_files, $idx_dot_DSStore, 1); }
-	
+	if ($idx_dot_DSStore >= 0) { splice(@dir_files, $idx_dot_DSStore, 1); }	
 	my $array_ref = \@dir_files;
 	return $array_ref;
 }
