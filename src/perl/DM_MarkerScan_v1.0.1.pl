@@ -1732,8 +1732,11 @@ if (!$avoid_mapping) {
 				&debugger_print("File: $file_path");		
 			
 			my $files_ref;
-			if ($pyRAD_file) { $files_ref = DOMINO::loci_file_splitter($file_path, $chars,'loci');
-			} else { $files_ref = DOMINO::file_splitter($file_path, $chars, 'fa'); }		
+			if ($pyRAD_file) { 
+				$files_ref = DOMINO::loci_file_splitter($file_path, $chars,'loci');
+			} else { 
+				$files_ref = DOMINO::fasta_file_splitter($file_path, $chars, 'fa');
+			}		
 			push (@{ $domino_files{'RADseq'}{'parts'}}, @$files_ref);		
 			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 	
@@ -2084,9 +2087,9 @@ if ($option eq "msa_alignment") {
 					my $sequence = $hash{$keys};
 					push (@{ $hash2fill{$sample} }, $keys.":::".$sequence);
 				}}
+				
 				foreach my $keys (keys %hash2fill) {
 					my $alleles = scalar @{ $hash2fill{$keys} };
-
 					if ($alleles == 1) {
 						my @array = split(":::", $hash2fill{$keys}[0]);
 						$hash2return{$keys} = $array[1];					
@@ -2123,14 +2126,16 @@ if ($option eq "msa_alignment") {
 					} elsif ($alleles > 2) {
 						&printError("ERROR: $region_id: [ $keys ] contains more than 2 alleles\nDOMINO would not die here but this locus would be skipped....\n");
 						$pm_MARKER_MSA_files->finish;
-					}
-				}
+				}}
+				#print "\n\n"; print Dumper \%hash2return;
+
 				undef %hash2fill;
 				unless ($dnaSP_flag) {
 					my $valueReturned = &check_marker_pairwise(\%hash2return);
 					if ($valueReturned != 1) { $pm_MARKER_MSA_files->finish; }
 				}
 				$string2print_ref = &check_marker_ALL(\%hash2return, "Ref"); # Check there is a minimun variation
+				#print $region_id."\t".$string2print_ref."\n";
 				if ($string2print_ref eq 'NO' ) { $pm_MARKER_MSA_files->finish;}
 			} else {
 				my @path_file = split("\.fasta", $array_files_fasta_msa[$i]);
@@ -3283,12 +3288,10 @@ sub check_marker_ALL {
 	
 	my @tmp_length = sort @length_seqs;
 	my @tmp_length_uniq = uniq(@tmp_length);	
+	
 	if (scalar @tmp_length_uniq > 1) {
-		&printError("There is problem: length of the markers do not match for $file...");
-		return "";
-	} else {
-		$length_seqs[0] = $length;
-	}	
+		&printError("There is problem: length of the markers do not match for $file..."); return "";
+	} else { $length_seqs[0] = $length; }	
 	
 	my @profile;
 	for (my $i=0; $i < $length; $i++) {
@@ -3297,7 +3300,6 @@ sub check_marker_ALL {
 		foreach my $seqs (keys %hash) { 
 			push (@tmp, $hash{$seqs}[$i]);
 		}
-		
 		my @tmp_uniq = sort @tmp;
 		my @tmp_uniq_sort = uniq(@tmp_uniq);
 		
@@ -3306,6 +3308,8 @@ sub check_marker_ALL {
 				push (@profile, 'N');
 			} elsif ($tmp_uniq_sort[0] eq '-') {
 				push (@profile, '-');
+			} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[0]}) {
+				push (@profile, '1');
 			} else { push (@profile, '0'); }
 		} else {
 			## We are assuming the calling has been correctly done and
@@ -3340,14 +3344,12 @@ sub check_marker_ALL {
 							} else { push (@profile, '0'); }
 						} else {
 							push (@profile, '1');
-					}}
-				} elsif (scalar @amb > 1) { ## Several
+				}}} elsif (scalar @amb > 1) { ## Several
 					push (@profile, '1');
 	}}}}
-	my $string = join ("", @profile);
+	my $string = join ("", @profile); #print "\t\t\t  ".$string."\n";
 	my $var_sites = $string =~ tr/1/1/; ## count variable sites
 	if ($var_sites == 0) { return 'NO'; }
-	
 	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
 	my $count_length = $con_sites + $var_sites;
 	my $missing = $length - $count_length;

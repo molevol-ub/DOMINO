@@ -169,8 +169,7 @@ sub fasta_file_splitter {
 	while (1) {
 		my $chunk;
 	   	my @tmp = split ("\.".$ext, $file);
-	   	my @name = split("/", $tmp[0]);
-		my $block_file = $dir."/".$name[-1]."_part-".$j."_tmp.".$ext;
+		my $block_file = $tmp[0]."_part-".$j."_tmp.".$ext;
 		push (@files, $block_file);
 		open(OUT, ">$block_file") or die "Could not open destination file";
 		if (!eof(FH)) { read(FH, $chunk,$block);  
