@@ -1,14 +1,13 @@
 #!/usr/bin/perl
 ###########################################################################################
 ### DOMINO: Development of molecular markers in non-model organisms using NGS data 	###
-###											###
-### Authors:										###
-### Cristina Frías-López, José F. Sánchez-Herrero, Miquel A. Arnedo, Alejandro 		###
-### Sánchez-Gracia, and Julio Rozas.					     		###
-###											###
+###											
+### Authors:								
+### Cristina Frías-López, José F. Sánchez-Herrero, Miquel A. Arnedo, Alejandro
+### Sánchez-Gracia, and Julio Rozas.					     		
 ###########################################################################################
 ##	Usage:
-##      perl DM_Assembly_v1.0.0.pl
+##      perl DM_Assembly_v1.0.2.pl
 ##
 ##    ###########################
 ##    ### General Information ###
@@ -52,8 +51,6 @@ BEGIN {
 	require Cwd; use Cwd qw(abs_path);  
 	require Parallel::ForkManager;
 }
-## TODO: Write a debug message if importing any module fails
-## TODO:: use debugger_print for printing Debugging messages
 
 ##################################
 ##	Initializing some variables	##
@@ -106,6 +103,7 @@ pod2usage( -exitstatus => 0, -verbose => 1 ) if ($helpAsked);
 pod2usage( -exitstatus => 0, -verbose => 2 ) if ($manual);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "VERSION") if ($version);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPTION|AUTHOR|COPYRIGHT|LICENSE|DATE|CITATION") if ($further_information);
+my $domino_version = "v1.0.2 ## Revised 7-11-2016";
 
 =pod
 
@@ -125,7 +123,7 @@ pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPT
 
 =over 2
 
-DM_Assembly_v1.0.0.pl  
+DM_Assembly_v1.0.2.pl  
 
 =back	
 
@@ -133,7 +131,7 @@ DM_Assembly_v1.0.0.pl
 
 =over 2
 
-DOMINO v1.0.1
+DOMINO v1.0.2
 
 =back	
 	
@@ -143,7 +141,7 @@ DOMINO v1.0.1
 
 =item B<>
 
-perl DM_Assembly_v1.0.0.pl  
+perl DM_Assembly_v1.0.2.pl  
 
 =item B<###########################>
 	
@@ -298,7 +296,7 @@ B<-DOMINO_files [Default]>
 
 Default option. DOMINO uses the pre-processed reads in /DM_clean_data folder for the assembly.
 
-If QC is not desired, please prepare the files using '-only_tag_files' option using the DM_Clean_v1.0.0.pl script or provide appropriately tagged files.
+If QC is not desired, please prepare the files using '-only_tag_files' option using the DM_Clean_v1.0.2.pl script or provide appropriately tagged files.
 
 B<-user_files>
 
@@ -406,40 +404,40 @@ Available option for Illumina reads (single or paired-end reads). 454 is not sup
 
 =item B<454: DOMINO Multiple fastq files>
 
- perl DM_Assembly_v1.0.0.pl -o test_folder -DOMINO_files -type_file 3 -p 3 -mrs 80
+ perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 3 -p 3 -mrs 80
 
 =item B<454: DOMINO Multiple fastq files. Use CAP3 for scaffolding>
 
- perl DM_Assembly_v1.0.0.pl -o test_folder -DOMINO_files -type_file 3 -p 3 -mrs 80 
+ perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 3 -p 3 -mrs 80 
  -useCAP3 -overCAP3 80 -simCAP3 97 -TempFiles
 
 =item B<Illumina: DOMINO Multiple fastq files>
 
- perl DM_Assembly_v1.0.0.pl -o test_folder -DOMINO_files -type_file 5
+ perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 5
 
 =item B<Illumina: DOMINO Multiple fastq files -- SPAdes >
 
- perl DM_Assembly_v1.0.0.pl -o test_folder -DOMINO_files -type_file 5 -SPAdes
+ perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 5 -SPAdes
 
 =item B<Illumina Paired-end Files: DOMINO Multiple Paired-end FASTQ files>
 
- perl DM_Assembly_v1.0.0.pl -o test_folder -DOMINO_files -type_file 7
+ perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 7
 
 =item B<454: User Multiple fastq files>
 
- perl DM_Assembly_v1.0.0.pl -o test_folder -type_file 3 -user_files 
+ perl DM_Assembly_v1.0.2.pl -o test_folder -type_file 3 -user_files 
  -input_file 454_user_file1.fastq -input_file 454_user_file2.fastq 
  -input_file 454_user_file3.fastq
 
 =item B<Illumina: User Multiple fastq files>
 
- perl DM_Assembly_v1.0.0.pl -o test_folder -type_file 5 -user_files 
+ perl DM_Assembly_v1.0.2.pl -o test_folder -type_file 5 -user_files 
  -input_file illumina_user_file1.fastq -input_file illumina_user_file2.fastq 
  -input_file illumina_user_file3.fastq
 
 =item B<Illumina Paired-end Files: User Multiple Paired-end FASTQ files>
 
- perl DM_Assembly_v1.0.0.pl -o test_folder -type_file 7 -user_files 
+ perl DM_Assembly_v1.0.2.pl -o test_folder -type_file 7 -user_files 
  -input_file user_file_left_1.fastq -input_file user_file_right_1.fastq 
  -input_file user_file_left_2.fastq -input_file user_file_right_2.fastq
 
@@ -492,7 +490,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 =over 2
 
-21 - 09 - 2016
+07 - 11 - 2016
 
 =back
 

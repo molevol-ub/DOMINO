@@ -2,7 +2,8 @@
 ####################################################################
 ###	DOMINO: Development of molecular markers in non-model organisms 
 ####################################################################
-# This package provides multiple subroutines for the DOMINO package 
+# This package provides multiple subroutines for the DOMINO package
+## date 7/11/16
 
 package DOMINO;
 

@@ -2045,7 +2045,7 @@ void MainWindow_AMM::check_user_options(QString step) {
 
                        // Set the perl command to send
                        QString MolMarker_command;
-                       MolMarker_command = QString(perl_abs_path + " " + dir + "/scripts/DM_MarkerScan_v1.0.0.pl");
+                       MolMarker_command = QString(perl_abs_path + " " + dir + "/scripts/DM_MarkerScan_v1.0.2.pl");
 
                        // Options
                        QString folder_option(" -o ");
@@ -2113,7 +2113,7 @@ void MainWindow_AMM::check_user_options(QString step) {
 
                    // Set the perl command to send
                    QString MolMarker_command;
-                   MolMarker_command = QString(perl_abs_path + " " + dir + "/scripts/DM_MarkerScan_v1.0.0.pl");
+                   MolMarker_command = QString(perl_abs_path + " " + dir + "/scripts/DM_MarkerScan_v1.0.2.pl");
 
                    // Options
                    QString folder_option(" -o ");
@@ -2275,7 +2275,7 @@ void MainWindow_AMM::cleaning_pipe(QString option) {
     proc_Perl_cleaning_pipe = new QProcess(this);
     proc_Perl_cleaning_pipe->setProcessChannelMode(QProcess::SeparateChannels); // Two channels: STD & STERR
     QString Species_names_mids = option;
-    QString pipe_perl = QString(perl_abs_path + " " + APPDIR + "/scripts/DM_Clean_v1.0.0.pl");
+    QString pipe_perl = QString(perl_abs_path + " " + APPDIR + "/scripts/DM_Clean_v1.0.2.pl");
 
     additional_perl_options_cleaning.append(Species_names_mids);
     connect(proc_Perl_cleaning_pipe, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(onCleaningPipe_finished()));
@@ -2340,7 +2340,7 @@ void MainWindow_AMM::run_assembling_pipeline() {
     }
 
     // Generate perl command
-    QString pipe_perl_Assembly = QString(perl_abs_path + " " + APPDIR + "/scripts/DM_Assembly_v1.0.0.pl");
+    QString pipe_perl_Assembly = QString(perl_abs_path + " " + APPDIR + "/scripts/DM_Assembly_v1.0.2.pl");
     QString folder(" -o ");
     QString type_file_string(" -type_file ");
     QString min_read_score_string(" -mrs ");
@@ -2428,7 +2428,7 @@ void MainWindow_AMM::run_DOMINO_marker_identification() {
 
         // Set the perl command to send
         QString MolMarker_command;
-        MolMarker_command = QString(perl_abs_path + " " + APPDIR + "/scripts/DM_MarkerScan_v1.0.0.pl");
+        MolMarker_command = QString(perl_abs_path + " " + APPDIR + "/scripts/DM_MarkerScan_v1.0.2.pl");
 
         // Options
         QString folder_option(" -o ");

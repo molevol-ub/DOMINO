@@ -13,7 +13,7 @@
 ##    ###########################
 ##    ### General Information ###
 ##    ###########################
-##      [-h|--help] [-man] [-v|--version] [-MoreInfo]
+##      [-h] [--help] [-man] [-v|--version] [-MoreInfo]
 ##
 ##    #########################
 ##    ### Mandatory options ###
@@ -40,12 +40,13 @@
 ##      [-low_coverage_data]
 ##
 ##      ## Markers
-##
-##      [-MPA|--missing_perct_allowed float_value]
-##      [-MCT|--minimum_number_taxa_covered int_value]
-##      [-CD|--conserved_differences int_value] [-PV|--polymorphism]
-##      [-VP|--variable_positions range]
-##
+##		[-MPA|--missing_perct_allowed float_value] 
+##		[-MCT|--minimum_number_taxa_covered int_value] 
+##		[-CD|--conserved_differences int_value] [-PV|--polymorphism] 
+##		[-VP|--variable_positions range] 
+##		[-SI|--sliding_interval int] 
+##		[-dnaSP]
+##		
 ##      ## Others
 ##
 ##      [-No_Profile_Generation|NPG] [-TempFiles] [-keep_bam_file]
@@ -76,7 +77,7 @@ use List::MoreUtils qw(firstidx);
 ##################################
 ##	Initializing some variables	##
 ##################################
-my $domino_version = "v1.0.1";
+my $domino_version = "v1.0.2 ## Revised 7-11-2016";
 my (
 ## User options
 $folder, $helpAsked, $avoidDelete_tmp_files, $num_proc_user, $window_var_CONS, 
@@ -86,7 +87,7 @@ $rfgopen, $MID_taxa_names, $option, $mis_penalty, $msa_fasta_folder, $polymorphi
 $level_significance_coverage_distribution, $map_contig_files, $missing_allowed, $keepbam, 
 $version, $DOMINO_simulations, $minimum_number_taxa_covered, $avoid_mapping, $further_information,
 @user_cleanRead_files, @user_contig_files, $msa_file, $behaviour, $select_markers, $identify_markers,
-$debugger,
+$debugger, $helpAsked1,
  
 ## absolute path
 @contigs_fasta_file_abs_path, @clean_fastq_file_abs_path, # toDiscard
@@ -116,7 +117,8 @@ foreach my $keys (keys %ambiguity_DNA_codes) {
 ## Get user options	##
 ######################
 GetOptions(
-	"h|help" => \$helpAsked,
+	"h" => \$helpAsked1,
+	"help" => \$helpAsked,
 	"man" => \$manual,
 	"v|version" => \$version, 
 	"MoreInfo" => \$further_information,
@@ -168,6 +170,7 @@ GetOptions(
 
 ## Help/manual/version asked
 pod2usage( -exitstatus => 0, -verbose => 1 ) if ($helpAsked);
+pod2usage( -exitstatus => 0, -verbose => 0 ) if ($helpAsked1);
 pod2usage( -exitstatus => 0, -verbose => 2 ) if ($manual);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "VERSION") if ($version);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPTION|AUTHOR|COPYRIGHT|LICENSE|DATE|CITATION") if ($further_information);
@@ -190,7 +193,7 @@ pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPT
 
 =over 2
 
-DM_MarkerScan_1.0.0.pl
+DM_MarkerScan_1.0.2.pl
 
 =back
 		
@@ -198,7 +201,7 @@ DM_MarkerScan_1.0.0.pl
 
 =over 2
 
-DOMINO v1.0.1
+DOMINO v1.0.2
 
 =back
 	
@@ -208,7 +211,7 @@ DOMINO v1.0.1
 
 =item B<>
 	
-perl DM_MarkerScan_1.0.1.pl
+perl DM_MarkerScan_1.0.2.pl
 
 =item B<###########################>
 	
@@ -224,7 +227,7 @@ perl DM_MarkerScan_1.0.1.pl
 
 =item B<#########################>
 
-[-option string] [-type_input string] [-o|--outputFolder string] [-taxa_names string] [-VD|--variable_divergence int_value] [-CL|--conserved_length int_value] [-VL|--variable_length range] [-DM|--development_analysis selection/discovery]
+[-option string] [-type_input string] [-o|--outputFolder string] [-taxa_names string] [-VD|--variable_divergence int_value] [-CL|--conserved_length range] [-VL|--variable_length range] [-DM|--development_analysis selection/discovery]
 
 =item B<######################>
 
@@ -242,7 +245,7 @@ perl DM_MarkerScan_1.0.1.pl
 
 ## Markers
 
-[-MPA|--missing_perct_allowed float_value] [-MCT|--minimum_number_taxa_covered int_value] [-CD|--conserved_differences int_value] [-PV|--polymorphism] [-VP|--variable_positions range]
+[-MPA|--missing_perct_allowed float_value] [-MCT|--minimum_number_taxa_covered int_value] [-CD|--conserved_differences int_value] [-PV|--polymorphism] [-VP|--variable_positions range] [-SI|--sliding_interval int] [-dnaSP]
 
 ## Others
 
@@ -526,6 +529,12 @@ Compatible with -option msa_alignment and -option RADseq
 
 Sequence length for the two conserved regions flanking the marker.
 
+Provide a single value or a range using the :: separator. 
+
+If a unique value is provided, it would be used as the minimun for the conserved length. If two values provided, it would be interpreted as minimun and maximun for this conserved region. 
+
+Example: -CL 30 or -CL 30::45
+
 =item B<-CD|--conserved_differences [int_value]>
 
 Maximun number of nucleotide differences across taxa allowed in the conserved region. [Default: 1]
@@ -610,27 +619,33 @@ Minimum number of taxa required in the alignment of a candidate region to be con
 
 Example: For a taxa panel of 4 species, specifying -taxa_names sp1,sp2,sp3,sp4 -MCT 3, DOMINO search sequence regions where any combination of 3 of the 4 taxa are present in the alignment.
 
-=item B<-PV|--polymorphism>
+=item B<-PV|--polymorphism [Default Off]>
 
 Use polymorphic variants to estimate nucleotide VD and CD.
 
-=item B<-low_coverage_data>
+=item B<-low_coverage_data [Default Off]>
 
 Use this option if you expect your data to have really low coverage. Sensibility and precision of the markers identified could be decrease.
 
-=item B<-dnaSP>
+=item B<-SI|--sliding_interval [int_value] [Default 5]>
+
+When discovering new markers, DOMINO checks each region using a sliding window approach. This option SI is the increment to loop around this sequence. 
+
+If a greater amount of markers is desired, please decrement this value
+
+=item B<-dnaSP [Default Off]>
 
 Use this option along with RADseq file or MSA [file|folder] to report any alignment with a minimun number of variations independently of the taxa given
 
-=item B<-keep_bam_file>
+=item B<-keep_bam_file [Default Off]>
 
 Keep the BAM files generated during the run.
 
-=item B<-No_Profile_Generation|NPG>
+=item B<-No_Profile_Generation|NPG [Default Off]>
 	
-Use this flag to skip mapping phase and use data from a previous DOMINO run.
+Use this flag to skip the mapping phase and the generation of the variation profile. Uses data from a previous DOMINO run.
 	
-=item B<-TempFiles>
+=item B<-TempFiles [Default Off]>
 	
 Keep all intermediate files.
 
@@ -644,25 +659,25 @@ Keep all intermediate files.
 
 =item B<DOMINO files: single end -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option DOMINO_files
+ perl DM_MarkerScan_v1.0.2.pl -option DOMINO_files
  -type_input single_end -o test/ -taxa_names Dmelanogaster,Dsimulans,Dyakuba 
  -VD 0.01 -CL 40 -VL 400 -CD 1 -DM discovery 
 
 =item B<DOMINO files: single end, No Mapping  -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option DOMINO_files
+ perl DM_MarkerScan_v1.0.2.pl -option DOMINO_files
  -type_input single_end -o test/ -taxa_names Dmelanogaster,Dsimulans,Dyakuba 
  -VD 0.01 -CL 40 -VL 500 -CD 1 -NPG -MCT 2 -MPA 25 -DM discovery 
 
 =item B<DOMINO files: paired-end -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option DOMINO_files
+ perl DM_MarkerScan_v1.0.2.pl -option DOMINO_files
  -type_input pair_end -o test/ -taxa_names Dmelanogaster,Dsimulans,Dyakuba 
  -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 -DM discovery 
 
 =item B<User provides contigs and reads (single end) -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option user_assembly_contigs -type_input single_end -o test/ 
+ perl DM_MarkerScan_v1.0.2.pl -option user_assembly_contigs -type_input single_end -o test/ 
  -taxa_names Dmelanogaster,Dsimulans,Dyakuba -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 
  -user_contig_files path_to_file1/Dmelanogaster.contigs.fasta -user_contig_files path_to_file2/Dsimulans.contigs.fasta 
  -user_contig_files path_to_file3/Dyakuba.contigs.fasta -user_cleanRead_files Dmelanogaster.clean.fastq 
@@ -670,7 +685,7 @@ Keep all intermediate files.
 
 =item B<User provides contigs and reads (paired-end) -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option user_assembly_contigs -type_input pair_end -o test/ 
+ perl DM_MarkerScan_v1.0.2.pl -option user_assembly_contigs -type_input pair_end -o test/ 
  -taxa_names Dmelanogaster,Dsimulans,Dyakuba -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 
  -user_contig_files path_to_file1/clean_assembly_id-Dmelanogaster.contigs.fasta 
  -user_contig_files path_to_file2/clean_assembly_id-Dsimulans.contigs.fasta 
@@ -682,7 +697,7 @@ Keep all intermediate files.
 
 =item B<User provides contigs but no reads, and specifies to map contigs vs contigs  -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option user_assembly_contigs -type_input single_end -o test/ 
+ perl DM_MarkerScan_v1.0.2.pl -option user_assembly_contigs -type_input single_end -o test/ 
  -taxa_names Dmelanogaster,Dsimulans,Dyakuba -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 
  -user_contig_files path_to_file1/clean_assembly_id-Dmelanogaster.contigs.fasta 
  -user_contig_files path_to_file2/clean_assembly_id-Dsimulans.contigs.fasta 
@@ -691,7 +706,7 @@ Keep all intermediate files.
 
 =item B<User provides a reference genome and reads (single end) -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option genome -type_input single_end -o test/ 
+ perl DM_MarkerScan_v1.0.2.pl -option genome -type_input single_end -o test/ 
  -taxa_names Dmelanogaster,Dsimulans,Dyakuba -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 
  -genome_fasta path_to_genomes_folder/NCBI_id-Dpseudobscura.fasta
  -user_cleanRead_files Dmelanogaster.clean.fastq -user_cleanRead_files Dsimulans.clean.fastq 
@@ -699,42 +714,42 @@ Keep all intermediate files.
 
 =item B<MSA alignment: A single MSA in PHYLIP -- Single File -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option msa_alignment -o test/ -msa_file file.phy 
+ perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/ -msa_file file.phy 
  -taxa_names cow,carp,horse,human -VD 0.01 -CL 40 -VL 400 -CD 1 -DM discovery 
 
 =item B<MSA alignment: A single MSA in FASTA -- Single File -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option msa_alignment -o test/ -msa_file file.fasta 
+ perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/ -msa_file file.fasta 
  -taxa_names cow,carp,horse,human -VD 0.01 -CL 40 -VL 400 -CD 1 -DM discovery 
 
 =item B<MSA alignment: A single PHYLIP file -- Multiple MSA -- Discovery>
 
- perl DM_MarkerScan_v1.0.0.pl -option msa_alignment -o test/ -msa_file multi_msa_file.phy 
+ perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/ -msa_file multi_msa_file.phy 
  -taxa_names cow,carp,horse,human -VD 0.01 -CL 40 -VL 400 -CD 1 -DM discovery 
 
 =item B<MSA alignment: A single PHYLIP file -- Multiple MSA -- Selection>
 
- perl DM_MarkerScan_v1.0.0.pl -option msa_alignment -o test/ -msa_file multi_msa_file.phy 
+ perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/ -msa_file multi_msa_file.phy 
  -taxa_names cow,carp,horse,human -VD 0.01 -DM selection 
 
 =item B<MSA alignment: Multiple files in PHYLIP -- Folder -- Selection>
 
- perl DM_MarkerScan_v1.0.0.pl -option msa_alignment -o test/  -msa_folder /home/user/MSA
+ perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/  -msa_folder /home/user/MSA
  -taxa_names cow,carp,horse,human -VD 0.01 -DM selection 
 
 =item B<MSA alignment: Multiple files in FASTA MSA -- Folder -- Selection>
 
- perl DM_MarkerScan_v1.0.0.pl -option msa_alignment -o test/  -msa_folder /home/user/MSA
+ perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/  -msa_folder /home/user/MSA
  -taxa_names cow,carp,horse,human -VD 0.01 -DM selection
 
 =item B<RAD-MSA alignment: single file in pyRAD format -- File -- Selection>
 
- perl DM_MarkerScan_v1.0.0.pl -option RADseq -o test/  -RADseq_file output.loci
+ perl DM_MarkerScan_v1.0.2.pl -option RADseq -o test/  -RADseq_file output.loci
  -taxa_names ind1,ind3,ind5,ind8,ind9 -VD 0.01 -DM selection
 
 =item B<RAD-MSA alignment: single file in STACKS format -- File -- Selection>
 
- perl DM_MarkerScan_v1.0.0.pl -option RADseq -o test/  -RADseq_file output.fa
+ perl DM_MarkerScan_v1.0.2.pl -option RADseq -o test/  -RADseq_file output.fa
  -taxa_names ind1,ind3,ind5,ind8,ind9 -VD 0.01 -DM selection
 
 =back	
@@ -786,7 +801,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 =over 2
 
-21 - 09 - 2016
+07 - 11 - 2016
 
 =back
 
@@ -914,7 +929,7 @@ if (!$rdgexten) { $rdgexten = 3; } 			## Bowtie Defaults
 if (!$rfgopen) { $rfgopen = 5; } 			## Bowtie Defaults
 if (!$rfgexten) { $rfgexten = 3; } 			## Bowtie Defaults
 if (!$mis_penalty) { $mis_penalty = 4;} 	## Bowtie Defaults
-if (!$SLIDING_user) { $SLIDING_user = 1; } 	## sliding interval for marker search
+if (!$SLIDING_user) { $SLIDING_user = 5; } 	## sliding interval for marker search
 if (!$cigar_pct) { $cigar_pct = 10; }
 if (!$window_var_CONS) { $window_var_CONS = 1;}
 if (!$level_significance_coverage_distribution) { $level_significance_coverage_distribution = 1e-05; }
@@ -2427,8 +2442,13 @@ foreach my $ref_taxa (keys %domino_files) { ## For each taxa specified, obtain p
 		sub { my ($pid, $exit_code, $ident) = @_; } );
 	$pm_MARKER_PILEUP->run_on_start( sub { my ($pid,$ident)=@_; } );
 	foreach my $contigs (sort keys %pileup_files) {
-		$counter++; print "\t- Checking each contig: [$counter/$total_contigs]...\r";
+		$counter++;
+		if ($total_contigs > 100) {
+			my $perc = sprintf( "%.3f", ( $counter/$total_contigs )*100 );
+			print "\t- Checking each contig: [ $perc % ]...\r";
+		} else { print "\t- Checking each contig: [$counter/$total_contigs]...\r";}	
 		my $pid = $pm_MARKER_PILEUP->start($contigs) and next;
+
 		my %pileup_files_threads;
 		my @pileup_fasta;
 		foreach my $files (keys %{ $pileup_files{$contigs} }) {
