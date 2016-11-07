@@ -58,7 +58,7 @@ BEGIN {
 my ($helpAsked, %domino_files, $avoidDelTMPfiles, $file_type, $cap3flag,
 $manual, $abs_folder, $mrs, $debugger, $flagSpades, $noOfProcesses, $version,
 @user_files, $DOMINO_files, $overlap_CAP3, $similar_CAP3, $user_files, $further_information,
-@file_abs_path, $step_time, %nucleotides, $check_threads,
+@file_abs_path, $step_time, %nucleotides, $check_threads,$helpAsked1,
 
 $total_Contigs_all_sets);
 
@@ -71,7 +71,8 @@ my %input_options = (1 =>'454_sff', 2 =>'454_fastq', 3=>'454_multiple_fastq',
 ## Get user options ##
 ######################
 GetOptions(
-	"h|help" => \$helpAsked,
+	"h" => \$helpAsked1,
+	"help" => \$helpAsked,
 	"man" => \$manual,
 	"v|version" => \$version, 
 	"MoreInfo" => \$further_information,
@@ -100,6 +101,7 @@ GetOptions(
 
 ## Help/manual/version asked
 pod2usage( -exitstatus => 0, -verbose => 1 ) if ($helpAsked);
+pod2usage( -exitstatus => 0, -verbose => 0 ) if ($helpAsked1);
 pod2usage( -exitstatus => 0, -verbose => 2 ) if ($manual);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "VERSION") if ($version);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPTION|AUTHOR|COPYRIGHT|LICENSE|DATE|CITATION") if ($further_information);

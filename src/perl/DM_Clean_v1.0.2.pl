@@ -65,7 +65,7 @@ for (my $j = 0; $j < $#script_path_array; $j++) { $scripts_path .= $script_path_
 my (
 ## Options provided
 $bdiffs, $read_length_GUI, $minimum_qual_GUI, $minimum_length_GUI, $outFolder, 
-$manual, $version, $threshold, $noOfProcesses, $user_barcodes_file, $helpAsked, 
+$manual, $version, $threshold, $noOfProcesses, $user_barcodes_file, $helpAsked, $helpAsked1,
 $avoidDelTMPfiles, @user_blast_db, $skipping_BLAST, $user_option_file_type, $only_user_db, @blast_db,
 $further_information, $onlyTagging_files, $debugger, @user_blast_db_tmp, @user_files,
 
@@ -100,7 +100,8 @@ GetOptions(
 	"only_user_db" => \$only_user_db,
 	"only_tag_files|OTG" => \$onlyTagging_files,
 			
-	"h|help" => \$helpAsked,
+	"h" => \$helpAsked1,
+	"help" => \$helpAsked,
 	"man" => \$manual,
 	"v|version" => \$version,
 	"MoreInfo" => \$further_information,
@@ -110,6 +111,7 @@ GetOptions(
 
 ## Help/manual/version
 pod2usage( -exitstatus => 0, -verbose => 1 ) if ($helpAsked);
+pod2usage( -exitstatus => 0, -verbose => 0 ) if ($helpAsked1);
 pod2usage( -exitstatus => 0, -verbose => 2 ) if ($manual);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "VERSION") if ($version);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPTION|AUTHOR|COPYRIGHT|LICENSE|DATE|CITATION") if ($further_information);
