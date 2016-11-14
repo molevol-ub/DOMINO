@@ -1079,7 +1079,7 @@ chdir $dirname;
 my $array_Ref = DOMINO::readDir($dirname);
 my @dirname_files = @$array_Ref;
 foreach my $taxa (keys %domino_files) {
-	print "+ Generating some statistics for Assembly file: $domino_files{$taxa}{'FINAL'}[0]\n";
+	print "\n+ Generating some statistics for Assembly file: $domino_files{$taxa}{'FINAL'}[0]\n";
 	if ($cap3flag) {
 		print "+ Statistics for MIRA assembly:\n";
 		my $stats_file_MIRA = &Contig_Stats($domino_files{$taxa}{'contigsMIRA'}[0]);
@@ -1108,33 +1108,6 @@ unless ($avoidDelTMPfiles) {
 ##########################
 ##	SUBROUTINES	##
 ##########################
-
-sub calcN50 {
-	my @x = @{$_[0]};
-	my $n = $_[1];
-	my $total;
-	for (my $j=0; $j<@x; $j++){ $total += $x[$j]; }
-	my ($count, $n50) = (0,0);
-	for (my $j=0; $j<@x; $j++){
-        $count += $x[$j];
-        if($count >= ($total*$n/100)){
-            $n50=$x[$j]; last;
-    }}
-	return $n50;
-}
-	
-sub calcMedian {
-	my @arr = @_;
-	my @sArr = sort{$a<=>$b} @arr;
-	my $arrLen = @arr;
-	my $median;
-	if($arrLen % 2 == 0) {
-		$median = ($sArr[$arrLen/2-1] + $sArr[$arrLen/2])/2;
-	} else {
-		$median = $sArr[$arrLen/2];
-	}
-	return $median;
-}
 
 sub change_seq_names {
 	
@@ -1271,9 +1244,9 @@ sub Contig_Stats {
 	##			Set	average   median N95	Count_Genomic_Contigs  		CountContigs_%  pb_this_set	pb_this_set_%	Reads_RNA_Count			 Reads_RNA_Count_%	Unmapped_contigs_Count				Unmapped_contigs_%							
 	#print Dumper (\%parts_array);
 
-	&printHeader("","#"); 
-	&printHeader(" Assembly Statistics ","#"); 
-	&printHeader("","#"); 
+	DOMINO::printHeader("","#"); 
+	DOMINO::printHeader(" Assembly Statistics ","#"); 
+	DOMINO::printHeader("","#"); 
 	print "Assembly Statisitcs for file: $fasta_file\n\n";
 	print "## General Statistics ##\n";
 	print "\nTotal sequences: $total_Contigs_all_sets\n\n";
@@ -1301,7 +1274,7 @@ sub Contig_Stats {
 	my $array_ref_3 = \@all_contigs;
 	&get_stats($array_ref_3, $all_bases);
 	
-	&printHeader("","#"); 
+	DOMINO::printHeader("","#"); 
 	foreach my $keys (keys %parts_array) {
 		my %hash = %{$parts_array{$keys}};
 		my $total_pb_this_set;
@@ -1320,29 +1293,32 @@ sub Contig_Stats {
 		my @sort_array = sort @tmp;
 		my $array_ref_2 = \@sort_array;
 		&get_stats($array_ref_2, $all_bases);
-		&printHeader("","#"); 
+		DOMINO::printHeader("","#"); 
 	}
 
-	close (OUT);
-	return $outFile;
+	close (OUT); return $outFile;
 	
 	sub get_stats {
 	
 		my $array_ref = $_[0];
 		my $all_bases = $_[1];
 		my @array = @$array_ref;
-		my $bases = sum(@array);
+		my $totalContigs = scalar @array;
+		
+		my $bases = 0;
+		for (my $i=0; $i < scalar @array; $i++) { $bases += $array[$i]; }
+		my @sort_array = sort{$a<=>$b} @array;
+		my $minReadLen = $sort_array[0];
+		my $maxReadLen = $sort_array[-1];
+		
 		my $percentage_pb_bases_this_set = ($bases/$all_bases)*100;
 		my $percentage_pb_bases_this_set_print = sprintf "%0.5f",$percentage_pb_bases_this_set;
-		my $totalContigs = scalar @array;
 		my $percentage_contigs_this_set = ($totalContigs/$total_Contigs_all_sets)*100;
 		my $percentage_contigs_returned = sprintf "%0.5f",$percentage_contigs_this_set;
 	
-		my $minReadLen = min(@array);
-		my $maxReadLen = max(@array);
 		my $avgReadLen = sprintf "%0.2f", $bases/$totalContigs;
-		my $medianLen = calcMedian(@array);
-		my $n50 = calcN50($array_ref, 50);
+		my $medianLen = &calcMedian(@array);
+		my $n50 = &calcN50($array_ref, 50);
 
 		printf "%-25s %d\n" , "Total sequences", $totalContigs;
 		printf "%-25s %0.2f\n" , "Total sequences (%)", $percentage_contigs_returned;
@@ -1363,6 +1339,32 @@ sub Contig_Stats {
 		printf OUT "%-25s %0.2f\n", "Average sequence length", $avgReadLen;
 		printf OUT "%-25s %0.2f\n", "Median sequence length", $medianLen;
 		printf OUT "%-25s %0.2f\n", "N50: ", $n50;	
+	}
+	sub calcN50 {
+		my @x = @{$_[0]};
+		my $n = $_[1];
+		my $total;
+		for (my $j=0; $j<@x; $j++){ $total += $x[$j]; }
+		my ($count, $n50) = (0,0);
+		for (my $j=0; $j<@x; $j++){
+    	    $count += $x[$j];
+    	    if($count >= ($total*$n/100)){
+    	        $n50=$x[$j]; last;
+    	}}
+		return $n50;
+	}
+	
+	sub calcMedian {
+		my @arr = @_;
+		my @sArr = sort{$a<=>$b} @arr;
+		my $arrLen = @arr;
+		my $median;
+		if($arrLen % 2 == 0) {
+			$median = ($sArr[$arrLen/2-1] + $sArr[$arrLen/2])/2;
+		} else {
+			$median = $sArr[$arrLen/2];
+		}
+		return $median;
 	}
 }
 
