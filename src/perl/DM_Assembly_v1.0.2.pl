@@ -58,7 +58,7 @@ BEGIN {
 my ($helpAsked, %domino_files, $avoidDelTMPfiles, $file_type, $cap3flag,
 $manual, $abs_folder, $mrs, $debugger, $flagSpades, $noOfProcesses, $version,
 @user_files, $DOMINO_files, $overlap_CAP3, $similar_CAP3, $user_files, $further_information,
-@file_abs_path, $step_time, %nucleotides, $check_threads,$helpAsked1,
+@file_abs_path, $step_time, $check_threads,$helpAsked1,
 
 $total_Contigs_all_sets);
 
@@ -1109,16 +1109,6 @@ unless ($avoidDelTMPfiles) {
 ##	SUBROUTINES	##
 ##########################
 
-sub baseCount {
-	my $seq = $_[0];
-	my $tAs += $seq =~ s/A/A/gi; my $tTs += $seq =~ s/T/T/gi;
-	my $tGs += $seq =~ s/G/G/gi; my $tCs += $seq =~ s/C/C/gi;
-	my $Ns += (length $seq) - $tAs - $tTs - $tGs - $tCs;
-	$nucleotides{"A"} += $tAs; $nucleotides{"T"} += $tTs;
-	$nucleotides{"C"} += $tCs; $nucleotides{"G"} += $tGs;
-	$nucleotides{"N"} += $Ns;
-}
-
 sub calcN50 {
 	my @x = @{$_[0]};
 	my $n = $_[1];
@@ -1236,15 +1226,15 @@ sub Contig_Stats {
 	
 	my $fasta_file = $_[0];
 
-	### This is a modification of the script provided in NGS QC toolkit for
-	### the analysis of N50, average lentgh etc.
-	my (@len, %contig_length, $all_bases);
+	# Parameter variables
+	my (@len, %contig_length, $all_bases, %nucleotides, @all_contigs, %parts_array);
+
 	if(!defined($fasta_file)) { print "ERROR: No input files are provided\nDOMINO would not die here but not perform any statistics on for the assembly contigs\n"; return; }
 	my @name = split("\.fasta", $fasta_file);
 	my $outFile = $name[0]."-statistics.txt";
 	open(OUT, ">$outFile");
-	my @parts = (500, 1000, 2000, 5000, 10000, 50000); my %parts_array;
-	open(FILE, $fasta_file) or &printError("Could not open the $fasta_file ...\n") and DOMINO::dieNicely();
+	my @parts = (150, 500, 1000, 5000, 10000);
+	open(FILE, $fasta_file) || die "Could not open the $fasta_file ...\n";
 	$/ = ">"; ## Telling perl where a new line starts
 	while (<FILE>) {		
 		next if /^#/ || /^\s*$/;
@@ -1253,82 +1243,127 @@ sub Contig_Stats {
 		next unless ($sequence && $titleline);
 		my @split_titleline = split(" ",$titleline);
 		chomp $sequence;
-		my $len = length $sequence; ## Get total bases A+T+C+G
-		&baseCount($sequence);
+	
+		## Get total bases A+T+C+G
+		my $len = length $sequence;
+		if ($len < $parts[0]) { next; }
+		my $tAs += $sequence =~ s/A/A/gi; 
+		my $tTs += $sequence =~ s/T/T/gi;
+		my $tGs += $sequence =~ s/G/G/gi; 
+		my $tCs += $sequence =~ s/C/C/gi;
+		my $Ns += (length $sequence) - $tAs - $tTs - $tGs - $tCs;
+		$nucleotides{"A"} += $tAs; $nucleotides{"T"} += $tTs;
+		$nucleotides{"C"} += $tCs; $nucleotides{"G"} += $tGs;
+		$nucleotides{"N"} += $Ns;
 		$all_bases += $len; $total_Contigs_all_sets++;
+		push(@all_contigs, $len);
+
 		for (my $j = 0; $j < scalar @parts; $j++) {
 			if ($len <= $parts[$j] ) {
-				push (@{ $parts_array{$parts[$j]}}, $len); last;
-			} elsif ($len > $parts[5]) { ## Get contigs >50kb (if any)
-				push (@{ $parts_array{">50Kb"}}, $len); last;			
-		}}
-	}
+				my $id = "$parts[$j - 1] - $parts[$j]";
+				$parts_array{$id}{$titleline} = $len; last;
+			} elsif ($len > $parts[-1]) {
+				$parts_array{"bigger"}{$titleline} = $len; last;			
+	}}}
 	close(FILE);
 	$/ = "\n";
-	my $nucl_A = $nucleotides{"A"}; my $nucl_T = $nucleotides{"T"};
-	my $nucl_C = $nucleotides{"C"}; my $nucl_G = $nucleotides{"G"};
-	my $nucl_N = $nucleotides{"N"};
 	
-	print "## Assembly Statistics ##\n"; 											print OUT "## Assembly Statistics ##\n";
-	print "Assembly Statisitcs for file: $fasta_file\n\n";							print OUT "Assembly Statisitcs for file: $fasta_file\n\n";
-	print "## General Statistics ##\n";												print OUT "## General Statistics ##\n";
-	printf "%-25s %0.2f %s\n", "As:", $nucl_A/$all_bases*100, "%";					printf OUT "%-25s %0.2f %s\n", "As:", $nucl_A/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "Ts:", $nucl_T/$all_bases*100, "%"; 					printf OUT "%-25s %0.2f %s\n", "Ts:", $nucl_T/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "Cs:", $nucl_C/$all_bases*100, "%";					printf OUT "%-25s %0.2f %s\n", "Cs:", $nucl_C/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "Gs:", $nucl_G/$all_bases*100, "%"; 					printf OUT "%-25s %0.2f %s\n", "Gs:", $nucl_G/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "(A + T)s:", ($nucl_A+$nucl_T)/$all_bases*100, "%"; 	printf OUT "%-25s %0.2f %s\n", "(A + T)s:", ($nucl_A+$nucl_T)/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "(G + C)s:", ($nucl_G+$nucl_C)/$all_bases*100, "%"; 	printf OUT "%-25s %0.2f %s\n", "(G + C)s:", ($nucl_G+$nucl_C)/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "Ns:", $nucl_N/$all_bases*100, "%";					printf OUT "%-25s %0.2f %s\n", "Ns:", $nucl_N/$all_bases*100, "%";
-	print "----------------------------------------\n";								print OUT "----------------------------------------\n";
+	##			Set	average   median N95	Count_Genomic_Contigs  		CountContigs_%  pb_this_set	pb_this_set_%	Reads_RNA_Count			 Reads_RNA_Count_%	Unmapped_contigs_Count				Unmapped_contigs_%							
+	#print Dumper (\%parts_array);
 
-	foreach my $types (keys %parts_array) {
-		my @array = @{ $parts_array{$types} };
+	&printHeader("","#"); 
+	&printHeader(" Assembly Statistics ","#"); 
+	&printHeader("","#"); 
+	print "Assembly Statisitcs for file: $fasta_file\n\n";
+	print "## General Statistics ##\n";
+	print "\nTotal sequences: $total_Contigs_all_sets\n\n";
+	printf "%-25s %0.2f %s\n", "As", $nucleotides{"A"}/$all_bases*100, "%";
+	printf "%-25s %0.2f %s\n", "Ts", $nucleotides{"T"}/$all_bases*100, "%";
+	printf "%-25s %0.2f %s\n", "Cs", $nucleotides{"C"}/$all_bases*100, "%";
+	printf "%-25s %0.2f %s\n", "Gs", $nucleotides{"G"}/$all_bases*100, "%";
+	printf "%-25s %0.2f %s\n", "(A + T)s", ($nucleotides{"A"} + $nucleotides{"T"})/$all_bases*100, "%";
+	printf "%-25s %0.2f %s\n", "(G + C)s", ($nucleotides{"G"} + $nucleotides{"C"})/$all_bases*100, "%";
+	printf "%-25s %0.2f %s\n", "Ns", $nucleotides{"N"}/$all_bases*100, "%";
+	print "\nAssembly Statistics for the whole set\n";
+
+	print OUT "Assembly Statisitcs for file: $fasta_file\n\n";
+	print OUT "## General Statistics ##\n";
+	print OUT "\nTotal sequences: $total_Contigs_all_sets\n\n";
+	printf OUT "%-25s %0.2f %s\n", "As", $nucleotides{"A"}/$all_bases*100, "%";
+	printf OUT "%-25s %0.2f %s\n", "Ts", $nucleotides{"T"}/$all_bases*100, "%";
+	printf OUT "%-25s %0.2f %s\n", "Cs", $nucleotides{"C"}/$all_bases*100, "%";
+	printf OUT "%-25s %0.2f %s\n", "Gs", $nucleotides{"G"}/$all_bases*100, "%";
+	printf OUT "%-25s %0.2f %s\n", "(A + T)s", ($nucleotides{"A"} + $nucleotides{"T"})/$all_bases*100, "%";
+	printf OUT "%-25s %0.2f %s\n", "(G + C)s", ($nucleotides{"G"} + $nucleotides{"C"})/$all_bases*100, "%";
+	printf OUT "%-25s %0.2f %s\n", "Ns", $nucleotides{"N"}/$all_bases*100, "%";
+	print OUT "\nAssembly Statistics for the whole set\n";
+	
+	my $array_ref_3 = \@all_contigs;
+	&get_stats($array_ref_3, $all_bases);
+	
+	&printHeader("","#"); 
+	foreach my $keys (keys %parts_array) {
+		my %hash = %{$parts_array{$keys}};
 		my $total_pb_this_set;
-		my $set = $types;
 		my @tmp;
-		for (my $i = 0; $i < scalar @array; $i++) {
-			$total_pb_this_set += $array[$i];
-			push (@tmp, $array[$i]);
+		foreach my $contigs (keys %hash) {
+			$total_pb_this_set += $hash{$contigs};
+			push (@tmp, $hash{$contigs});
 		}
-		print "\nAssembly Statistics for Sequences: <".$set."pb\n"; 		print OUT "\nAssembly Statistics for Sequences: <".$set."pb\n";
-		my @sort_array = sort @tmp; my $array_ref_2 = \@sort_array;
-		print "Set: <".$set."\n"; &get_stats($array_ref_2,$all_bases, $total_pb_this_set);
-		print "----------------------------------------\n"; 			print OUT "----------------------------------------\n";
+		if ($keys eq 'bigger') { 
+			print "\nSet: > $parts[-1]\n";
+			print OUT "\nSet: > $parts[-1]\n";
+		} else { 
+			print "\nSet: ".$keys."\n";
+			print OUT "\nSet: ".$keys."\n";
+		}
+		my @sort_array = sort @tmp;
+		my $array_ref_2 = \@sort_array;
+		&get_stats($array_ref_2, $all_bases);
+		&printHeader("","#"); 
 	}
+
+	close (OUT);
+	return $outFile;
 	
 	sub get_stats {
+	
 		my $array_ref = $_[0];
 		my $all_bases = $_[1];
-		my $total_pb_this_set = $_[2];
-
 		my @array = @$array_ref;
-		my $bases = $total_pb_this_set;
+		my $bases = sum(@array);
 		my $percentage_pb_bases_this_set = ($bases/$all_bases)*100;
-		my $percentage_pb_bases_this_set_print = sprintf ("%0.3f",$percentage_pb_bases_this_set);
+		my $percentage_pb_bases_this_set_print = sprintf "%0.5f",$percentage_pb_bases_this_set;
 		my $totalContigs = scalar @array;
 		my $percentage_contigs_this_set = ($totalContigs/$total_Contigs_all_sets)*100;
-		my $percentage_contigs_returned = sprintf ("%0.3f", $percentage_contigs_this_set);
-		my $avgReadLen = sprintf ("%0.2f", $bases/$totalContigs);
+		my $percentage_contigs_returned = sprintf "%0.5f",$percentage_contigs_this_set;
+	
+		my $minReadLen = min(@array);
+		my $maxReadLen = max(@array);
+		my $avgReadLen = sprintf "%0.2f", $bases/$totalContigs;
 		my $medianLen = calcMedian(@array);
-		my $n25 = calcN50($array_ref, 25); my $n50 = calcN50($array_ref, 50); 
-		my $n75 = calcN50($array_ref, 75); my $n90 = calcN50($array_ref, 90);
-		my $n95 = calcN50($array_ref, 95);
-	
-		printf "%-25s %d\n" , "Total sequences:", $totalContigs; 						printf OUT "%-25s %d\n" , "Total sequences:", $totalContigs;
-		printf "%-25s %0.2f\n" , "Total sequences (%):", $percentage_contigs_this_set; 	printf OUT "%-25s %0.2f\n" , "Total sequences (%):", $percentage_contigs_this_set;
-		printf "%-25s %d\n" , "Total bases:", $bases; 									printf OUT "%-25s %d\n" , "Total bases:", $bases;
-		printf "%-25s %0.2f\n" , "Total bases(%):", $percentage_pb_bases_this_set_print; printf OUT "%-25s %0.2f\n" , "Total bases(%):", $percentage_pb_bases_this_set_print;
-		printf "%-25s %0.2f\n", "Average sequence length:", $avgReadLen; 				printf OUT "%-25s %0.2f\n", "Average sequence length:", $avgReadLen;
-		printf "%-25s %0.2f\n", "Median sequence length:", $medianLen; 					printf OUT "%-25s %0.2f\n", "Median sequence length:", $medianLen;
-		printf "%-25s %0.2f\n", "N25: ", $n25;											printf OUT "%-25s %0.2f\n", "N25: ", $n25;	
-		printf "%-25s %0.2f\n", "N50: ", $n50;											printf OUT "%-25s %0.2f\n", "N50: ", $n50;	
-		printf "%-25s %0.2f\n", "N75: ", $n75;											printf OUT "%-25s %0.2f\n", "N75: ", $n75;	
-		printf "%-25s %0.2f\n", "N90: ", $n90;											printf OUT "%-25s %0.2f\n", "N90: ", $n90;	
-		printf "%-25s %0.2f\n", "N95: ", $n95;											printf OUT "%-25s %0.2f\n", "N95: ", $n95;	
+		my $n50 = calcN50($array_ref, 50);
+
+		printf "%-25s %d\n" , "Total sequences", $totalContigs;
+		printf "%-25s %0.2f\n" , "Total sequences (%)", $percentage_contigs_returned;
+		printf "%-25s %d\n" , "Total bases", $bases;
+		printf "%-25s %0.2f\n" , "Total bases(%)", $percentage_pb_bases_this_set_print;
+		printf "%-25s %d\n" , "Min sequence length", $minReadLen;
+		printf "%-25s %d\n" , "Max sequence length", $maxReadLen;
+		printf "%-25s %0.2f\n", "Average sequence length", $avgReadLen;
+		printf "%-25s %0.2f\n", "Median sequence length", $medianLen;
+		printf "%-25s %0.2f\n", "N50: ", $n50;
+		
+		printf OUT "%-25s %d\n" , "Total sequences", $totalContigs;
+		printf OUT "%-25s %0.2f\n" , "Total sequences (%)", $percentage_contigs_returned;
+		printf OUT "%-25s %d\n" , "Total bases", $bases;
+		printf OUT "%-25s %0.2f\n" , "Total bases(%)", $percentage_pb_bases_this_set_print;
+		printf OUT "%-25s %d\n" , "Min sequence length", $minReadLen;
+		printf OUT "%-25s %d\n" , "Max sequence length", $maxReadLen;
+		printf OUT "%-25s %0.2f\n", "Average sequence length", $avgReadLen;
+		printf OUT "%-25s %0.2f\n", "Median sequence length", $medianLen;
+		printf OUT "%-25s %0.2f\n", "N50: ", $n50;	
 	}
-	close(OUT);
-	
-	return $outFile;
 }
 
 sub debugger_print {

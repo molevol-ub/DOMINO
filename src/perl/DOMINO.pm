@@ -517,7 +517,6 @@ sub readDir {
 	return $array_ref;
 }
 
-
 sub readFASTA_hash {
 
 	my $file = $_[0];
