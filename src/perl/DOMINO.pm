@@ -232,11 +232,15 @@ sub get_earliest {
 		if ($array_files[$i] eq "." || $array_files[$i] eq ".." || $array_files[$i] eq ".DS_Store") {next;}
 		if ($array_files[$i] =~ /(\d+)\_DM\_$option$/) {
 			my $time_log=$1;
-			if (!$earliest) { $earliest=$time_log; } else { if ($time_log > $earliest) {$earliest=$time_log}}
+			if (!$earliest) { $earliest = $time_log; 
+			} else { 
+				if ($time_log > $earliest) { 
+					$earliest = $time_log
+			}}
 			$mapping_dirs{$time_log} = $folder."/".$array_files[$i];
 	}}
 	if (!exists $mapping_dirs{$earliest}) { return 'NO';
-	} else {  return $mapping_dirs{$earliest}; }	
+	} else { return $mapping_dirs{$earliest}; }	
 }
 
 sub get_size { # Multiplatform	
