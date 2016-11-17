@@ -1330,28 +1330,45 @@ if (!$avoid_mapping) {
 			print "\n";	DOMINO::printHeader(" Aligning Reads Individually ", "%"); print "\n";
 			my @clean_fastq_files;
 			my @tmp_array;
-			if (scalar @user_cleanRead_files > 0) { ## Already pushed into this array in line 403
-				print "+ User clean reads files would be mapped\n";
-			} elsif ($map_contig_files) {
-				print "+ Contig files would be mapped\n";
-			} else { ## Map DOMINO clean reads
-				print "+ Clean reads files would be mapped\n";
+			if (scalar @user_cleanRead_files > 0) { print "+ User clean reads files would be mapped\n";
+			} elsif ($map_contig_files) { 			print "+ Contig files would be mapped\n";
+			} else { 								print "+ Clean reads files would be mapped\n"; ## Map DOMINO clean reads
 			}
 			print "+ Obtain information of the reference sequences\n";
 			my ($reference_hash_fasta_ref, $message) = DOMINO::readFASTA_hashLength($contigs_fasta); ## Obtain reference of a hash
 			my $file2dump_seqs = $dir."/contigs_".$reference_identifier."_length.txt";
 			push (@{ $domino_files{$reference_identifier}{"hash_reference_file"} }, $file2dump_seqs);
 			DOMINO::printDump($reference_hash_fasta_ref,$file2dump_seqs,1);
-	
+			
+			## Set DOMINO to use as many CPUs as provided
+			## maximize process if > 10
+			my ($split_CPU, $subprocesses); 
+			if ($num_proc_user > 10) { 
+				$split_CPU = int($num_proc_user/$number_sp);  $subprocesses = $number_sp; 
+			} else { 
+				$split_CPU = $num_proc_user; $subprocesses = 1; 			
+			}			
+			
+			my $pm_read_Reference =  new Parallel::ForkManager($subprocesses); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
+			#$pm_read_Reference->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_; print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; } );
+			#$pm_read_Reference->run_on_start( sub { my ($pid,$ident)=@_; print "\t- SAMTOOLS command for file $ident and PID=$pid started\n"; } );
+			my $total_subprocesses = $number_sp;
+			my $count_subprocesses=0;
+			print "+ Mapping process would be divided into $number_sp parts using up to $split_CPU/$num_proc_user CPUs provided\n";
 			foreach my $reads (sort keys %domino_files) {
-				chdir $domino_files{$reference_identifier}{'dir'}[0];
-				&debugger_print("Change dir to: ".$domino_files{$reference_identifier}{'dir'}[0]);
 				unless ($domino_files{$reads}{'reads'}) { next; }
+				$count_subprocesses++;
+				print "\t- Mapping reads of $reads vs reference: $reference_identifier: [$count_subprocesses/$total_subprocesses]\n";
+				my $out_log_file = $dir."/reads_".$reads."-reference_".$reference_identifier."_logfile.txt";
+				open (LOG, ">$out_log_file");
+				chdir $domino_files{$reference_identifier}{'dir'}[0];
+				print LOG "\nChange dir to: ".$domino_files{$reference_identifier}{'dir'}[0]."\n";
+				my $pid = $pm_read_Reference->start() and next; 
 			
 				## Mapping Parameters
 				my $R_group_id = '--rg-id '.$reads;
 				my $R_group_name = ' --rg '.$reads;
-				my $threads = ' -p '.$num_proc_user;
+				my $threads = ' -p '.$split_CPU;
 				my $mismatches = ' -N 1 --np 0'; ## Do not add penalty if read/ref got an ambiguous base
 				my $read_gap_open = ' --rdg '.$rdgopen.','.$rdgexten;
 				my $ref_gap_open = ' --rfg '.$rfgopen.','.$rfgexten;
@@ -1361,57 +1378,59 @@ if (!$avoid_mapping) {
 				if ($bowtie_local) { $botwie_system .= " --local"; }
 				my $sam_name = $dir."/".$reference_tag."-taxa_".$reads.".sam";
 				
-				print "+ Aligning reads for $reads against $reference_identifier as reference\n";
+				print LOG "+ Aligning reads for $reads against $reference_identifier as reference\n";
 				if ($input_type eq 'pair_end') {
 					my $second_Read_file = $domino_files{$reads}{'reads'}[1];
-					print "+ Reads 1: $mapping_file\n+ Reads 2: $second_Read_file\n";
+					print LOG "+ Reads 1: $mapping_file\n+ Reads 2: $second_Read_file\n";
 					$botwie_system .= " -x ".$reference_tag." -q -1 $mapping_file -2 $second_Read_file -S ".$sam_name." ".$R_group_id.$R_group_name.$threads.$mismatches." --no-unal".$read_gap_open.$ref_gap_open.$mismatch_penalty;   
 				} elsif ($input_type eq 'single_end') { ## Illumin single end, 454
-					print "+ Reads 1: $mapping_file...\n";
+					print LOG "+ Reads 1: $mapping_file...\n";
 					if ($map_contig_files) { ## Mapping contigs
 						$botwie_system .= " -x ".$reference_tag." -f -U ".$mapping_file." -S ".$sam_name." ".$R_group_id.$R_group_name.$threads.$mismatches." --no-unal".$read_gap_open.$ref_gap_open.$mismatch_penalty;   
-					} else {
+					} else { 
 						$botwie_system .= " -x ".$reference_tag." -q -U ".$mapping_file." -S ".$sam_name." ".$R_group_id.$R_group_name.$threads.$mismatches." --no-unal".$read_gap_open.$ref_gap_open.$mismatch_penalty;   
-					}
-				}
-				print "+ SAM file: $sam_name\n";
-				print "+ Mapping now...\n\n";
-				&debugger_print("BOWTIE2 command: ".$botwie_system); 
+				}}
+				print LOG "+ SAM file: $sam_name\n+ Mapping now...\n\n"; &debugger_print("BOWTIE2 command: ".$botwie_system); 
 				
 				### Map Reads
-				print "\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nMapping Statistics:\n\n"; 
+				my $error_bowtie = $dir."/reads_".$reads."-reference_".$reference_identifier."_mapping_logfile.txt";
+				print LOG "\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nMapping Statistics:\n\n"; 
+				$botwie_system .= " 2> ".$error_bowtie;
 				my $system_bowtie_call = system ($botwie_system);
 				if ($system_bowtie_call != 0) {
 					&printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); DOMINO::dieNicely();
 				} 			
 				push (@{$domino_files{$reads}{"SAM::Ref:".$reference_identifier}}, $sam_name);
-				print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n";
-				print "\n\n+ Mapping finished for taxa $reads against $reference_identifier\n"; &time_log();		
+				open (IN, $error_bowtie); while (<IN>) {print LOG $_; } close(IN);
+				print LOG "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n";
+				print LOG "\n\n+ Mapping finished for taxa $reads against $reference_identifier\n";		
 				
 				#################################
 				## Get the the reference fasta ##
 				#################################
-				print "\n+ Checking mapping reads in ".$sam_name."...\n";
+				print LOG "\n+ Checking mapping reads in ".$sam_name."...\n";
 				
 				## Generate a sam for each contig
 				my @temp = split ("\.sam", $sam_name);
 				chdir $dir;
 				my $dir_tmp = $temp[0]."_SPLIT"; mkdir $dir_tmp, 0755; chdir $dir_tmp;
-	
+				print LOG "\nChange dir to: ".$dir_tmp."\n";
+
 				#print Dumper $reference_hash_fasta_ref;
 				my @number_contigs = sort (keys %$reference_hash_fasta_ref);
 				my $scalar = scalar @number_contigs;
-				print "+ This SAM file contains $scalar referense sequences...\n";
+				print LOG "+ This SAM file contains $scalar referense sequences...\n";
 				system("ln -s $sam_name"); my @temp_name = split ("/", $sam_name);
-				my $sorted_bam_file = &generate_bam($temp_name[-1]);
+				my $sam_base_name = $temp_name[-1];
+				my $sorted_bam_file = &generate_bam($sam_base_name);
 				&generate_index_bam($sorted_bam_file);
 	
 				if ($scalar == 1) {
 					push (@{ $domino_files{$reads}{"SAM_Parts::Ref:".$reference_identifier} }, $temp_name[-1]);
 				} else {
-					print "+ Splitting SAM file into several parts to speed the computation...\n"; 
-					print "+ Using parallel threads ($num_proc_user CPUs)...\n";
-					my $parts = int($scalar/$num_proc_user); ## Split SAM into as many CPUs provided
+					print LOG "+ Using parallel threads ($split_CPU CPUs)...\n";
+					print LOG "+ Splitting SAM file into several parts to speed the computation...\n"; 
+					my $parts = int($scalar/$split_CPU); ## Split SAM into as many CPUs provided
 					my @commands; my $iteration = 0; 
 					while (1) {
 						if (@number_contigs) {
@@ -1420,48 +1439,52 @@ if (!$avoid_mapping) {
 							my @temp_1 = split ("\.sorted.bam", $sorted_bam_file);
 							my @temp_2 = split ("/", $temp_1[0]);
 							my $sam_file_part = $dir_tmp."/".$temp_2[-1]."_part-".$iteration.".sam";
-							my $command = $samtools_path." view -@ $num_proc_user -Sh -o $sam_file_part $sorted_bam_file $string";
+							#print "Contigs: ".$string."\n";
+							my $command = $samtools_path." view -@ $split_CPU -Sh -o $sam_file_part $sorted_bam_file $string";
 							push (@{ $domino_files{$reads}{"SAM_Parts::Ref:".$reference_identifier} }, $sam_file_part);
 							push (@commands, $command); $iteration++; 
 					} else { last; }}
 					
-					my $pm_SAM_split =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-					$pm_SAM_split->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_; print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; } );
-					$pm_SAM_split->run_on_start( sub { my ($pid,$ident)=@_; print "\t- SAMTOOLS command for file $ident and PID=$pid started\n"; } );
+					my $pm_SAM_split =  new Parallel::ForkManager($split_CPU); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
+					#$pm_SAM_split->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_; print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; } );
+					#$pm_SAM_split->run_on_start( sub { my ($pid,$ident)=@_; print "\t- SAMTOOLS command for file $ident and PID=$pid started\n"; } );
+					my $total_commands = scalar @commands;
+					my $count_commands=0;
 					for (my $a=0; $a < scalar @commands; $a++) {
+						$count_commands++;
+						print LOG "\t- Splitting SAM $sam_base_name: [$count_commands/$total_commands]\n";
 						my $pid = $pm_SAM_split->start($a) and next; 
 						&debugger_print("SAMTOOLS command: $commands[$a]");	
 						my $system_call = system ($commands[$a]);
 						$pm_SAM_split->finish($a); # pass an exit code to finish
 					}
 					$pm_SAM_split->wait_all_children;
-					print "\n**********************************************\n";
-					print "**** All SAMTOOLS child commands finished ****\n";
-					print "**********************************************\n\n";
+					#print "\n**********************************************\n";
+					#print "**** All SAMTOOLS child commands finished ****\n";
+					#print "**********************************************\n\n";
 					&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 		
 				}
 				
 				### Remove multimapping reads	### 
 				##  DOMINO checks the SAM files generated and discards bad reads mapping, unmapping reads or multimapping reads. ##
 				my @array_files_split = @{ $domino_files{$reads}{"SAM_Parts::Ref:".$reference_identifier}};				
-				print "+ Cleaning reads now in parallel threads ($num_proc_user CPUs)...\n";
+				print LOG "\n+ Cleaning reads now in parallel threads ($split_CPU CPUs)...\n";
 				## Get files for later dump
 				for (my $i=0; $i < scalar @array_files_split; $i++) {
 					my $file2dump = $dir_tmp."/dump_file_split_".$reads."_Part_".$i.".txt";
 					#print "File to dump: ".$file2dump."\n";
 					push (@{ $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier} }, $file2dump);
 				}		
-	
-				my $pm_SAM_parts =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-				$pm_SAM_parts->run_on_finish( 
-					sub { my ($pid, $exit_code, $ident) = @_; 
-						print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; 
-				} );
-				$pm_SAM_parts->run_on_start( sub { my ($pid,$ident)=@_; print "+ Child process sent for checking file $ident with PID=$pid...\n"; } );
+				
+				my $pm_SAM_parts =  new Parallel::ForkManager($split_CPU); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
+				#$pm_SAM_parts->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_;} );   #print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; 
+				#$pm_SAM_parts->run_on_start( sub { my ($pid,$ident)=@_; print "+ Child process sent for checking file $ident with PID=$pid...\n"; } );
+				my $scalar_array_files_split = scalar @array_files_split;
+				my $count_split=0;
 				for (my $i=0; $i < scalar @array_files_split; $i++) {
-					my @basename = split("/", $array_files_split[$i]);
-					my @name = split(".sam", $basename[-1]);
-					my $pid = $pm_SAM_parts->start($name[0]) and next;
+					$count_split++;
+					print LOG "\t- Checking each splitted file for $sam_base_name: [$count_split/$scalar_array_files_split]\n";	
+					my $pid = $pm_SAM_parts->start() and next;
 					my %domino_files_SAM_parts; my $discard_reads = 0; my $good_reads = 0; my $total_reads = 0;
 					open (SAM, "<$array_files_split[$i]");
 					my @temp = split ("\.sam", $array_files_split[$i]);
@@ -1525,7 +1548,7 @@ if (!$avoid_mapping) {
 					push (@{ $domino_files_SAM_parts{$reads}{"clean_BAM_Parts::Ref:".$reference_identifier} }, $clean_sorted_bam);
 	
 					%discard_contigs = (); ## Initialize some hashes
-					print "\t- Generating coverage statistics for $clean_sorted_bam\n";
+					#print "\t- Generating coverage statistics for $clean_sorted_bam\n";
 				
 					## Generate Coverage statistics for the alignment file
 					my @tmp_bam_name = split ("\.sorted.bam", $clean_sorted_bam);
@@ -1533,54 +1556,58 @@ if (!$avoid_mapping) {
 					push (@{ $domino_files_SAM_parts{$reads}{"coverage_Parts::Ref:".$reference_identifier} }, $coverage_file);
 	
 					my $coverage_samtools_command = $samtools_path." depth ".$clean_sorted_bam." > ".$coverage_file;
-					my $system_coverage_call = system ($coverage_samtools_command); &debugger_print("SAMTOOLS command: $coverage_samtools_command");
+					my $system_coverage_call = system ($coverage_samtools_command); 
+					&debugger_print("SAMTOOLS command: $coverage_samtools_command");
 					if ($system_coverage_call != 0) {
 						&printError("Exiting the script. Some error happened when calling SAMtools for obtaining coverage of file $sorted_bam[$i]...\n"); DOMINO::dieNicely();
 					}
-					print "\t- Filtering Coverage Stats...\n\n";
-					my ($sum_coverage_each, $total_positions_each);
-					my %max_cov;
-					open (COVERAGE, "<$coverage_file");
-					while (<COVERAGE>) {
-						my $line = $_;
-						chomp $line;
-						my @array = split (/\s+/,$line);
-						if ($array[2]) {
-							my $coverage_position = $array[2];
-							$sum_coverage_each += $coverage_position;
-							$total_positions_each++;
-							my $contig = $array[0];
-							if (defined($max_cov{$contig})) {
-								if ($coverage_position > $max_cov{$contig}) { $max_cov{$contig} = $coverage_position; }
-							} else { $max_cov{$contig} = $coverage_position; }
-					}}
-					close(COVERAGE);
 					
-					## Print max coverage to a file
-					my $max_cov_file = $coverage_file."_max_coverage";
-					push (@{$domino_files_SAM_parts{$reads}{"max_coverage_Parts::Ref:".$reference_identifier} }, $max_cov_file);
-					open (OUT_COV, ">$max_cov_file");
-					foreach my $contig (sort keys %max_cov) {
-						print OUT_COV $contig.":".$max_cov{$contig}."\n";
-					} close (OUT_COV);
-					undef %max_cov;
-					
-					## Push useful info
-					my $coverage_each = $sum_coverage_each.":".$total_positions_each;
-					push (@{ $domino_files_SAM_parts{$reads}{"mean_coverage_Parts::Ref:".$reference_identifier} }, $coverage_each);
-					push (@{$domino_files_SAM_parts{$reads}{"discard_reads::Ref:".$reference_identifier} }, $discard_reads);
-					push (@{$domino_files_SAM_parts{$reads}{"good_reads::Ref:".$reference_identifier} }, $good_reads);
-					push (@{$domino_files_SAM_parts{$reads}{"total_reads::Ref:".$reference_identifier} }, $total_reads);
-	
-					# Dump info into file
-					DOMINO::printDump(\%domino_files_SAM_parts, $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier}[$i]);
-					$pm_SAM_parts->finish($name[0]); # pass an exit code to finish
+					unless (-z $coverage_file) {
+						#print "\t- Filtering Coverage Stats...\n\n";
+						my ($sum_coverage_each, $total_positions_each);
+						my %max_cov;
+						open (COVERAGE, "<$coverage_file");
+						while (<COVERAGE>) {
+							my $line = $_;
+							chomp $line;
+							my @array = split (/\s+/,$line);
+							if ($array[2]) {
+								my $coverage_position = $array[2];
+								$sum_coverage_each += $coverage_position;
+								$total_positions_each++;
+								my $contig = $array[0];
+								if (defined($max_cov{$contig})) {
+									if ($coverage_position > $max_cov{$contig}) { $max_cov{$contig} = $coverage_position; }
+								} else { $max_cov{$contig} = $coverage_position; }
+						}}
+						close(COVERAGE);
+						
+						## Print max coverage to a file
+						my $max_cov_file = $coverage_file."_max_coverage";
+						push (@{$domino_files_SAM_parts{$reads}{"max_coverage_Parts::Ref:".$reference_identifier} }, $max_cov_file);
+						open (OUT_COV, ">$max_cov_file");
+						foreach my $contig (sort keys %max_cov) {
+							print OUT_COV $contig.":".$max_cov{$contig}."\n";
+						} close (OUT_COV);
+						undef %max_cov;
+						
+						## Push useful info
+						my $coverage_each = $sum_coverage_each.":".$total_positions_each;
+						push (@{ $domino_files_SAM_parts{$reads}{"mean_coverage_Parts::Ref:".$reference_identifier} }, $coverage_each);
+						push (@{$domino_files_SAM_parts{$reads}{"discard_reads::Ref:".$reference_identifier} }, $discard_reads);
+						push (@{$domino_files_SAM_parts{$reads}{"good_reads::Ref:".$reference_identifier} }, $good_reads);
+						push (@{$domino_files_SAM_parts{$reads}{"total_reads::Ref:".$reference_identifier} }, $total_reads);
+		
+						# Dump info into file
+						DOMINO::printDump(\%domino_files_SAM_parts, $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier}[$i]);
+					}
+					$pm_SAM_parts->finish(); # pass an exit code to finish
 				}
 				$pm_SAM_parts->wait_all_children;
-				print "\n";
-				print "************************************************\n";
-				print "*** All SAM parsing child commands finished ****\n";
-				print "************************************************\n\n";
+				#print "\n";
+				#print "************************************************\n";
+				#print "*** All SAM parsing child commands finished ****\n";
+				#print "************************************************\n\n";
 				
 				my @dump_files1 = @{ $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier} };
 				&retrieve_info(\@dump_files1, \%domino_files);
@@ -1638,7 +1665,7 @@ if (!$avoid_mapping) {
 				if ($contigs_discarded) { $perc_contig = (1 - ($contigs_discarded/$num_contigs))*100; $h_cont = sprintf ("%.3f", $perc_contig); } else { $contigs_discarded = 0; $h_cont = 100; }
 				
 				## Adjust SAM files
-				print "+ Adjusting the SAM/BAM files using parallel threads ($num_proc_user CPUs)\n+ Splitted files would be used...\n";
+				print LOG "\n+ Adjusting the SAM/BAM files using parallel threads ($split_CPU CPUs)\n+ Splitted files would be used...\n";
 				my @parts_clean_sam = @{ $domino_files{$reads}{"CLEAN_SAM_Parts::Ref:".$reference_identifier}};
 	
 				## Get files for later dump
@@ -1648,10 +1675,14 @@ if (!$avoid_mapping) {
 					push (@{ $domino_files{$reads}{"DUMP2_Parts::Ref:".$reference_identifier} }, $file2dump);
 				}	
 				
-				my $pm_SAM_PILEUP =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-				$pm_SAM_PILEUP->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_; print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; } );
-				$pm_SAM_PILEUP->run_on_start( sub { my ($pid,$ident)=@_; print "+ Child process sent for checking file $ident with PID=$pid...\n"; } );
+				my $pm_SAM_PILEUP =  new Parallel::ForkManager($split_CPU); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
+				#$pm_SAM_PILEUP->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_; print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; } );
+				#$pm_SAM_PILEUP->run_on_start( sub { my ($pid,$ident)=@_; print "+ Child process sent for checking file $ident with PID=$pid...\n"; } );
+				my $total_parts_clean_sam = scalar @parts_clean_sam;
+				my $count_totalParts=0;
 				for (my $j=0; $j < scalar @parts_clean_sam; $j++) {
+					$count_totalParts++;
+					print LOG "\t- Adjusting SAM/BAM part file for $sam_base_name: [$count_totalParts/$total_parts_clean_sam]\n";
 					my @basename = split("/", $parts_clean_sam[$j]);
 					my @name = split(".sam", $basename[-1]);
 					my $pid = $pm_SAM_PILEUP->start($name[0]) and next;
@@ -1669,14 +1700,14 @@ if (!$avoid_mapping) {
 								print SAM_OUT $line."\n";	
 					}}}
 					close(SAM_OUT); close(SAM); undef %discard_contigs;
-					print "\t- File checked: Contigs and Reads discarded...\n";
+					#print LOG "- File checked: Contigs and Reads discarded...\n";
 					push (@{ $domino_files_SAM_PILEUP{$reads}{"FILTERED_SAM_Parts::Ref:".$reference_identifier} }, $sam_filter);
 					my $bam_filtered_returned = &generate_bam($sam_filter);
 					push (@{ $domino_files_SAM_PILEUP{$reads}{"FILTERED_BAM_Parts::Ref:".$reference_identifier} }, $bam_filtered_returned);
 					unless ($reads eq $reference_identifier) { ## DO NOT GENERATE FILTER PROFILE FOR REFERENCE
-						print "\t- Generate a PILEUP file for $sam_filter...\n";
+						print LOG "- Generate a PILEUP file for $sam_filter...\n";
 						my $dir_returned = &generate_filter_PILEUP($bam_filtered_returned, $domino_files{$reference_identifier}{'contigs'}[0], $reference_hash_fasta_ref, $reference_identifier, $reads);
-						&debugger_print("Finish PILEUP for $bam_filtered_returned");
+						print LOG "Finish PILEUP for $bam_filtered_returned\n";
 						push (@{ $domino_files_SAM_PILEUP{$reads}{"PROFILE::Ref:".$reference_identifier} }, $dir_returned);
 					}
 					# Dump info into file
@@ -1684,34 +1715,38 @@ if (!$avoid_mapping) {
 					$pm_SAM_PILEUP->finish($name[0]); # pass an exit code to finish
 				}
 				$pm_SAM_PILEUP->wait_all_children;
-				print "\n";
-				print "************************************************\n";
-				print "*** All SAM parsing child commands finished ****\n";
-				print "************************************************\n\n";
+				#print "\n";
+				#print "************************************************\n";
+				#print "*** All SAM parsing child commands finished ****\n";
+				#print "************************************************\n\n";
 				
 				my @dump_files = @{ $domino_files{$reads}{"DUMP2_Parts::Ref:".$reference_identifier} };
 				&retrieve_info(\@dump_files, \%domino_files);
-							
+				print LOG "\n\n\n";			
 				my $stats_file = $dir."/mapping_statistics_Ref_".$reference_identifier."_Reads_".$reads.".txt";
 				push (@{ $domino_files{$reference_identifier}{'stats'} }, $stats_file);
-				DOMINO::printHeader(" Filtering Statistics ", "="); 
+				print LOG "================ Filtering Statistics ======================\n"; 
 				open (STATS, ">$stats_file");			
-				print STATS "File: $sam_name\n"; 																print "File: $sam_name\n";
-				print STATS "Reference: ".$reference_identifier."\n"; 											print "Reference: ".$reference_identifier."\n";
-				print STATS "Reads: ".$reads."\n";																print "Reads: ".$reads."\n";
-				print STATS "==========================================================\n";						print "==========================================================\n";
-				print STATS "Total Contigs: $num_contigs\n";													print "Total Contigs: $num_contigs\n";
-				print STATS "Total Reads mapping: $total_reads\n";												print "Total Reads mapping: $total_reads\n";
-				print STATS "Coverage Mean: x".$mean."\n";														print "Coverage Mean: x".$mean."\n";
-				print STATS "\n******* CONTIGS *******\n";														print "\n******* CONTIGS *******\n";
-				print STATS "Contigs discarded: ".$contigs_discarded."\n";										print "Contigs discarded: ".$contigs_discarded."\n";
-				print STATS "Contigs remaining: ".($num_contigs - $contigs_discarded)."\t( ".$h_cont." %) \n"; 	print "Contigs remaining: ".($num_contigs - $contigs_discarded)."\t( ".$h_cont." %) \n";
-				print STATS "\n******* READS *******\n";														print "\n******* READS *******\n";
-				print STATS "Reads discarded (multimapping, unmapped, low quality reads): $discard_reads\n";	print "Reads discarded (multimapping, unmapped, low quality reads): $discard_reads\n";
-				print STATS "Reads remaining: $good_reads\t( ".$h." %)\n";										print "Reads remaining: $good_reads\t( ".$h." %)\n";
-				DOMINO::printHeader("", "="); print "\n";
-				#unless ($avoidDelete_tmp_files) { &delete_files_mapping($dir, $reference_identifier); }			
+				print STATS "File: $sam_name\n"; 																print LOG "File: $sam_name\n";
+				print STATS "Reference: ".$reference_identifier."\n"; 											print LOG "Reference: ".$reference_identifier."\n";
+				print STATS "Reads: ".$reads."\n";																print LOG "Reads: ".$reads."\n";
+				print STATS "==========================================================\n";						print LOG "==========================================================\n";
+				print STATS "Total Contigs: $num_contigs\n";													print LOG "Total Contigs: $num_contigs\n";
+				print STATS "Total Reads mapping: $total_reads\n";												print LOG "Total Reads mapping: $total_reads\n";
+				print STATS "Coverage Mean: x".$mean."\n";														print LOG "Coverage Mean: x".$mean."\n";
+				print STATS "\n******* CONTIGS *******\n";														print LOG "\n******* CONTIGS *******\n";
+				print STATS "Contigs discarded: ".$contigs_discarded."\n";										print LOG "Contigs discarded: ".$contigs_discarded."\n";
+				print STATS "Contigs remaining: ".($num_contigs - $contigs_discarded)."\t( ".$h_cont." %) \n"; 	print LOG "Contigs remaining: ".($num_contigs - $contigs_discarded)."\t( ".$h_cont." %) \n";
+				print STATS "\n******* READS *******\n";														print LOG "\n******* READS *******\n";
+				print STATS "Reads discarded (multimapping, unmapped, low quality reads): $discard_reads\n";	print LOG "Reads discarded (multimapping, unmapped, low quality reads): $discard_reads\n";
+				print STATS "Reads remaining: $good_reads\t( ".$h." %)\n";										print LOG "Reads remaining: $good_reads\t( ".$h." %)\n";
+				print LOG "============================================================\n"; 
+				print LOG "\n\n\n";			
+
+				$pm_read_Reference->finish(); # pass an exit code to finish
 			} ## foreach reads
+			$pm_read_Reference->wait_all_children;
+
 			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 			print "\n\n"; DOMINO::printHeader("", "+");DOMINO::printHeader(" Mapping finished for Reference $reference_identifier ", "+");DOMINO::printHeader("", "+"); &time_log(); print "\n";		
 			undef $reference_hash_fasta_ref;
@@ -3861,7 +3896,7 @@ sub generate_bam {
 	my $avoid = $_[1];
 	my @temp = split ("\.sam", $sam_file);
 	my $name = $temp[0]; my $bam_file = $name.".bam";
-	print "\t- Generating a BAM file for $sam_file\n"; 	
+	&debugger_print("- Generating a BAM file for $sam_file\n"); 	
 	my $system_samtools_sam2bam = $samtools_path." view -@ $num_proc_user -bS -o $bam_file $sam_file";
 	&debugger_print("SAMTOOLS command: $system_samtools_sam2bam");	
 	my $system_call = system ($system_samtools_sam2bam);
@@ -3879,7 +3914,7 @@ sub generate_sorted_bam {
 	my $sam = $_[1];
 	my @temp = split ("\.bam", $bam_file);
 	my $name = $temp[0];
-	print "\t- Sorting the BAM file: $bam_file\n"; 	
+	&debugger_print("- Sorting the BAM file: $bam_file\n"); 	
 	my $sorted;	
 	my $system_samtools_sort;
 	if ($sam) {
@@ -3901,7 +3936,7 @@ sub generate_sam {
 	my $bam_file = $_[0];
 	my @temp = split ("\.bam", $bam_file);
 	my $name = $temp[0];
-	print "\t- Generating a SAM file for $bam_file\n"; 	
+	&debugger_print("- Generating a SAM file for $bam_file\n"); 	
 	my $system_samtools_bam2sam = $samtools_path." view -@ $num_proc_user -h ".$bam_file." -o ".$name.".sam";
 	&debugger_print("SAMTOOLS command: $system_samtools_bam2sam");
 	my $system_call = system ($system_samtools_bam2sam);
@@ -3913,7 +3948,7 @@ sub generate_sam {
 
 sub generate_index_bam {
 	my $bam_file = $_[0];
-	print "\t- Generating an index bam file for $bam_file\n"; 	
+	#print "\t- Generating an index bam file for $bam_file\n"; 	
 	my $index_system = $samtools_path." index ".$bam_file;
 	&debugger_print("SAMTOOLS command: ".$index_system);
 	my $index_call = system($index_system);
@@ -4800,6 +4835,7 @@ sub retrieve_info {
 	my @dump_files = @{ $dump_files_ref };
 	for (my $j=0; $j < scalar @dump_files; $j++) {
 		if ($dump_files[$j] eq '.' || $dump_files[$j] eq '..' || $dump_files[$j] eq '.DS_Store') { next;}
+		unless (-e -r -s $dump_files[$j]) { next; }
 		open (DUMP_IN, "$dump_files[$j]");
 		while (<DUMP_IN>) {
 			my $line = $_; chomp $line;
