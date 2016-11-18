@@ -87,8 +87,8 @@ $rfgopen, $MID_taxa_names, $option, $mis_penalty, $msa_fasta_folder, $polymorphi
 $level_significance_coverage_distribution, $map_contig_files, $missing_allowed, $keepbam, 
 $version, $DOMINO_simulations, $minimum_number_taxa_covered, $avoid_mapping, $further_information,
 @user_cleanRead_files, @user_contig_files, $msa_file, $behaviour, $select_markers, $identify_markers,
-$debugger, $helpAsked1,
- 
+$debugger, $helpAsked1, $VAR_inc, $CONS_inc,
+
 ## absolute path
 @contigs_fasta_file_abs_path, @clean_fastq_file_abs_path, # toDiscard
 
@@ -164,6 +164,8 @@ GetOptions(
  	"keep_bam_file" => \$keepbam,
  	"dnaSP" => \$dnaSP_flag,
  	"SI|sliding_interval:i" => \$SLIDING_user,
+ 	"V-SI_inc:i" => \$VAR_inc,
+ 	"C-SI_inc:i" => \$CONS_inc,
  	
  	"Debug" => \$debugger,
 );
@@ -929,7 +931,7 @@ if (!$rdgexten) { $rdgexten = 3; } 			## Bowtie Defaults
 if (!$rfgopen) { $rfgopen = 5; } 			## Bowtie Defaults
 if (!$rfgexten) { $rfgexten = 3; } 			## Bowtie Defaults
 if (!$mis_penalty) { $mis_penalty = 4;} 	## Bowtie Defaults
-if (!$SLIDING_user) { $SLIDING_user = 1; } 	## sliding interval for marker search
+if (!$SLIDING_user) { $SLIDING_user = 10; } 	## sliding interval for marker search
 if (!$cigar_pct) { $cigar_pct = 10; }
 if (!$window_var_CONS) { $window_var_CONS = 1;}
 if (!$level_significance_coverage_distribution) { $level_significance_coverage_distribution = 1e-05; }
@@ -970,6 +972,21 @@ if ($window_size_VARS_range) {
 	push (@{ $domino_params{'marker'}{'window_size_VARS_max'} }, $window_size_VARS_max);
 	push (@{ $domino_params{'marker'}{'window_size_VARS_min'} }, $window_size_VARS_min);
 }
+## Variable Sliding window
+if (!$VAR_inc) {
+	my $difference_VAR = $window_size_VARS_max - $window_size_VARS_min;
+	if ( $difference_VAR > 500) {  		$VAR_inc = 10; $CONS_inc = 5;
+	} elsif ($difference_VAR > 300) { 	$VAR_inc = 5; $CONS_inc = 5;
+	} elsif ($difference_VAR > 200) { 	$VAR_inc = 3; $CONS_inc = 3;
+	} elsif ($difference_VAR > 100) { 	$VAR_inc = 2; $CONS_inc = 2;
+	} else { $VAR_inc = 1; $CONS_inc = 1; }
+}
+## Conserved Sliding window
+if (!$CONS_inc) {
+	# Set step for CONS range
+	my $difference_CONS = $window_size_CONS_max - $window_size_CONS_min;
+	if ( $difference_CONS >= 20) { $CONS_inc = 2; } else { $CONS_inc = 1; }
+}
 
 # MCT
 if (!$minimum_number_taxa_covered) { $minimum_number_taxa_covered = $number_sp;  ## Force to be all the taxa
@@ -994,6 +1011,8 @@ push (@{ $domino_params{'mapping'}{'map_contig_files'} }, $mapContigFiles);
 push (@{ $domino_params{'mapping'}{'bowtie_local'} }, $BowtieLocal);
 push (@{ $domino_params{'marker'}{'SLIDING_user'} }, $SLIDING_user);
 push (@{ $domino_params{'marker'}{'cigar_pct'} }, $cigar_pct);
+push (@{ $domino_params{'marker'}{'V-SI_inc'} }, $VAR_inc);
+push (@{ $domino_params{'marker'}{'C-SI_inc'} }, $CONS_inc);
 &debugger_print("DOMINO Parameters");&debugger_print("Ref", \%domino_params);
 
 ## Check parameters previous run
@@ -1229,6 +1248,10 @@ if ($behaviour eq 'selection') {
 	DOMINO::printDetails("\t- Conserved Length (CL): $window_size_CONS_min -- $window_size_CONS_max (bp)\n", $param_Detail_file_markers);
 	DOMINO::printDetails("\t- Conserved Differences (CD): $window_var_CONS\n", $param_Detail_file_markers);
 	DOMINO::printDetails("\t- Variable Length (VL): $window_size_VARS_min -- $window_size_VARS_max (bp)\n", $param_Detail_file_markers);
+	DOMINO::printDetails("\t- Sliding window increment (SI): $SLIDING_user (bp)\n", $param_Detail_file_markers);
+	DOMINO::printDetails("\t- Sliding window increment Variable region (V-SI_inc): $VAR_inc (bp)\n", $param_Detail_file_markers);
+	DOMINO::printDetails("\t- Sliding window increment Conserved region (C-SI_inc): $CONS_inc (bp)\n", $param_Detail_file_markers);
+	
 }
 
 if ($variable_divergence) {
@@ -1297,19 +1320,18 @@ if (!$avoid_mapping) {
 			my $contigs_fasta = $temp_contigs_name[$#temp_contigs_name];
 			my $ref_Fasta = $reference_identifier.".fasta";
 			
-			## Generate a directory for each one
-			my $dir = $align_dirname."/".$reference_identifier; mkdir $dir, 0755; chdir $dir;
-			system("ln -s $domino_files{$reference_identifier}{'contigs'}[0] $ref_Fasta");
-			push (@{ $domino_files{$reference_identifier}{'dir'} }, $dir);
-			print "+ Using as reference: $contigs_fasta\tID: $reference_identifier...OK\n";
-			print "+ Generating a new directory $dir....OK\n\n";
-			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
-			
 			###############################
 			###	 Copy necessary files	### 
 			###############################
-			print "+ Generating symbolic links for necessary files\n"; system("ln -s $domino_files{$reference_identifier}{'contigs'}[0]");
-			
+			print "+ Generating symbolic links for necessary files\n"; 
+			my $dir = $align_dirname."/".$reference_identifier; mkdir $dir, 0755; chdir $dir;
+			system("ln -s $domino_files{$reference_identifier}{'contigs'}[0] $ref_Fasta");
+			push (@{ $domino_files{$reference_identifier}{'dir'} }, $dir);
+			## Generate a directory for each one
+			print "+ Using as reference: $contigs_fasta\tID: $reference_identifier...OK\n";
+			print "+ Generating a new directory $dir....OK\n\n";
+			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
+		
 			###################################
 			###		 Index Contig file		### 
 			###################################
@@ -1335,7 +1357,7 @@ if (!$avoid_mapping) {
 			} else { 								print "+ Clean reads files would be mapped\n"; ## Map DOMINO clean reads
 			}
 			print "+ Obtain information of the reference sequences\n";
-			my ($reference_hash_fasta_ref, $message) = DOMINO::readFASTA_hashLength($contigs_fasta); ## Obtain reference of a hash
+			my ($reference_hash_fasta_ref, $message) = DOMINO::readFASTA_hashLength($ref_Fasta); ## Obtain reference of a hash
 			my $file2dump_seqs = $dir."/contigs_".$reference_identifier."_length.txt";
 			push (@{ $domino_files{$reference_identifier}{"hash_reference_file"} }, $file2dump_seqs);
 			DOMINO::printDump($reference_hash_fasta_ref,$file2dump_seqs,1);
@@ -1343,28 +1365,33 @@ if (!$avoid_mapping) {
 			## Set DOMINO to use as many CPUs as provided
 			## maximize process if > 10
 			my ($split_CPU, $subprocesses); 
-			if ($num_proc_user > 10) { 
-				$split_CPU = int($num_proc_user/$number_sp);  $subprocesses = $number_sp; 
-			} else { 
-				$split_CPU = $num_proc_user; $subprocesses = 1; 			
+			if ($num_proc_user > 10) { 	$split_CPU = int($num_proc_user/$number_sp);  $subprocesses = $number_sp; 
+			} else { 					$split_CPU = $num_proc_user; $subprocesses = 1; 			
 			}			
 			
+			## Get files for later dump
+			foreach my $reads_here (sort keys %domino_files) {
+				unless ($domino_files{$reads_here}{'reads'}) { next; }
+				my $file2dump = $dir."/dump_file_mapping_".$reads_here."_Ref_".$reference_identifier.".txt";
+				#print "File to dump: ".$file2dump."\n";
+				push (@{ $domino_files{$reads_here}{"DUMP_Mapping::Ref:".$reference_identifier} }, $file2dump);
+			}
+			
 			my $pm_read_Reference =  new Parallel::ForkManager($subprocesses); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-			#$pm_read_Reference->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_; print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; } );
-			#$pm_read_Reference->run_on_start( sub { my ($pid,$ident)=@_; print "\t- SAMTOOLS command for file $ident and PID=$pid started\n"; } );
-			my $total_subprocesses = $number_sp;
-			my $count_subprocesses=0;
+			my $total_subprocesses = $number_sp; my $count_subprocesses=0;
 			print "+ Mapping process would be divided into $number_sp parts using up to $split_CPU/$num_proc_user CPUs provided\n";
 			foreach my $reads (sort keys %domino_files) {
 				unless ($domino_files{$reads}{'reads'}) { next; }
 				$count_subprocesses++;
-				print "\t- Mapping reads of $reads vs reference: $reference_identifier: [$count_subprocesses/$total_subprocesses]\n";
+				print "\t- Mapping reads ($reads) vs reference ($reference_identifier): [$count_subprocesses/$total_subprocesses]\n";
 				my $out_log_file = $dir."/reads_".$reads."-reference_".$reference_identifier."_logfile.txt";
 				open (LOG, ">$out_log_file");
 				chdir $domino_files{$reference_identifier}{'dir'}[0];
 				print LOG "\nChange dir to: ".$domino_files{$reference_identifier}{'dir'}[0]."\n";
-				my $pid = $pm_read_Reference->start() and next; 
-			
+				my $pid = $pm_read_Reference->start() and next;
+				my %domino_files_split_mapping;
+				push(@{ $domino_files_split_mapping{$reads}{'LOG'}}, $out_log_file);
+
 				## Mapping Parameters
 				my $R_group_id = '--rg-id '.$reads;
 				my $R_group_name = ' --rg '.$reads;
@@ -1400,7 +1427,7 @@ if (!$avoid_mapping) {
 				if ($system_bowtie_call != 0) {
 					&printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); DOMINO::dieNicely();
 				} 			
-				push (@{$domino_files{$reads}{"SAM::Ref:".$reference_identifier}}, $sam_name);
+				push (@{$domino_files_split_mapping{$reads}{"SAM::Ref:".$reference_identifier}}, $sam_name);
 				open (IN, $error_bowtie); while (<IN>) {print LOG $_; } close(IN);
 				print LOG "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n";
 				print LOG "\n\n+ Mapping finished for taxa $reads against $reference_identifier\n";		
@@ -1412,10 +1439,8 @@ if (!$avoid_mapping) {
 				
 				## Generate a sam for each contig
 				my @temp = split ("\.sam", $sam_name);
-				chdir $dir;
-				my $dir_tmp = $temp[0]."_SPLIT"; mkdir $dir_tmp, 0755; chdir $dir_tmp;
+				chdir $dir; my $dir_tmp = $temp[0]."_SPLIT"; mkdir $dir_tmp, 0755; chdir $dir_tmp;
 				print LOG "\nChange dir to: ".$dir_tmp."\n";
-
 				#print Dumper $reference_hash_fasta_ref;
 				my @number_contigs = sort (keys %$reference_hash_fasta_ref);
 				my $scalar = scalar @number_contigs;
@@ -1426,7 +1451,7 @@ if (!$avoid_mapping) {
 				&generate_index_bam($sorted_bam_file);
 	
 				if ($scalar == 1) {
-					push (@{ $domino_files{$reads}{"SAM_Parts::Ref:".$reference_identifier} }, $temp_name[-1]);
+					push (@{ $domino_files_split_mapping{$reads}{"SAM_Parts::Ref:".$reference_identifier} }, $temp_name[-1]);
 				} else {
 					print LOG "+ Using parallel threads ($split_CPU CPUs)...\n";
 					print LOG "+ Splitting SAM file into several parts to speed the computation...\n"; 
@@ -1441,46 +1466,38 @@ if (!$avoid_mapping) {
 							my $sam_file_part = $dir_tmp."/".$temp_2[-1]."_part-".$iteration.".sam";
 							#print "Contigs: ".$string."\n";
 							my $command = $samtools_path." view -@ $split_CPU -Sh -o $sam_file_part $sorted_bam_file $string";
-							push (@{ $domino_files{$reads}{"SAM_Parts::Ref:".$reference_identifier} }, $sam_file_part);
+							push (@{ $domino_files_split_mapping{$reads}{"SAM_Parts::Ref:".$reference_identifier} }, $sam_file_part);
 							push (@commands, $command); $iteration++; 
 					} else { last; }}
 					
 					my $pm_SAM_split =  new Parallel::ForkManager($split_CPU); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-					#$pm_SAM_split->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_; print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; } );
-					#$pm_SAM_split->run_on_start( sub { my ($pid,$ident)=@_; print "\t- SAMTOOLS command for file $ident and PID=$pid started\n"; } );
 					my $total_commands = scalar @commands;
 					my $count_commands=0;
 					for (my $a=0; $a < scalar @commands; $a++) {
 						$count_commands++;
 						print LOG "\t- Splitting SAM $sam_base_name: [$count_commands/$total_commands]\n";
-						my $pid = $pm_SAM_split->start($a) and next; 
+						my $pid = $pm_SAM_split->start() and next; 
 						&debugger_print("SAMTOOLS command: $commands[$a]");	
 						my $system_call = system ($commands[$a]);
-						$pm_SAM_split->finish($a); # pass an exit code to finish
+						$pm_SAM_split->finish(); # pass an exit code to finish
 					}
 					$pm_SAM_split->wait_all_children;
-					#print "\n**********************************************\n";
-					#print "**** All SAMTOOLS child commands finished ****\n";
-					#print "**********************************************\n\n";
-					&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 		
+					&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files_split_mapping); 		
 				}
 				
 				### Remove multimapping reads	### 
 				##  DOMINO checks the SAM files generated and discards bad reads mapping, unmapping reads or multimapping reads. ##
-				my @array_files_split = @{ $domino_files{$reads}{"SAM_Parts::Ref:".$reference_identifier}};				
+				my @array_files_split = @{ $domino_files_split_mapping{$reads}{"SAM_Parts::Ref:".$reference_identifier}};				
 				print LOG "\n+ Cleaning reads now in parallel threads ($split_CPU CPUs)...\n";
 				## Get files for later dump
 				for (my $i=0; $i < scalar @array_files_split; $i++) {
 					my $file2dump = $dir_tmp."/dump_file_split_".$reads."_Part_".$i.".txt";
 					#print "File to dump: ".$file2dump."\n";
-					push (@{ $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier} }, $file2dump);
+					push (@{ $domino_files_split_mapping{$reads}{"DUMP_Parts::Ref:".$reference_identifier} }, $file2dump);
 				}		
 				
 				my $pm_SAM_parts =  new Parallel::ForkManager($split_CPU); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-				#$pm_SAM_parts->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_;} );   #print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; 
-				#$pm_SAM_parts->run_on_start( sub { my ($pid,$ident)=@_; print "+ Child process sent for checking file $ident with PID=$pid...\n"; } );
-				my $scalar_array_files_split = scalar @array_files_split;
-				my $count_split=0;
+				my $scalar_array_files_split = scalar @array_files_split; my $count_split=0;
 				for (my $i=0; $i < scalar @array_files_split; $i++) {
 					$count_split++;
 					print LOG "\t- Checking each splitted file for $sam_base_name: [$count_split/$scalar_array_files_split]\n";	
@@ -1528,12 +1545,8 @@ if (!$avoid_mapping) {
 							my $total = $pos + $NOpos; 				 ## total positions
 							$xcentmax = $total * $cigar_pct_convert; ## Max bad CIGAR
 							$xcent = $NOpos; ## Bad CIGAR
-							#&debugger_print("TOTAL: ".$total."\nPOS: ".$pos."\nNOPOS = XCENT: ".$NOpos."\nXCENTMAX: ".$xcentmax."\n");
 							if($xcent <= $xcentmax){
-								#&debugger_print("XCENT < XCENTMAX\nGOOD READ!!\n");
-								print SAM_OUT $line."\n"; 
-								#open (OUT, $domino_files{$reference_identifier}{'mapping_'.$reads}[0]); print OUT $sam[2]."\n"; close (OUT);							
-								$good_reads++;
+								print SAM_OUT $line."\n"; $good_reads++;
 							} else {
 								#&debugger_print("XCENT > XCENTMAX\nDISCARD READ!!\n"); 
 								if ($bowtie_local) { print SAM_OUT $line."\n"; next; } 
@@ -1599,24 +1612,20 @@ if (!$avoid_mapping) {
 						push (@{$domino_files_SAM_parts{$reads}{"total_reads::Ref:".$reference_identifier} }, $total_reads);
 		
 						# Dump info into file
-						DOMINO::printDump(\%domino_files_SAM_parts, $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier}[$i]);
+						DOMINO::printDump(\%domino_files_SAM_parts, $domino_files_split_mapping{$reads}{"DUMP_Parts::Ref:".$reference_identifier}[$i]);
 					}
 					$pm_SAM_parts->finish(); # pass an exit code to finish
 				}
 				$pm_SAM_parts->wait_all_children;
-				#print "\n";
-				#print "************************************************\n";
-				#print "*** All SAM parsing child commands finished ****\n";
-				#print "************************************************\n\n";
-				
-				my @dump_files1 = @{ $domino_files{$reads}{"DUMP_Parts::Ref:".$reference_identifier} };
-				&retrieve_info(\@dump_files1, \%domino_files);
-							
+				my @dump_files1 = @{ $domino_files_split_mapping{$reads}{"DUMP_Parts::Ref:".$reference_identifier} };
+				my $hash_dump1 = &retrieve_info(\@dump_files1, \%domino_files_split_mapping);
+				%domino_files_split_mapping = %{$hash_dump1};
+
 				## Get total reads: discard, good and total
 				my $discard_reads = 0; my $good_reads = 0; my $total_reads = 0; my @array;
-				push (@array, $domino_files{$reads}{"discard_reads::Ref:".$reference_identifier});
-				push (@array, $domino_files{$reads}{"good_reads::Ref:".$reference_identifier});
-				push (@array, $domino_files{$reads}{"total_reads::Ref:".$reference_identifier});
+				push (@array, $domino_files_split_mapping{$reads}{"discard_reads::Ref:".$reference_identifier});
+				push (@array, $domino_files_split_mapping{$reads}{"good_reads::Ref:".$reference_identifier});
+				push (@array, $domino_files_split_mapping{$reads}{"total_reads::Ref:".$reference_identifier});
 				for (my $i=0; $i < scalar @array; $i++) {
 					my @array_2 = @{$array[$i]};
 					for (my $j=0; $j < scalar @array_2; $j++) {
@@ -1628,7 +1637,7 @@ if (!$avoid_mapping) {
 				##############################################################################################	
 				## Calculate the probability of being under a poisson distribution with the mean of our data
 				##############################################################################################
-				my @stats = @{ $domino_files{$reads}{"mean_coverage_Parts::Ref:".$reference_identifier}};
+				my @stats = @{ $domino_files_split_mapping{$reads}{"mean_coverage_Parts::Ref:".$reference_identifier}};
 				my ($sum_coverage, $total_positions);
 				for (my $i=0; $i < scalar @stats; $i++) {
 					my @stats_each = split(":", $stats[$i]);
@@ -1638,7 +1647,7 @@ if (!$avoid_mapping) {
 				my $mean_coverage = $sum_coverage/$total_positions;
 				my $mean = sprintf ("%.3f", $mean_coverage);
 	
-				my @max_cov_files = @{ $domino_files{$reads}{"max_coverage_Parts::Ref:".$reference_identifier} };
+				my @max_cov_files = @{ $domino_files_split_mapping{$reads}{"max_coverage_Parts::Ref:".$reference_identifier} };
 				my $num_contigs; my %discard_contigs; my $contigs_discarded;
 				for (my $h=0; $h < scalar @max_cov_files; $h++) {
 					## Read Coverage file
@@ -1666,18 +1675,16 @@ if (!$avoid_mapping) {
 				
 				## Adjust SAM files
 				print LOG "\n+ Adjusting the SAM/BAM files using parallel threads ($split_CPU CPUs)\n+ Splitted files would be used...\n";
-				my @parts_clean_sam = @{ $domino_files{$reads}{"CLEAN_SAM_Parts::Ref:".$reference_identifier}};
+				my @parts_clean_sam = @{ $domino_files_split_mapping{$reads}{"CLEAN_SAM_Parts::Ref:".$reference_identifier}};
 	
 				## Get files for later dump
 				for (my $i=0; $i < scalar @parts_clean_sam; $i++) {
 					my $file2dump = $dir_tmp."/dump_file_split_".$reads."_Part2_".$i.".txt";
 					#print "File to dump: ".$file2dump."\n";
-					push (@{ $domino_files{$reads}{"DUMP2_Parts::Ref:".$reference_identifier} }, $file2dump);
+					push (@{ $domino_files_split_mapping{$reads}{"DUMP2_Parts::Ref:".$reference_identifier} }, $file2dump);
 				}	
 				
 				my $pm_SAM_PILEUP =  new Parallel::ForkManager($split_CPU); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-				#$pm_SAM_PILEUP->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_; print "\t** Child process finished for file $ident; PID=$pid & ExitCode=$exit_code **\n"; } );
-				#$pm_SAM_PILEUP->run_on_start( sub { my ($pid,$ident)=@_; print "+ Child process sent for checking file $ident with PID=$pid...\n"; } );
 				my $total_parts_clean_sam = scalar @parts_clean_sam;
 				my $count_totalParts=0;
 				for (my $j=0; $j < scalar @parts_clean_sam; $j++) {
@@ -1692,12 +1699,10 @@ if (!$avoid_mapping) {
 					open (SAM_OUT, ">$sam_filter"); open (SAM, "<$parts_clean_sam[$j]");
 					while (<SAM>) {
 						chomp; my $line = $_;
-						if ($line =~ /^@.*/ ) {
-							print SAM_OUT $line."\n";	
+						if ($line =~ /^@.*/ ) { print SAM_OUT $line."\n";	
 						} else {
 							my @array = split (/\s+/,$line);
-							if (!$discard_contigs{$array[2]}) {
-								print SAM_OUT $line."\n";	
+							if (!$discard_contigs{$array[2]}) { print SAM_OUT $line."\n";	
 					}}}
 					close(SAM_OUT); close(SAM); undef %discard_contigs;
 					#print LOG "- File checked: Contigs and Reads discarded...\n";
@@ -1711,20 +1716,18 @@ if (!$avoid_mapping) {
 						push (@{ $domino_files_SAM_PILEUP{$reads}{"PROFILE::Ref:".$reference_identifier} }, $dir_returned);
 					}
 					# Dump info into file
-					DOMINO::printDump(\%domino_files_SAM_PILEUP, $domino_files{$reads}{"DUMP2_Parts::Ref:".$reference_identifier}[$j]);
+					DOMINO::printDump(\%domino_files_SAM_PILEUP, $domino_files_split_mapping{$reads}{"DUMP2_Parts::Ref:".$reference_identifier}[$j]);
 					$pm_SAM_PILEUP->finish($name[0]); # pass an exit code to finish
 				}
 				$pm_SAM_PILEUP->wait_all_children;
-				#print "\n";
-				#print "************************************************\n";
-				#print "*** All SAM parsing child commands finished ****\n";
-				#print "************************************************\n\n";
 				
-				my @dump_files = @{ $domino_files{$reads}{"DUMP2_Parts::Ref:".$reference_identifier} };
-				&retrieve_info(\@dump_files, \%domino_files);
+				my @dump_files = @{ $domino_files_split_mapping{$reads}{"DUMP2_Parts::Ref:".$reference_identifier} };
+				my $hash_dump = &retrieve_info(\@dump_files, \%domino_files_split_mapping);
+				%domino_files_split_mapping = %{$hash_dump};
+
 				print LOG "\n\n\n";			
 				my $stats_file = $dir."/mapping_statistics_Ref_".$reference_identifier."_Reads_".$reads.".txt";
-				push (@{ $domino_files{$reference_identifier}{'stats'} }, $stats_file);
+				push (@{ $domino_files_split_mapping{$reference_identifier}{'stats'} }, $stats_file);
 				print LOG "================ Filtering Statistics ======================\n"; 
 				open (STATS, ">$stats_file");			
 				print STATS "File: $sam_name\n"; 																print LOG "File: $sam_name\n";
@@ -1743,13 +1746,19 @@ if (!$avoid_mapping) {
 				print LOG "============================================================\n"; 
 				print LOG "\n\n\n";			
 
+				DOMINO::printDump(\%domino_files_split_mapping, $domino_files{$reads}{"DUMP_Mapping::Ref:".$reference_identifier}[0]);
 				$pm_read_Reference->finish(); # pass an exit code to finish
 			} ## foreach reads
-			$pm_read_Reference->wait_all_children;
-
+			$pm_read_Reference->wait_all_children;			
+			
+			## Get files for later dump
+			foreach my $reads_here (sort keys %domino_files) {
+				unless ($domino_files{$reads_here}{'reads'}) { next; }
+				my @dump_files = @{ $domino_files{$reads_here}{"DUMP_Mapping::Ref:".$reference_identifier} };
+				&retrieve_info(\@dump_files, \%domino_files);
+			}
 			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 			print "\n\n"; DOMINO::printHeader("", "+");DOMINO::printHeader(" Mapping finished for Reference $reference_identifier ", "+");DOMINO::printHeader("", "+"); &time_log(); print "\n";		
-			undef $reference_hash_fasta_ref;
 		} # foreach reference
 	} elsif ($option eq "msa_alignment") {	
 		mkdir $msa_dirname, 0755; chdir $align_dirname;
@@ -2095,27 +2104,18 @@ if ($option eq "msa_alignment") {
 						my @allele1 = split("", $array[1]);
 						my @array2 = split(":::", $hash2fill{$keys}[1]);
 						my @allele2 = split("", $array2[1]);
-
 						my @string;
 						for (my $i=0; $i < scalar @allele1; $i++) {
-							my @tmp;
-							push(@tmp, $allele1[$i]);
-							push(@tmp, $allele2[$i]);
-							my @tmp_uniq = sort @tmp;
-							my @tmp_uniq_sort = uniq(@tmp_uniq);
+							my @tmp; push(@tmp, $allele1[$i]); push(@tmp, $allele2[$i]);
+							my @tmp_uniq_sort = uniq(sort @tmp);
 							if (scalar @tmp_uniq_sort == 1) {
-								if ($tmp_uniq_sort[0] eq 'N') { 
-									push (@string, 'N');
-								} elsif ($tmp_uniq_sort[0] eq '-') {
-									push (@string, '-');
-								} else {
-									push (@string, $allele1[$i]);
+								if ($tmp_uniq_sort[0] eq 'N') {  		push (@string, 'N');
+								} elsif ($tmp_uniq_sort[0] eq '-') { 	push (@string, '-');
+								} else { 								push (@string, $allele1[$i]);
 							}} else {
 								my $hash;
-								$$hash{$allele1[$i]}++;
-								$$hash{$allele2[$i]}++;
-								my $value = &get_amb_code($hash);
-								push (@string, $value);
+								$$hash{$allele1[$i]}++; $$hash{$allele2[$i]}++;
+								push (@string, &get_amb_code($hash));
 						}}
 						my $tmp = join ("", @string);
 						$hash2return{$keys} = $tmp;
@@ -2147,10 +2147,9 @@ if ($option eq "msa_alignment") {
 				if ($string2print_ref eq 'NO' ) { $pm_MARKER_MSA_files->finish;}
 			}
 			
-			## $string2print_ref
+			#print Dumper $string2print_ref;
 			## taxa_included	var_sites	length	profile	effective_length
 			##	0					1		2		3		4			
-			#print Dumper $string2print_ref;
 			
 			my ($taxa, $var_sites, $length_string, $string_profile, $effective_length) = @{ $string2print_ref };
 			my @array_taxa_split = split(",", $taxa);
@@ -2334,7 +2333,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	## Get the the reference fasta  ##
 	##################################
 	print "+ Checking the file specified as reference fasta... $domino_files{$ref_taxa}{'contigs'}[0]...OK\n";
-	system("ln -s $domino_files{$ref_taxa}{'contigs'}[0]");
+	print "+ Generating symbolic links for necessary files\n"; 
+	my $ref_Fasta = $ref_taxa.".fasta";
+	system("ln -s $domino_files{$ref_taxa}{'contigs'}[0] $ref_Fasta");
 	
 	############################################################
 	###	Generate an array information file for the reference ### 
@@ -2347,17 +2348,18 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	print "+ Using parallel threads ($num_proc_user CPUs)...\n";			
 	my $reference_dir = $marker_dir."/REF_DIR"; mkdir $reference_dir, 0755;
 	push (@{ $domino_files{$ref_taxa}{'REF_DIR'}}, $reference_dir);
-	my $reference_fasta_file = $domino_files{$ref_taxa}{'contigs'}[0];
-	my $size_file = DOMINO::get_size($reference_fasta_file);
+	my $size_file = DOMINO::get_size($ref_Fasta);
 	my $parts2split = int($size_file/$num_proc_user);
-	my $fasta_files_split = DOMINO::fasta_file_splitter($reference_fasta_file, $parts2split, "fasta", $reference_dir);
-	#&debugger_print("Total Size: $size_file\nCharacters to split: $parts2split"); #&debugger_print("Ref", $fasta_files_split);		
+	my $fasta_files_split = DOMINO::fasta_file_splitter($ref_Fasta, $parts2split, "fasta", $reference_dir);
+		#&debugger_print("Total Size: $size_file\nCharacters to split: $parts2split"); #&debugger_print("Ref", $fasta_files_split);		
 	
 	## Generate a fasta for each contig
 	my $pm_SPLIT_FASTA =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-	$pm_SPLIT_FASTA->run_on_finish(sub { my ($pid, $exit_code, $ident) = @_; print "\t** Child process finished with PID = $pid **\n"; } );
-	$pm_SPLIT_FASTA->run_on_start( sub { my ($pid,$ident)=@_; print "\t- Splitting process with PID = $pid started\n"; } );
+	my $total_fasta_files_split = scalar @{ $fasta_files_split };
+	my $count_fasta_files_split=0;
 	for (my $i=0; $i < scalar @{ $fasta_files_split }; $i++) {
+		$count_fasta_files_split++;
+		print "\t- Splitting file: [$count_fasta_files_split/$total_fasta_files_split]\n";
 		my $pid = $pm_SPLIT_FASTA->start($i) and next;
 		open(FILE, $$fasta_files_split[$i]) || die "Could not open the $$fasta_files_split[$i]...\n";
 		$/ = ">"; ## Telling perl where a new line starts
@@ -2367,21 +2369,14 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			my ($titleline, $sequence) = split(/\n/,$_,2);
 			next unless ($sequence && $titleline);
 			chomp $sequence;
-			$sequence =~ s/\n//g; 
-			$titleline =~ s/\s/\t/g;
+			$sequence =~ s/\n//g;  $titleline =~ s/\s/\t/g;
 			my $file = $reference_dir."/".$titleline.".fasta";
-			open(OUT, ">$file");
-			print OUT ">".$titleline."\n".uc($sequence)."\n";
-			close (OUT);
+			open(OUT, ">$file"); print OUT ">".$titleline."\n".uc($sequence)."\n"; close (OUT);
 		} close(FILE); $/ = "\n";
 		$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
 	}
 	$pm_SPLIT_FASTA->wait_all_children; 
-	print "\n\n";
-	print "***********************************************\n";
-	print "**** All splitting processes have finished ****\n";
-	print "***********************************************\n\n";		
-	
+
 	##########################################
 	## 	Merge PILEUP information arrays     ##
 	##########################################
@@ -3011,7 +3006,7 @@ sub check_overlapping_markers {
 		my $bool = 1;
 		my ($counter, $bad_counter) = 0;
 		while ($bool) {
-			$counter++;
+			$counter += $SLIDING_user;
 			my $new_coord = $keys_markers + $counter;
 			if ($tmp_coord{$new_coord}) {
 				push (@array_coordinates, $new_coord); 	$coord_seen{$new_coord}++;
@@ -4866,20 +4861,6 @@ sub sliding_window_conserve_variable {
 	open (OUTPUT,">$output_file_coordinates") or &printError("Could not open file $output_file_coordinates for writing results...");		
 	my $dna_seq = $$seq; my $seqlen = length($$seq);
 	
-	# Set step for CONS range
-	my $CONS_inc; ## Set as a variable? TODO
-	my $difference_CONS = $window_size_CONS_max - $window_size_CONS_min;
-	if ( $difference_CONS >= 20) { $CONS_inc = 2; } else { $CONS_inc = 1; }
-		
-	# Set step for CONS range
-	my $VAR_inc; ## Set as a variable? TODO
-	my $difference_VAR = $window_size_VARS_max - $window_size_VARS_min;
-	if ( $difference_VAR > 500) {  		$VAR_inc = 10; $CONS_inc = 5;
-	} elsif ($difference_VAR > 300) { 	$VAR_inc = 5; $CONS_inc = 5;
-	} elsif ($difference_VAR > 200) { 	$VAR_inc = 3; $CONS_inc = 3;
-	} elsif ($difference_VAR > 100) { 	$VAR_inc = 2; $CONS_inc = 2;
-	} else { $VAR_inc = 1; $CONS_inc = 1; }
-	#&debugger_print("ID=$$id\nVAR_inc = $VAR_inc\nCONS_inc = $CONS_inc\nsliding_interval = $SLIDING_user");
 	## Loop
 	for (my $i=0; $i < $seqlen; $i += $SLIDING_user) {
 		# AAATATGACTATCGATCGATCATGCTACGATCGATCGATCGTACTACTACGACTGATCGATCGATCGACGACTGAC
