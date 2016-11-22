@@ -7,9 +7,9 @@ DM_Assembly_v1.0.0.pl
 	SPAdes for Mac?
 	
 DM_MarkerScan_v1.0.0.pl
-	Print excel
-	set CONS_inc and VAR_inc as variables?
 	
+	Fix marker overlapper
+	Fix marker clustering
 	Explain new parameters implemented
 	Update manual and documentation
 
