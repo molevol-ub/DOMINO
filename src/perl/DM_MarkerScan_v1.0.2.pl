@@ -94,11 +94,7 @@ $debugger, $helpAsked1, $VAR_inc, $CONS_inc,
 
 ## others
 %domino_files, %domino_params, $step_time, %discard_contigs, $pyRAD_file, $stacks_file, $radseq_like_data, 
-
-$number_sp, $genome_fasta,
-$scripts_path, $dnaSP_flag, $SLIDING_user,
-
-%mapping_contigs
+$number_sp, $genome_fasta, $scripts_path, $dnaSP_flag, $SLIDING_user, %mapping_contigs
 );
 
 my %ambiguity_DNA_codes = (
@@ -2337,7 +2333,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	if ($option eq "msa_alignment") { 
 		push ( @{ $domino_files{$ref_taxa}{'array_all_taxa'} }, $marker_dir."/merged.profile_ARRAY.txt");
 	} else {
-		my @taxa = sort @{ $domino_files{'taxa'}{'user_Taxa'} };
+		my @taxa = sort @{ $f{'taxa'}{'user_Taxa'} };
 		my @uniq_sort_taxa = uniq(@taxa);
 		my $name = join("_", @uniq_sort_taxa);
 		push ( @{ $domino_files{$ref_taxa}{'array_all_taxa'} }, $marker_dir."/$name.profile_ARRAY.txt");
@@ -2432,7 +2428,16 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	my $dir_Dump_file = $PILEUP_merged_folder_abs_path."/DUMP_files"; mkdir $dir_Dump_file, 0755;
 	my $dir2print_markers = $PILEUP_merged_folder_abs_path."/MSA_fasta_tmp"; mkdir $dir2print_markers, 0755;
 	
-	my $total_contigs = scalar keys %pileup_files; my $counter=0;
+	
+	######
+	######
+	###### FINDING THE GLITCH
+	######	
+	######	
+	######	
+	
+	my $total_contigs = scalar keys %pileup_files; 
+	my $counter=0;
 	my $pm_MARKER_PILEUP =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
 	foreach my $contigs (sort keys %pileup_files) {
 		$counter++;
@@ -2440,10 +2445,12 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			my $perc = sprintf( "%.3f", ( $counter/$total_contigs )*100 );
 			print "\t- Checking each contig: [ $perc % ]...\r";
 		} else { print "\t- Checking each contig: [$counter/$total_contigs]...\r";}	
+		
+		## send thread for each contig
 		my $pid = $pm_MARKER_PILEUP->start($contigs) and next;
-
-		my %pileup_files_threads;
-		my @pileup_fasta;
+		
+		## Variables
+		my (%pileup_files_threads, @pileup_fasta);
 		foreach my $files (sort keys %{ $pileup_files{$contigs} }) {
 			if ($files =~ /.*FASTA$/) {next;}
 			my $tmp_hash_reference = DOMINO::readFASTA_hash($pileup_files{$contigs}{$files});
@@ -2474,7 +2481,8 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			if ($tmp < $missing_allowed_species) {
 				$tmp_string .= $missing_flag; 
 			} else { $tmp_string .= $flag; 
-		}}
+		}}		
+		
 		my $array_all_taxa = $domino_files{$ref_taxa}{'array_all_taxa'}[0]; #&debugger_print($array_all_taxa);
 		open(OUT_PILEUP, ">>$array_all_taxa");
 		my $var_sites = $tmp_string =~ tr/1/1/; ## count variable sites
@@ -2559,6 +2567,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			push (@{ $pileup_files_threads{$contigs}{'markers_files'} }, @$markers_print_ref);
 			my $dump_folder_files = $dir_Dump_file."/dump_markers_".$contigs.".txt";
 			DOMINO::printDump(\%pileup_files_threads, $dump_folder_files);	
+			@pileup_fasta = (); %pileup_files_threads = ();
 		}
 		$pm_MARKER_PILEUP->finish(); # finish for each contig
 	} 
@@ -2568,6 +2577,14 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	print "**** All parallel parsing processes have finished ****\n";
 	print "******************************************************\n\n";
 	&time_log(); print "\n";
+
+	######
+	######
+	###### FINDING THE GLITCH
+	######	
+	######	
+	######	
+	
 	## Retrieve info of all markers identified...
 	my $dump_files = DOMINO::readDir($dir_Dump_file);
 	for (my $i=0; $i < scalar @$dump_files; $i++) {
@@ -2855,7 +2872,6 @@ exit();
 sub binomial {
 	## Returns the probability of an event ocurring $k times in $n attempts where the probability
 	## of it occurring in a sample attempt is $p
-
     my $k = shift(@_); ## Occurrences
     my $n = shift(@_); ## Attempts
     my $p = shift(@_); ## Probability
@@ -2985,7 +3001,7 @@ sub check_overlapping_markers {
 	# Debug print Dumper \%tmp_hash;
 	my %coord_seen;
 	foreach my $taxa (sort keys %tmp_hash ) {		
-		foreach my $marker (keys $tmp_hash{$taxa}) {			
+		foreach my $marker (keys %{ $tmp_hash{$taxa} }) {			
 		if ($coord_seen{$taxa}{$marker}) {next;}
 		my $bool = 1;
 		my ($counter, $bad_counter) = 0;
@@ -3006,7 +3022,7 @@ sub check_overlapping_markers {
 
 	my %tmp_coord;
 	foreach my $taxa (keys %tmp_hash ) {
-		foreach my $marker (keys $tmp_hash{$taxa}) {
+		foreach my $marker (keys %{ $tmp_hash{$taxa} }) {
 			if ($tmp_hash{$taxa}{$marker} == 1) {next;}
 			my @array = sort(@{ $tmp_hash{$taxa}{$marker} });
 			my @sort_uniq = uniq(@array);
@@ -3049,7 +3065,7 @@ sub check_overlapping_markers {
 						$marker_seen{$string}++;
 			}}}
 			foreach my $keys (keys %hash2print) {
-			foreach my $lent (sort keys $hash2print{$keys}) {
+			foreach my $lent (sort keys %{ $hash2print{$keys} }) {
 				my @array = @{ $hash2print{$keys}{$lent} };					
 				for (my $i=0; $i < scalar @array; $i++) { print OUT $array[$i]."\n"; }
 				print OUT "//\n";

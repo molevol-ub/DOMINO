@@ -1,16 +1,25 @@
 ## TODOs
 
-DM_Clean_v1.0.1.pl
+Wrap the package into docker
+
+install.sh
+	Check Installation somehow
+	
+DM_Clean_v1.0.2.pl
 	Sort and get uniq contaminants if contaminants found
 	
-DM_Assembly_v1.0.0.pl
+DM_Assembly_v1.0.2.pl
 	SPAdes for Mac?
 	
-DM_MarkerScan_v1.0.0.pl
+DM_MarkerScan_v1.0.2.pl
 	
 	Fix marker overlapper
 	Fix marker clustering
 	Explain new parameters implemented
 	Update manual and documentation
+	
+	Delete DOMINO_dump_information.txt
+	Fix Excel output and check if appropiate
+	Fix memory RAM glitch
 
 DOMINO.pm 
