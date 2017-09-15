@@ -2333,7 +2333,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	if ($option eq "msa_alignment") { 
 		push ( @{ $domino_files{$ref_taxa}{'array_all_taxa'} }, $marker_dir."/merged.profile_ARRAY.txt");
 	} else {
-		my @taxa = sort @{ $f{'taxa'}{'user_Taxa'} };
+		my @taxa = sort @{ $domino_files{'taxa'}{'user_Taxa'} };
 		my @uniq_sort_taxa = uniq(@taxa);
 		my $name = join("_", @uniq_sort_taxa);
 		push ( @{ $domino_files{$ref_taxa}{'array_all_taxa'} }, $marker_dir."/$name.profile_ARRAY.txt");
