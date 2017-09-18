@@ -87,7 +87,7 @@ $rfgopen, $MID_taxa_names, $option, $mis_penalty, $msa_fasta_folder, $polymorphi
 $level_significance_coverage_distribution, $map_contig_files, $missing_allowed, $keepbam, 
 $version, $DOMINO_simulations, $minimum_number_taxa_covered, $avoid_mapping, $further_information,
 @user_cleanRead_files, @user_contig_files, $msa_file, $behaviour, $select_markers, $identify_markers,
-$debugger, $helpAsked1, $VAR_inc, $CONS_inc,
+$debugger, $helpAsked1, $VAR_inc, $CONS_inc, $option_all,
 
 ## absolute path
 @contigs_fasta_file_abs_path, @clean_fastq_file_abs_path, # toDiscard
@@ -162,7 +162,8 @@ GetOptions(
  	"SI|sliding_interval:i" => \$SLIDING_user,
  	"V-SI_inc:i" => \$VAR_inc,
  	"C-SI_inc:i" => \$CONS_inc,
- 	
+
+ 	"all" => \$option_all, 	
  	"Debug" => \$debugger,
 );
 
@@ -654,6 +655,10 @@ Keep the BAM files generated during the run.
 =item B<-No_Profile_Generation|NPG [Default Off]>
 	
 Use this flag to skip the mapping phase and the generation of the variation profile. Uses data from a previous DOMINO run.
+
+=item B<-all [Default Off]>
+
+Use all the contigs generated during the assembly. By default and in order to speed the computation, DOMINO would only use the largest 50000 contigs generated.
 	
 =item B<-TempFiles [Default Off]>
 	
@@ -2372,6 +2377,8 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		print "\t- Splitting file: [$count_fasta_files_split/$total_fasta_files_split]\n";
 		my $pid = $pm_SPLIT_FASTA->start($i) and next;
 		open(FILE, $$fasta_files_split[$i]) || die "Could not open the $$fasta_files_split[$i]...\n";
+		my $size_file = $$fasta_files_split[$i]."_size";
+		open (SIZE, ">$size_file");
 		$/ = ">"; ## Telling perl where a new line starts
 		while (<FILE>) {		
 			next if /^#/ || /^\s*$/;
@@ -2382,10 +2389,19 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			$sequence =~ s/\n//g;  $titleline =~ s/\s/\t/g;
 			my $file = $reference_dir."/".$titleline.".fasta";
 			open(OUT, ">$file"); print OUT ">".$titleline."\n".uc($sequence)."\n"; close (OUT);
+			print SIZE length($sequence)."\t".$titleline."\n";
 		} close(FILE); $/ = "\n";
 		$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
 	}
 	$pm_SPLIT_FASTA->wait_all_children; 
+
+	my $ref_Fasta_size = $ref_taxa.".size";
+	my $tmp_Fasta_size = $ref_taxa.".size_tmp";
+	for (my $i=0; $i < scalar @{ $fasta_files_split }; $i++) {
+		my $size_file = $$fasta_files_split[$i]."_size";
+		system ("cat $size_file >> $tmp_Fasta_size"); system ("rm $size_file");
+	}
+	system ("sort -nr $tmp_Fasta_size >> $ref_Fasta_size"); system ("rm $tmp_Fasta_size");
 
 	##########################################
 	## 	Merge PILEUP information arrays     ##
@@ -2395,27 +2411,10 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	my (@clean_filtered_sam_files, @reference_bam_files, @pileup_Arrays);
 	foreach my $reads (sort keys %domino_files) {
 		unless ($domino_files{$reads}{'taxa'}) {next; }
-		if ($domino_files{$reads}{"FILTERED_BAM_Parts::Ref:".$ref_taxa}) {
-			push ( @reference_bam_files, @{ $domino_files{$reads}{"FILTERED_BAM_Parts::Ref:".$ref_taxa } } );
-		}		
-		if ($domino_files{$reads}{"FILTERED_SAM_Parts::Ref:".$ref_taxa}) { 
-			push ( @clean_filtered_sam_files, @{ $domino_files{$reads}{"FILTERED_SAM_Parts::Ref:".$ref_taxa } } );
-		}
-		
+		if ($domino_files{$reads}{"FILTERED_BAM_Parts::Ref:".$ref_taxa}) { push ( @reference_bam_files, @{ $domino_files{$reads}{"FILTERED_BAM_Parts::Ref:".$ref_taxa}});}		
+		if ($domino_files{$reads}{"FILTERED_SAM_Parts::Ref:".$ref_taxa}) { push ( @clean_filtered_sam_files, @{ $domino_files{$reads}{"FILTERED_SAM_Parts::Ref:".$ref_taxa}});}
 		next if ($reads eq $ref_taxa);
-		my $PROFILE_dir = $domino_files{$reads}{"PROFILE::Ref:".$ref_taxa}[0];
-		my $array_files_ref = DOMINO::readDir($PROFILE_dir);
-		my @array_files = @$array_files_ref;
-		for (my $y = 0; $y < scalar @array_files; $y++) {
-			if ($array_files[$y] eq "." || $array_files[$y] eq ".." || $array_files[$y] eq ".DS_Store") {next;}
-			my $tmp = "$PROFILE_dir/$array_files[$y]";		
-			if ($array_files[$y] =~ /(.*)\_sequence\.fasta/) {
-				$pileup_files{$1}{$reads."_FASTA"} = $tmp;
-			} elsif ($array_files[$y] =~ /(.*)\_ARRAY\.txt/) {
-				$pileup_files{$1}{$reads} = $tmp;
-	}}}
-	# Debug print &debugger_print("Ref", \@reference_bam_files); &debugger_print("Ref", \@clean_filtered_sam_files); &debugger_print("Ref", \%pileup_files);
-
+	}
 	my $PILEUP_merged_folder_abs_path = $marker_dir."/PROFILE_merge_species";
 	mkdir $PILEUP_merged_folder_abs_path, 0755; chdir $PILEUP_merged_folder_abs_path; 
 	&debugger_print("Changing dir to $PILEUP_merged_folder_abs_path");
@@ -2427,33 +2426,52 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	## Check each markers using threads
 	my $dir_Dump_file = $PILEUP_merged_folder_abs_path."/DUMP_files"; mkdir $dir_Dump_file, 0755;
 	my $dir2print_markers = $PILEUP_merged_folder_abs_path."/MSA_fasta_tmp"; mkdir $dir2print_markers, 0755;
-	
-	
+		
 	######
 	######
 	###### FINDING THE GLITCH
 	######	
-	######	
-	######	
+	######
+	######
+	## get ordered size of contigs
+	open (FILE, $marker_dir."/".$ref_Fasta_size);
+	my @size_contigs;
+	while (<FILE>) {
+		chomp;
+		my @array = split("\t", $_);
+		push (@size_contigs, $array[1]);
+	}
+	close (FILE);	
+	my $total_contigs = scalar @size_contigs; my $counter=0; my $stop=0;
 	
-	my $total_contigs = scalar keys %pileup_files; 
-	my $counter=0;
+	## check all or some
+	if ($total_contigs > 50000) { 
+		$stop = 50000; ## check largest ones
+		print "\n\nATTENTION\n: There are too many contigs. DOMINO would only check for markers in the largest 50000 ones\n";
+		print "Provide option -all for using the whole set\n\n";
+	} else { $stop = $total_contigs;  }
+	if ($option_all) {	$stop = $total_contigs; }
+
+	## For each contig check for markers: USING THREADS, ONE FOR EACH CONTIG
 	my $pm_MARKER_PILEUP =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-	foreach my $contigs (sort keys %pileup_files) {
+	for (my $i=0; $i < $stop; $i++) {
+		#foreach my $contigs (sort keys %pileup_files) {
+		my $contigs = $size_contigs[$i];
 		$counter++;
 		if ($total_contigs > 100) {
-			my $perc = sprintf( "%.3f", ( $counter/$total_contigs )*100 );
+			my $perc = sprintf( "%.3f", ( $counter/$stop )*100 );
 			print "\t- Checking each contig: [ $perc % ]...\r";
-		} else { print "\t- Checking each contig: [$counter/$total_contigs]...\r";}	
-		
+		} else { print "\t- Checking each contig: [$counter/$stop]...\r";}	
 		## send thread for each contig
 		my $pid = $pm_MARKER_PILEUP->start($contigs) and next;
 		
 		## Variables
 		my (%pileup_files_threads, @pileup_fasta);
-		foreach my $files (sort keys %{ $pileup_files{$contigs} }) {
-			if ($files =~ /.*FASTA$/) {next;}
-			my $tmp_hash_reference = DOMINO::readFASTA_hash($pileup_files{$contigs}{$files});
+		foreach my $reads (sort keys %domino_files) {
+			next if ($reads eq $ref_taxa);
+			next if ($reads eq 'taxa');
+			my $file = $domino_files{$reads}{"PROFILE::Ref:".$ref_taxa}[0]."/".$contigs."_ARRAY.txt";
+			my $tmp_hash_reference = DOMINO::readFASTA_hash($file);
 			my %tmp_fasta = %{$tmp_hash_reference};
 			foreach my $seqs (sort keys %tmp_fasta) {
 				push (@pileup_fasta, $tmp_fasta{$seqs});
@@ -2488,36 +2506,38 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		my $var_sites = $tmp_string =~ tr/1/1/; ## count variable sites
 		my $cons_sites = $tmp_string =~ tr/0/0/; ## count conserved sites
 		if ($var_sites != 0 && $cons_sites != 0) { 
-			#print ">$contigs\n$tmp_string\n"; 
 			my $file = $PILEUP_merged_folder_abs_path."/".$contigs."_merged_ARRAY.txt";
 			open (FH, ">$file"); print FH ">$contigs\n$tmp_string\n"; close(FH);
 			push (@{ $pileup_files_threads{$contigs}{'mergeProfile'} }, $file);
 			print OUT_PILEUP ">$contigs\n$tmp_string\n"; 
 			my $fileReturned = &sliding_window_conserve_variable(\$contigs, \$tmp_string, $PILEUP_merged_folder_abs_path);
-			if (-e -r -s $fileReturned) {
-				push (@{ $pileup_files_threads{$contigs}{'mergeCoord'} }, $fileReturned);
-			} else { $pm_MARKER_PILEUP->finish(); }
-		} else { $pm_MARKER_PILEUP->finish(); }
-		close (OUT_PILEUP); 
+			if (-e -r -s $fileReturned) { push (@{ $pileup_files_threads{$contigs}{'mergeCoord'} }, $fileReturned);
+			} else { ## if empty finish
+				$pm_MARKER_PILEUP->finish();
+			}} else { $pm_MARKER_PILEUP->finish();
+		} close (OUT_PILEUP); 
 		
 		######################################################################
 		## Check the coordinates foreach taxa against the merge statistics  ##
-		######################################################################
-		
+		######################################################################		
 		foreach my $taxa (sort keys %domino_files) {
 			unless ($domino_files{$taxa}{'taxa'}) { next; }
 			if ($taxa eq $ref_taxa) {next;}
-				#$pileup_files_threads{$contigs}{$taxa}
-				#$pileup_files_threads{$contigs}{$taxa."_FASTA"}
+			
+			## NAME for output files
 			my $string = $window_size_VARS_range;	$string =~ s/\:\:/-/;
 			my $string2 = $window_size_CONS_range;  $string2 =~ s/\:\:/-/;
 			my ($output_file, $error_file, $file);
-			if ($variable_divergence) { $file = $PILEUP_merged_folder_abs_path."/".$contigs.".id_".$taxa."-VD_".$variable_divergence."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
-			} else {  $file = $PILEUP_merged_folder_abs_path."/".$contigs.".id_".$taxa."-VPmin_".$variable_positions_user_min."-VPmax_".$variable_positions_user_max."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
+			if ($variable_divergence) { 
+				$file = $PILEUP_merged_folder_abs_path."/".$contigs.".id_".$taxa."-VD_".$variable_divergence."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
+			} else {  
+				$file = $PILEUP_merged_folder_abs_path."/".$contigs.".id_".$taxa."-VPmin_".$variable_positions_user_min."-VPmax_".$variable_positions_user_max."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
 			}		
 			$output_file = $file.".out"; $error_file = $file.".err";			
-			if ($pileup_files{$contigs}{$taxa}) {
-				my $pileup_each_taxa = $pileup_files{$contigs}{$taxa};
+			
+			## For each taxa confirm profile
+			my $pileup_each_taxa = $domino_files{$taxa}{"PROFILE::Ref:".$ref_taxa}[0]."/".$contigs."_ARRAY.txt";
+			if (-f $pileup_each_taxa) {
 				&get_coordinates_each_taxa(\$pileup_each_taxa, \$pileup_files_threads{$contigs}{'mergeCoord'}[0], $taxa, \$output_file, \$error_file);
 				push (@{ $pileup_files_threads{$contigs}{'eachTaxaCoord'} }, $output_file);
 		}}
@@ -2553,13 +2573,18 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		foreach my $taxa (sort keys %domino_files) {
 			unless ($domino_files{$taxa}{'taxa'}) { next; }
 			if ($taxa eq $ref_taxa) {next;}
-			if ($pileup_files{$contigs}{$taxa."_FASTA"}) {
-				$fasta_msa{$contigs}{$taxa} = $pileup_files{$contigs}{$taxa."_FASTA"};
-			} else { $fasta_msa{$contigs}{$taxa} = "missing"; }
+
+			my $fasta_each_taxa = $domino_files{$taxa}{"PROFILE::Ref:".$ref_taxa}[0]."/".$contigs."_sequence.fasta";
+			if (-f $fasta_each_taxa) {
+				$fasta_msa{$contigs}{$taxa} = $fasta_each_taxa;
+			} else { 
+				$fasta_msa{$contigs}{$taxa} = "missing"; 
+			}
 		}
 		my $reference_file_contig = $domino_files{$ref_taxa}{'REF_DIR'}[0]."/".$contigs.".fasta";
 		unless (-e -r -s $reference_file_contig) {$pm_MARKER_PILEUP->finish();}
 		$fasta_msa{$contigs}{$ref_taxa} = $reference_file_contig;
+		
 		my $output_file = $PILEUP_merged_folder_abs_path."/".$contigs."_markers_retrieved.txt";
 		push (@{ $pileup_files_threads{$contigs}{'markers'} }, $output_file);
 		my $markers_print_ref = &check_DOMINO_marker($output_file, \%fasta_msa, $dir2print_markers, $file_markers_collapse, $contigs);

@@ -12,6 +12,10 @@ use lib $FindBin::Bin."/lib";
 require List::MoreUtils;
 use List::MoreUtils qw(firstidx);
 
+sub assemblyStats {
+	## toAdd contig statistics
+}
+
 sub blastn {
 	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
 	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-10 -db '".$db."' -out $results -outfmt 6";
@@ -241,6 +245,20 @@ sub get_earliest {
 	}}
 	if (!exists $mapping_dirs{$earliest}) { return 'NO';
 	} else { return $mapping_dirs{$earliest}; }	
+}
+
+sub get_seq_sizes {
+	
+	my $file = $_[0];
+	
+	my $out = $file."_sizes";
+	my $hash_size = &readFASTA_hashLength(\$file);
+	open (OUT, ">$out");
+	foreach my $keys (keys %{$hash_size}) {
+		print OUT $$hash_size{$keys}."\t".$keys."\n";
+	}
+	close (OUT);
+	return $out;	
 }
 
 sub get_size { # Multiplatform	
