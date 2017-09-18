@@ -7,6 +7,7 @@ install.sh
 	
 DM_Clean_v1.0.2.pl
 	Sort and get uniq contaminants if contaminants found
+	FIX RENAME FOR LATER ASSEMBLY STEPS
 	
 DM_Assembly_v1.0.2.pl
 	SPAdes for Mac?
