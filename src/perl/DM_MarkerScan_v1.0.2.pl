@@ -2385,12 +2385,11 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			chomp;
 			my ($titleline, $sequence) = split(/\n/,$_,2);
 			next unless ($sequence && $titleline);
-			chomp $sequence;
-			$sequence =~ s/\n//g;  $titleline =~ s/\s/\t/g;
+			chomp $sequence; $sequence =~ s/\n//g; $titleline =~ s/\s/\t/g;
 			my $file = $reference_dir."/".$titleline.".fasta";
 			open(OUT, ">$file"); print OUT ">".$titleline."\n".uc($sequence)."\n"; close (OUT);
 			print SIZE length($sequence)."\t".$titleline."\n";
-		} close(FILE); $/ = "\n";
+		} close(FILE); $/ = "\n"; close (SIZE);
 		$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
 	}
 	$pm_SPLIT_FASTA->wait_all_children; 
