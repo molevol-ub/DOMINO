@@ -2101,6 +2101,7 @@ if ($option eq "msa_alignment") {
 			#print "\nChecking now: $array_files_fasta_msa[$i]\n";
 			my ($region_id, $string2print_ref, $hash_ref_msa);
 			if ($stacks_file) {
+				#### STACKS
 				$hash_ref_msa = DOMINO::readFASTA_hash($file_path);
 				my $filename = $array_files_fasta_msa[$i];	
 				my %hash = %$hash_ref_msa; my ( %hash2fill, %hash2return);
@@ -2150,6 +2151,7 @@ if ($option eq "msa_alignment") {
 				$string2print_ref = &check_marker_ALL(\%hash2return, "Ref"); # Check there is a minimun variation
 				if ($string2print_ref eq 'NO' ) { $pm_MARKER_MSA_files->finish;}
 			} else {
+				#### OTHER MSAs
 				my @path_file = split("\.fasta", $array_files_fasta_msa[$i]);
 				$region_id = $path_file[0];
 				$hash_ref_msa = DOMINO::readFASTA_hash($file_path);				
@@ -2176,6 +2178,8 @@ if ($option eq "msa_alignment") {
 			}
 			
 			if ($select_markers) {
+				#### SELECTION MODE
+				
 				## Check marker
 				my $variation_perc = ($var_sites/$effective_length)*100;
 				my $h = sprintf ("%.3f", $variation_perc);
@@ -2201,37 +2205,48 @@ if ($option eq "msa_alignment") {
 				DOMINO::printDump(\%domino_files_msa, $dump_folder_files);	
 			
 			} elsif ($identify_markers) { ## Identify markers in MSA alignments
+				#### DISCOVERY MODE
 
 				my $profile_dir_file = $profile_dir."/".$region_id.".txt";
 				open (OUT, ">$profile_dir_file"); print OUT ">".$region_id."\n".$string_profile."\n"; close(OUT);
 				push (@{ $domino_files_msa{$region_id}{'profile'} }, $profile_dir_file);
 		
-				## Identify markers in MSA alignments
-				my $fileReturned = &sliding_window_conserve_variable(\$region_id, \$string_profile, $profile_dir); ## FIX HERE
-				#print $$fileReturned."\n";
-				if ($fileReturned eq 0) { $pm_MARKER_MSA_files->finish;
-				} else { push (@{ $domino_files_msa{$region_id}{'mergeCoord'} }, $$fileReturned); }
 
-				my $file_markers_collapse = &check_overlapping_markers($$fileReturned, \$profile_dir_file); ## FIX HERE
+				my $mergeProfile = $profile_dir."/".$region_id."_merged_ARRAY.txt";
+				my $string = $window_size_VARS_range;$string =~ s/\:\:/-/; my $string2 = $window_size_CONS_range; $string2 =~ s/\:\:/-/;	
+				my $mergeCoord;
+
+				if ($variable_divergence) { $mergeCoord = $profile_dir."/".$region_id."-VD_".$variable_divergence."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
+				} else { 					$mergeCoord = $profile_dir."/".$region_id."-VPmin_".$variable_positions_user_min."-VPmax_".$variable_positions_user_max."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
+				}
+				push (@{ $domino_files_msa{$region_id}{'mergeProfile'} }, $mergeProfile);
+				push (@{ $domino_files_msa{$region_id}{'mergeCoord'} }, $mergeCoord);
+				open (OUT_COORD, ">$mergeCoord");
+
+				## Identify markers in MSA alignments
+				my $infoReturned = &sliding_window_conserve_variable(\$region_id, \$string_profile); 
+				#print $$fileReturned."\n";
+				if (!$infoReturned) { $pm_MARKER_MSA_files->finish;
+				} else { 
+					my @array = @$infoReturned;
+					for (my $j=0; $j < scalar @array; $j++) {
+						print OUT_COORD $array[$j]."\n";
+				}}
+				close (OUT_COORD);
+				
+				my $file_markers_collapse = &check_overlapping_markers($mergeCoord, \$profile_dir_file);
 				push (@{ $domino_files_msa{$region_id}{'markers_Merge'} }, $file_markers_collapse);
 				
 				# Retrieve fasta sequences...
-				my $fasta_msa_ref = DOMINO::readFASTA_hash($file_path);
-				my %fasta_msa;
-				foreach my $taxa (sort keys %{ $fasta_msa_ref}) {
-					$fasta_msa{$region_id}{$taxa} = $$fasta_msa_ref{$taxa};
-				}
 				my $output_file = $msa_dir_tmp."/".$region_id."_markers_retrieved.txt";				
-				my $array_Ref = &check_DOMINO_marker($output_file, \%fasta_msa, $msa_dir_tmp, $file_markers_collapse, $region_id); ## TO FIX HERE
-
+				my $array_Ref = &check_DOMINO_marker($output_file, $msa_dir_tmp, $file_markers_collapse, $file_path);
 				unless (scalar @$array_Ref == 0) { 
 					push (@{ $domino_files_msa{$region_id}{'markers_files'} }, @$array_Ref);
 					my $dump_folder_files = $dir_Dump_file."/dump_markers_".$region_id.".txt";
 					push (@{ $domino_files_msa{$region_id}{'markers'} }, $output_file);
 					# Dump into file # print Dumper \%domino_files_msa;
 					DOMINO::printDump(\%domino_files_msa, $dump_folder_files);	
-		}}}
-		$pm_MARKER_MSA_files->finish();
+	}}} $pm_MARKER_MSA_files->finish();
 	}
 	$pm_MARKER_MSA_files->wait_all_children;
 	print "\n\n";
@@ -2264,8 +2279,7 @@ if ($option eq "msa_alignment") {
 				&debugger_print($line);
 				push (@{ $hashRetrieve{$array[0]}{$array[1]}}, $array[2]);
 		} close (DUMP_IN); }
-		#print Dumper \%hashRetrieve;
-	
+
 		foreach my $regions (sort keys %hashRetrieve) {
 			if ($hashRetrieve{$regions}{'markers'}) {
 				my @array_coord = @{$hashRetrieve{$regions}{'markers'}};
@@ -3038,6 +3052,7 @@ sub check_overlapping_markers {
 
 	## Overlaps and maximizes domino markers obtained
 	my $file = $_[0]; my $mergeArray_file = $_[1];
+	&debugger_print("Checking file $file");
 	my $contig_id; my %tmp_hash; my $marker_counter_tmp = 0;
 	my @sequences;
 	open (FILE, $file);
@@ -3059,7 +3074,7 @@ sub check_overlapping_markers {
 	} 
 	close(FILE);
 
-	# Debug print Dumper \%tmp_hash;
+	# Debug 
 	my %coord_seen;
 	foreach my $contig (sort keys %tmp_hash) {
 		foreach my $taxa (sort keys %{ $tmp_hash{$contig} }) {		
@@ -3094,7 +3109,7 @@ sub check_overlapping_markers {
 
 	## Set range values
 	my $range = $window_size_VARS_max - $window_size_VARS_min; my @length;
-	if ($range > 500) { 		@length = (100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500);
+	if ($range => 500) { 		@length = (100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500);
 	} elsif ($range < 500) {	@length = (50, 100, 200, 300, 400, 500); }
 
 	# Debug print Dumper \%tmp_coord;
@@ -3145,7 +3160,8 @@ sub check_overlapping_markers {
 sub check_DOMINO_marker {
 	
 	my $file = $_[0]; my $dir = $_[1];	
-	my $DOMINO_markers_file = $_[2]; my $ref_taxa_all = $_[3];
+	my $DOMINO_markers_file = $_[2]; 
+	my $ref_taxa_all = $_[3]; # if MSA alignment it is a file containing msa
 
 	my @files; 
 	
@@ -3190,18 +3206,22 @@ sub check_DOMINO_marker {
 			
 			## Retrieve msa for this marker			
 			my %hash; my %fasta_msa_sub;
-			my @desired_taxa = split(",", $taxa);
-			
-			for (my $j=0; $j < scalar @desired_taxa; $j++) {
-				next if ($ref_taxa_all eq $desired_taxa[$j]);
-				my $fasta_each_taxa = $domino_files{$desired_taxa[$j]}{"PROFILE::Ref:".$ref_taxa_all}[0]."/".$contig_name[0]."_sequence.fasta";
-				if (-f $fasta_each_taxa) {
-					$fasta_msa_sub{$desired_taxa[$j]} = $fasta_each_taxa;
-				} else { 
-					$fasta_msa_sub{$desired_taxa[$j]} = "missing"; 
-			}}
-			my $reference_file_contig = $domino_files{$ref_taxa_all}{'REF_DIR'}[0]."/".$contig_name[0].".fasta";
-			$fasta_msa_sub{$ref_taxa_all} = $reference_file_contig;
+			if ($option eq "msa_alignment") {
+				my $fasta_msa_sub_ref = DOMINO::readFASTA_hash($ref_taxa_all);
+				%fasta_msa_sub = %{ $fasta_msa_sub_ref };
+			} else {
+				my @desired_taxa = split(",", $taxa);
+				for (my $j=0; $j < scalar @desired_taxa; $j++) {
+					next if ($ref_taxa_all eq $desired_taxa[$j]);
+					my $fasta_each_taxa = $domino_files{$desired_taxa[$j]}{"PROFILE::Ref:".$ref_taxa_all}[0]."/".$contig_name[0]."_sequence.fasta";
+					if (-f $fasta_each_taxa) {
+						$fasta_msa_sub{$desired_taxa[$j]} = $fasta_each_taxa;
+					} else { 
+						$fasta_msa_sub{$desired_taxa[$j]} = "missing"; 
+				}}
+				my $reference_file_contig = $domino_files{$ref_taxa_all}{'REF_DIR'}[0]."/".$contig_name[0].".fasta";
+				$fasta_msa_sub{$ref_taxa_all} = $reference_file_contig;
+			}
 
 			foreach my $keys (sort keys %fasta_msa_sub ) {			
 				if ($fasta_msa_sub{$keys} =~ /missing/) {next;}
