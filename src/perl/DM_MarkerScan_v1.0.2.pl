@@ -3082,7 +3082,7 @@ sub check_overlapping_markers {
 	}}}}}}
 	my %tmp_coord;
 	foreach my $contig (sort keys %tmp_hash) {
-		foreach my $taxa (keys $tmp_hash{$contig} ) {
+		foreach my $taxa (keys %{ $tmp_hash{$contig} }) {
 			foreach my $marker (keys %{ $tmp_hash{$contig}{$taxa} }) {
 				if ($tmp_hash{$contig}{$taxa}{$marker} == 1) {next;}
 				my @array = sort(@{ $tmp_hash{$contig}{$taxa}{$marker} });
@@ -3103,7 +3103,7 @@ sub check_overlapping_markers {
 	# print $file2return."\n";	#
 
 	foreach my $contig (sort keys %tmp_coord) {
-		foreach my $taxa (keys $tmp_coord{$contig} ) {
+		foreach my $taxa (keys %{ $tmp_coord{$contig} }) {
 			foreach my $keys_markers (keys %{ $tmp_coord{$contig}{$taxa} }) {		
 				my @array_coordinates = @{ $tmp_coord{$contig}{$taxa}{$keys_markers} };
 				my (@good_ones, %hash2print, %marker_seen); 
@@ -4911,8 +4911,6 @@ sub retrieve_info {
 sub sliding_window_conserve_variable {
 
 	my $id = $_[0]; my $seq = $_[1]; 
-	
-	#### open files	
 	my @output_file_info;
 	my $dna_seq = $$seq; my $seqlen = length($$seq);
 	
@@ -4991,6 +4989,7 @@ sub sliding_window_conserve_variable {
 				if ($flag_error > 0) {	next; } #if ($debugger) { print "\n\nERROR!\n\n######################################\n\n"; }
 				if ($missing_count_percent < $percent_total_length) {
 					push (@output_file_info, "$$id\t$coord_P1:$coord_P2\t$coord_P3:$coord_P4\t$coord_P5:$coord_P6");
+=head DEBUGGER
 					#if ($debugger) {
 						#print "\n\n***********************************************\n";
 						#print "Marker: $coord_P1:$coord_P2 $coord_P3:$coord_P4 $coord_P5:$coord_P6\n";
@@ -5009,9 +5008,9 @@ sub sliding_window_conserve_variable {
 						#print "Missing allowed: $percent_total_length %\tMissing:$missing_count_percent %\n";
 						#print "***********************************************\n";
 					#}
-				} else { next;	
-	}}}}
-	close(OUTPUT);
+=cut
+
+	} else { next;	}}}}
 	return \@output_file_info;	
 }
 
