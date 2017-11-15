@@ -8,7 +8,7 @@
 ###																					###
 #######################################################################################
 ##	Usage:
-##      perl DM_MarkerScan_1.0.2.pl
+##      perl DM_MarkerScan_1.0.3.pl
 ##
 ##    ###########################
 ##    ### General Information ###
@@ -77,7 +77,7 @@ use List::MoreUtils qw(firstidx);
 ##################################
 ##	Initializing some variables	##
 ##################################
-my $domino_version = "v1.0.2 ## Revised 7-11-2016";
+my $domino_version = "v1.0.3 ## Revised 15-11-2017";
 my (
 ## User options
 $folder, $helpAsked, $avoidDelete_tmp_files, $num_proc_user, $window_var_CONS, 
@@ -990,19 +990,21 @@ if ($window_size_VARS_range) {
 	push (@{ $domino_params{'marker'}{'window_size_VARS_min'} }, $window_size_VARS_min);
 }
 ## Variable Sliding window
-if (!$VAR_inc) {
-	my $difference_VAR = $window_size_VARS_max - $window_size_VARS_min;
-	if ( $difference_VAR > 500) {  		$VAR_inc = 10; $CONS_inc = 5;
-	} elsif ($difference_VAR > 300) { 	$VAR_inc = 5; $CONS_inc = 5;
-	} elsif ($difference_VAR > 200) { 	$VAR_inc = 3; $CONS_inc = 3;
-	} elsif ($difference_VAR > 100) { 	$VAR_inc = 2; $CONS_inc = 2;
-	} else { $VAR_inc = 1; $CONS_inc = 1; }
-}
-## Conserved Sliding window
-if (!$CONS_inc) {
-	# Set step for CONS range
-	my $difference_CONS = $window_size_CONS_max - $window_size_CONS_min;
-	if ( $difference_CONS >= 20) { $CONS_inc = 2; } else { $CONS_inc = 1; }
+if ($behaviour eq "discovery") {
+	if (!$VAR_inc) {
+		my $difference_VAR = $window_size_VARS_max - $window_size_VARS_min;
+		if ( $difference_VAR > 500) {  		$VAR_inc = 10; $CONS_inc = 5;
+		} elsif ($difference_VAR > 300) { 	$VAR_inc = 5; $CONS_inc = 5;
+		} elsif ($difference_VAR > 200) { 	$VAR_inc = 3; $CONS_inc = 3;
+		} elsif ($difference_VAR > 100) { 	$VAR_inc = 2; $CONS_inc = 2;
+		} else { $VAR_inc = 1; $CONS_inc = 1; }
+	}
+	## Conserved Sliding window
+	if (!$CONS_inc) {
+		# Set step for CONS range
+		my $difference_CONS = $window_size_CONS_max - $window_size_CONS_min;
+		if ( $difference_CONS >= 20) { $CONS_inc = 2; } else { $CONS_inc = 1; }
+	}
 }
 
 # MCT
@@ -2087,8 +2089,8 @@ if ($option eq "msa_alignment") {
 		$counter++; 
 		if ($total_files > 100) {
 			my $perc = sprintf( "%.3f", ( $counter/$total_files )*100 );
-			print "\t- Checking each contig: [ $perc % ]...\r";
-		} else { print "\t- Checking each contig: [$counter/$total_files]...\r";}	
+			print "\t- Checking each sequence: [ $perc % ]...\r";
+		} else { print "\t- Checking each sequence: [$counter/$total_files]...\r";}	
 	
 		my $pid = $pm_MARKER_MSA_files->start($i) and next;
 		my %domino_files_msa;
@@ -2700,7 +2702,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 				$hash_contigs{$uniq_contigs[$c]} = $$hash_contigs{$uniq_contigs[$c]};
 				print OUT ">".$uniq_contigs[$c]."\n".$$hash_contigs{$uniq_contigs[$c]}."\n";			
 		}}
-		
 		## Get markers	
 		open (IN_marker, "<$marker_contigs"); 
 		while (<IN_marker>) { 
@@ -3288,24 +3289,34 @@ sub check_marker_pairwise {
 			my $total_sub = $con_sites_sub + $var_sites_sub;			
 			if ($var_sites_sub == 0) { ## If does not fit the necessary divergence
 				$seen{$reference}++; $discard{$keys}++; $pairwise{$reference}{$keys} = "NO!";
-				&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t0\t".$variable_divergence);
+				if ($variable_divergence) { &debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t0\t".$variable_divergence);
+				} else { 					&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t0\t".$variable_positions_user_range);
+				}
 				next;
 			}
 			my $percentage_sub = $var_sites_sub/$total_sub;
-			&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t".$percentage_sub."\t".$variable_divergence);
+			if ($variable_divergence) { &debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t".$percentage_sub."\t".$variable_divergence);
+			} else {					&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t".$percentage_sub."\t".$variable_positions_user_range);
+			}
 			if ($variable_positions_user_min) {
 				if ($var_sites_sub > $variable_positions_user_min) { 
-					$pairwise{$reference}{$keys} = "YES!";
+					if ($var_sites_sub < $variable_positions_user_max) { 
+						$pairwise{$reference}{$keys} = "YES!";
+						&debugger_print("YES");
+					} else {&debugger_print("NO");}
 				} else {
 					## If does not fit the necessary divergence
 					$seen{$reference}++; $discard{$keys}++; ## avoid checking if it is not variable
 					$pairwise{$reference}{$keys} = "NO!";
+					&debugger_print("NO");
 				}
 			} elsif ($variable_divergence) {
 				if ($percentage_sub > $variable_divergence) { 
 					$pairwise{$reference}{$keys} = "YES!";
+					&debugger_print("YES");
 				} else {
 					## If does not fit the necessary divergence
+					&debugger_print("NO");
 					$pairwise{$reference}{$keys} = "NO!";
 					$seen{$reference}++; $discard{$keys}++; ## avoid checking if it is not variable
 		}}}
