@@ -877,13 +877,11 @@ if ($behaviour eq 'selection') {
 	$select_markers=1;
 	if ($option eq "DOMINO_files" || $option eq "user_assembly_contigs" || $option eq "genome") {
 		&printError("\nThe DOMINO development module SELECTION is not yet available for the option $option...\n"); DOMINO::dieNicely();
-	} 
-} elsif ($behaviour eq 'discovery') {
+}} elsif ($behaviour eq 'discovery') {
 	if ($option eq "RADseq") { &printError("\nThe DOMINO development module DISCOVERY is not suitable for the option $option...\n"); DOMINO::dieNicely(); }
 	if (!$window_size_CONS_range || !$window_size_VARS_range) {
-		unless ($option eq "msa_alignment") {
-			&printError("\nMandatory options are missing...\n"); DOMINO::dieNicely();
-	}}
+		unless ($option eq "msa_alignment") { &printError("\nMandatory options are missing...\n"); DOMINO::dieNicely(); }
+	}
 	$identify_markers=1;
 } else { &printError("\nPlease choose between selection/discovery...\n"); DOMINO::dieNicely(); }
 push (@{ $domino_params{'general'}{'behaviour'} }, $behaviour);
@@ -1004,8 +1002,7 @@ if ($behaviour eq "discovery") {
 		# Set step for CONS range
 		my $difference_CONS = $window_size_CONS_max - $window_size_CONS_min;
 		if ( $difference_CONS >= 20) { $CONS_inc = 2; } else { $CONS_inc = 1; }
-	}
-}
+}}
 
 # MCT
 if (!$minimum_number_taxa_covered) { $minimum_number_taxa_covered = $number_sp;  ## Force to be all the taxa
@@ -2560,8 +2557,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			######################################################################
 			foreach my $taxa (sort keys %domino_files) {
 				unless ($domino_files{$taxa}{'taxa'}) { next; }
-				if ($taxa eq $ref_taxa) {next;}
-	
+				if ($taxa eq $ref_taxa) {next;}	
 				## For each taxa confirm profile
 				my $pileup_each_taxa = $domino_files{$taxa}{"PROFILE::Ref:".$ref_taxa}[0]."/".$seqs."_ARRAY.txt";
 				if (-f $pileup_each_taxa) {
@@ -3084,7 +3080,6 @@ sub check_overlapping_markers {
 					$counter += $SLIDING_user;
 					my $new_coord = $marker + $counter;
 					if ($coord_seen{$contig}{$taxa}{$new_coord}) {next;}
-		
 					if ($tmp_hash{$contig}{$taxa}{$new_coord}) {
 						push (@{ $tmp_hash{$contig}{$taxa}{$marker} }, @{ $tmp_hash{$contig}{$taxa}{$new_coord} });
 						$coord_seen{$contig}{$taxa}{$new_coord}++;
@@ -3107,14 +3102,12 @@ sub check_overlapping_markers {
 
 	## Set range values
 	my $range = $window_size_VARS_max - $window_size_VARS_min; my @length;
-	if ($range => 500) { 		@length = (100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500);
-	} elsif ($range < 500) {	@length = (50, 100, 200, 300, 400, 500); }
+	if ($range >= 500) { 	 @length = (100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500); 
+	} elsif ($range < 500) { @length = (50, 100, 200, 300, 400, 500); }
 
-	# Debug print Dumper \%tmp_coord;
-	my $hash_ref = DOMINO::readFASTA_hash($$mergeArray_file);
-	my @array = split(".txt", $file); 
-	my $file2return = $array[0]."_overlapped_Markers.txt"; open (OUT, ">$file2return");
-	# print $file2return."\n";	#
+	# Debug print Dumper \%tmp_coord
+	my @array = split(".txt", $file); my $hash_ref = DOMINO::readFASTA_hash($mergeArray_file); 
+	my $file2return = $array[0]."_overlapped_Markers.txt"; open (OUT, ">$file2return"); # print $file2return."\n";	#
 
 	foreach my $contig (sort keys %tmp_coord) {
 		foreach my $taxa (keys %{ $tmp_coord{$contig} }) {
@@ -3131,8 +3124,7 @@ sub check_overlapping_markers {
 						my $string = join(":", @array2check).":".$taxa;
 						#print $$hash_ref{$contig}."\n";
 						if ($marker_seen{$string}) {next;}
-						my $result = &check_given_marker(\@array2check, $$hash_ref{$contig});
-						
+						my $result = &check_given_marker(\@array2check, $$hash_ref{$contig});						
 						if ($result ne 1) {
 							my $id;
 							for (my $j = 0; $j < scalar @length; $j++) {
@@ -3149,8 +3141,7 @@ sub check_overlapping_markers {
 						for (my $i=0; $i < scalar @array; $i++) { 
 							print OUT $contig."##".$array[$i]."\n";
 						} print OUT "//\n";
-	}}} ## foreach marker not overlapped
-	}}
+	}}}}}
 	close(OUT); 
 	return $file2return;
 }
