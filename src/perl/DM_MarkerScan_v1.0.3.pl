@@ -2195,15 +2195,13 @@ if ($option eq "msa_alignment") {
 				# Print format: same as input and *mmfas 				
 				my $msa_fasta = $msa_dir."/".$region_id.".fasta";
 				open (OUT_MSA, ">$msa_fasta");
-				foreach my $keys (sort keys %{ $hash_ref_msa }) {
-					print OUT_MSA ">".$keys."\n".$$hash_ref_msa{$keys}."\n";
-				}
+				foreach my $keys (sort keys %{ $hash_ref_msa }) { print OUT_MSA ">".$keys."\n".$$hash_ref_msa{$keys}."\n"; }
 				close (OUT_MSA);
 				#push (@{ $domino_files_msa{$region_id}{'markers'} }, $msa_fasta);
+
 				my $dump_folder_files = $dir_Dump_file."/dump_markers_".$region_id.".txt";
 				# Dump into file # print Dumper \%domino_files_msa;
 				DOMINO::printDump(\%domino_files_msa, $dump_folder_files);	
-			
 			} elsif ($identify_markers) { ## Identify markers in MSA alignments
 				#### DISCOVERY MODE
 
@@ -2925,7 +2923,7 @@ unless ($avoidDelete_tmp_files) {
 }
 
 # ToDo
-if ($keepbam) { print "Not yet implemented....\nSorry for that...\n"; }
+if ($keepbam) { print "Keepbam option not yet implemented....\nSorry for that...\n"; }
 
 ## Move parameters and error file to folder
 File::Copy::move($param_Detail_file_markers, $marker_dirname."/");
@@ -4503,11 +4501,11 @@ sub print_Excel {
 			if ($array_markers[$i] eq "undef") { $row_markers++; next;}
 			my @split = split("\t", $array_markers[$i]);
 			$col_markers = $second_col;
-			$worksheet_markers->write($row_markers, $col_markers, $split[0], $format_left); $col_markers++;	# Contig name
-			$worksheet_markers->write($row_markers, $col_markers, $split[1], $format_left); $col_markers++; 	## taxa names
-			$worksheet_markers->write($row_markers, $col_markers, $split[2], $format_right); $col_markers++;	## Variable sites
-			$worksheet_markers->write($row_markers, $col_markers, $split[3], $format_right); $col_markers++;	## effective length
-			$worksheet_markers->write($row_markers, $col_markers, $split[4], $format_right); $row_markers++;	## Variation percentage
+			$worksheet_markers->write($row_markers, $col_markers, $split[2], $format_left); $col_markers++;	# Contig name
+			$worksheet_markers->write($row_markers, $col_markers, $split[3], $format_left); $col_markers++; 	## taxa names
+			$worksheet_markers->write($row_markers, $col_markers, $split[4], $format_right); $col_markers++;	## Variable sites
+			$worksheet_markers->write($row_markers, $col_markers, $split[5], $format_right); $col_markers++;	## effective length
+			$worksheet_markers->write($row_markers, $col_markers, $split[6], $format_right); $row_markers++;	## Variation percentage
 			$markers++;
 		}
     } else {
@@ -4539,9 +4537,9 @@ sub print_Excel {
 			$worksheet_markers->write($row_markers, $position, $split[1], $format_right);	$position++; ## Conserved left
 			$worksheet_markers->write($row_markers, $position, $split[2], $format_right); $position++; ## Variable
 			$worksheet_markers->write($row_markers, $position, $split[3], $format_right); $position++; ## Conserved Right
-			$worksheet_markers->write($row_markers, $position, $split[4], $format_left); $position++; ## taxa names
-			$worksheet_markers->write($row_markers, $position, $split[5], $format_right); $position++; ## variable region length
-			$worksheet_markers->write($row_markers, $position, $split[6], $format_right); $row_markers++;	 	## Divergence
+			$worksheet_markers->write($row_markers, $position, $split[6], $format_left); $position++; ## taxa names
+			$worksheet_markers->write($row_markers, $position, $split[4], $format_right); $position++; ## variable region length
+			$worksheet_markers->write($row_markers, $position, $split[5], $format_right); $row_markers++;	 	## Divergence
 			$markers++;
 	}} 
 
