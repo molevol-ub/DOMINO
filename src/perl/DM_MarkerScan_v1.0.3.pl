@@ -2403,14 +2403,16 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		} close(FILE); $/ = "\n"; close (SIZE);
 		$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
 	}
-	$pm_SPLIT_FASTA->wait_all_children; 
-
+	$pm_SPLIT_FASTA->wait_all_children;
+	
+	print "\n+ Concatenate contig size for each splitted file...\n";
 	my $ref_Fasta_size = $ref_taxa.".size";
 	my $tmp_Fasta_size = $ref_taxa.".size_tmp";
 	for (my $i=0; $i < scalar @{ $fasta_files_split }; $i++) {
 		my $size_file = $$fasta_files_split[$i]."_size";
 		system ("cat $size_file >> $tmp_Fasta_size"); system ("rm $size_file");
 	}
+	print "\n+ Sorting contig size...\n";
 	system ("sort -nr $tmp_Fasta_size >> $ref_Fasta_size"); system ("rm $tmp_Fasta_size");
 
 	##########################################
@@ -2429,20 +2431,14 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	mkdir $PILEUP_merged_folder_abs_path, 0755; chdir $PILEUP_merged_folder_abs_path; 
 	&debugger_print("Changing dir to $PILEUP_merged_folder_abs_path");
 	push (@{ $domino_files{$ref_taxa}{'PROFILE_FOLDER'}}, $PILEUP_merged_folder_abs_path);
-
-	print "+ Checking profiles of variation for each contig and merging information...\n";
-	print "+ Using a sliding window approach...\n"; print "+ Using parallel threads ($num_proc_user CPUs)...\n";			
-
-	## Check each markers using threads
-	my $dir_Dump_file = $PILEUP_merged_folder_abs_path."/DUMP_files"; mkdir $dir_Dump_file, 0755;
-	my $dir2print_markers = $PILEUP_merged_folder_abs_path."/MSA_fasta_tmp"; mkdir $dir2print_markers, 0755;
-		
+	
 	######
 	######
 	###### FINDING THE GLITCH
 	######	
 	######
 	######
+	
 	## get ordered size of contigs
 	open (FILE, $marker_dir."/".$ref_Fasta_size);
 	my @size_contigs;
@@ -2452,16 +2448,22 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	}
 	close (FILE);	
 	my $total_contigs = scalar @size_contigs; my $counter=0; my $stop=0;
-	
 	## check all or some
 	if ($total_contigs > 50) { 
 		$stop = 50; ## check largest ones
 		print "\n\nATTENTION: There are too many contigs. DOMINO would only check for markers in the largest 50.000 ones\n";
-		print "Provide option -all for using the whole set\n\n";
+		print "ATTENTION: Provide option -all for using the whole set\n\n";
 	} else { $stop = $total_contigs; }
 	if ($option_all) {	$stop = $total_contigs; }
 	my $subset_offset = 5;
+	
+	print "+ Checking profiles of variation for each contig and merging information...\n";
+	print "+ Using a sliding window approach...\n"; print "+ Using parallel threads ($num_proc_user CPUs)...\n";			
 
+	## Check each markers using threads
+	my $dir_Dump_file = $PILEUP_merged_folder_abs_path."/DUMP_files"; mkdir $dir_Dump_file, 0755;
+	my $dir2print_markers = $PILEUP_merged_folder_abs_path."/MSA_fasta_tmp"; mkdir $dir2print_markers, 0755;
+		
 	## Check for markers: USING THREADS, ONE FOR EACH BLOCK OF CONTIGS
 	my $pm_MARKER_PILEUP =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
 	my $SETS = int($total_contigs/$subset_offset) + 1;
@@ -2480,6 +2482,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			next if ($reads eq 'taxa');
 			for (my $j=0; $j < scalar @subset_array; $j++) {
 				my $file = $domino_files{$reads}{"PROFILE::Ref:".$ref_taxa}[0]."/".$subset_array[$j]."_ARRAY.txt";
+				unless (-e -r -s $file) { next; } # skip
 				my $tmp_hash_reference = DOMINO::readFASTA_hash($file);
 				my %tmp_fasta = %{$tmp_hash_reference};
 				foreach my $seqs (sort keys %tmp_fasta) {
