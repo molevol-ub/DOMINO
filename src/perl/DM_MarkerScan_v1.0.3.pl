@@ -193,7 +193,7 @@ pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPT
 
 =over 2
 
-DM_MarkerScan_1.0.2.pl
+DM_MarkerScan_1.0.3.pl
 
 =back
 		
@@ -201,7 +201,7 @@ DM_MarkerScan_1.0.2.pl
 
 =over 2
 
-DOMINO v1.0.2
+DOMINO v1.0.3
 
 =back
 	
@@ -211,7 +211,7 @@ DOMINO v1.0.2
 
 =item B<>
 	
-perl DM_MarkerScan_1.0.2.pl
+perl DM_MarkerScan_1.0.3.pl
 
 =item B<###########################>
 	
@@ -2449,7 +2449,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		}
 		close (FILE); close (IDS);
 		DOMINO::mothur_retrieve_FASTA_seqs($ref_Fasta, $marker_dir, $Fasta_ids2retrieve, $mothur_path); ## file generated:
-		my $ref_Fasta_ids2retrieve = $marker_dir."/".$ref_taxa."pick.fasta";
+		my $ref_Fasta_ids2retrieve = $marker_dir."/".$ref_taxa.".pick.fasta";
 		
 		## Get size for each contig
 		my $size_file_retrieved = DOMINO::get_size($ref_Fasta_ids2retrieve);
@@ -5166,10 +5166,6 @@ PILEUP Explanation
 	Contig_25_MID3  495     C       20      tTtTtTtTGTttTtttTTTT    9B9F;F;FIF19H771II55
 	Contig_25_MID3  496     A       20      ,.,.,.,...,,.,,,....    9A;F9B=FIF16F540II88
 	
-	
-#####################################################################################################################
-
-
 	Contig1	1	A	0	## type 1
 
 	Contig1	2	T	10	..........	## type 2
@@ -5215,63 +5211,5 @@ PILEUP Explanation
 	Contig1	22	R	10	ACCCAAGGGGGGTTTTTT	## type 22
 
 	Contig1	23	R	10	GCCCCCCCCCCCTTTTTT	## type 23
-	
-	
-#################################################
-## Merging the sam according to the user input ##
-################################################
-#print "\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" Merging the SAM files according to user input ", "#"); DOMINO::printHeader("", "#"); print "\n";
-#$merge_bam_all_sp = &merge_sam(\@sams_to_parse, \@sam_headers_line);
-#print "\n"; &time_log(); print "\n";
-#my @tmp = split ("_sorted\.bam", $merge_bam_all_sp);
-	
-sub merge_sam {
-	##########################################################################################
-	##	 																					##
-	##  This function generates a merge sam of the files user specified						##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 08/05/2014 jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
-	
-	my $array_sams2parse = $_[0];
-	my @sams_to_parse_sub = @$array_sams2parse;
-	my $array_samsheaders2parse = $_[1];
-	my @sam_headers_line_sub = @$array_samsheaders2parse;
 
-	my @array_sorted_uniq = uniq(@sam_headers_line_sub);
-	my $file_header = "header.sam";
-	open (HEADER, ">$file_header");
-	for (my $i = 0; $i < scalar @array_sorted_uniq; $i++) {
-		unless ($array_sorted_uniq[$i] =~ /^\@PG/) {
-			unless ($i == $#array_sorted_uniq ) {
-				print HEADER $array_sorted_uniq[$i]."\n";
-			} else {
-				print HEADER $array_sorted_uniq[$i];
-	}}}
-	close(HEADER);	
-
-	my $sorted_bam; my $name;	
-
-	## Generate sorted bam files
-	for (my $j = 0; $j < scalar @sams_to_parse_sub; $j++) {
-		my $temp_bam = &generate_bam($sams_to_parse_sub[$j]);
-		$sorted_bam .= $temp_bam." ";
-	}
-	## Generate a name for the merge bam file
-	foreach my $taxa (sort keys %domino_files) {
-		if ($domino_files{$taxa}{'taxa'}) {
-		$name .= $taxa."_";
-	}}	
-	## Merge the different bam files
-	DOMINO::printHeader(" Merging the BAM files ", "%");
-	my $system_samtools_merge = $samtools_path." merge -r -@ $num_proc_user -h header.sam ".$name."merged.bam ".$sorted_bam;
-	&debugger_print("SAMTOOLS command: ".$system_samtools_merge);
-	my $merge_system_command = system ($system_samtools_merge);
-	if ($merge_system_command != 0) {
-		&printError("Exiting the script. Some error happened when calling SAMtools for merging the different BAM Files...\n"); DOMINO::dieNicely();
-	}
-	print "Merge...\nDone\n";
-	my $file_merged_sorted = &generate_sorted_bam($name."merged.bam");
-	return $file_merged_sorted;
-}	 
+#####################################################################################################################
