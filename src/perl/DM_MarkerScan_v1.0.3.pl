@@ -898,7 +898,6 @@ unless (!$variable_divergence) {
 }
 push (@{ $domino_params{'marker'}{'variable_divergence'} }, $variable_divergence);
 
-
 if ($option eq "DOMINO_files") {
 	if (!$input_type) { &printError("-type_input option is missing...\nPlease provide it in order to proceed with the computation...."); DOMINO::dieNicely(); }
 } elsif ($option eq "user_assembly_contigs") {
@@ -1089,7 +1088,7 @@ if ($avoid_mapping) {
 	}}}
 	if ($undef_mapping > 0) {
 		undef $avoid_mapping;
-		DOMINO::printDetails("+ Although option -No_Profile_Generation was provided, it would be done again as parameters do not much with the available mapping folder...\n",$mapping_parameters, $param_Detail_file_markers);
+		DOMINO::printDetails("+ Although option -No_Profile_Generation was provided, it would be done again as parameters do not match with the available mapping folder...\n",$mapping_parameters, $param_Detail_file_markers);
 	} else {
 		DOMINO::printDetails("+ A previous profile has been generated with the same parameters and details...\n",$mapping_parameters, $param_Detail_file_markers);
 		%domino_files = %domino_files_dump; 
@@ -2644,6 +2643,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 					&get_coordinates_each_taxa(\$pileup_each_taxa, "tmp_coord_set_".$set.".txt", $taxa, \$output_merged_file, \$error_merged_file);
 		}}}
 		close (OUT_COORD);
+		unless (-e -r -s $mergeCoord) { $pm_MARKER_PILEUP->finish(); } #if empty file
+		unless (-e -r -s $mergeProfile) { $pm_MARKER_PILEUP->finish(); } #if empty file
+
 
 		##########################################
 		## Get Coordinates of Molecular Markers ##
