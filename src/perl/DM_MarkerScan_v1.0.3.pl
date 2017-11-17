@@ -2454,13 +2454,13 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	my $total_contigs = scalar @size_contigs; my $counter=0; my $stop=0;
 	
 	## check all or some
-	if ($total_contigs > 50000) { 
-		$stop = 50000; ## check largest ones
+	if ($total_contigs > 50) { 
+		$stop = 50; ## check largest ones
 		print "\n\nATTENTION: There are too many contigs. DOMINO would only check for markers in the largest 50.000 ones\n";
 		print "Provide option -all for using the whole set\n\n";
 	} else { $stop = $total_contigs; }
 	if ($option_all) {	$stop = $total_contigs; }
-	my $subset_offset = 50;
+	my $subset_offset = 5;
 
 	## Check for markers: USING THREADS, ONE FOR EACH BLOCK OF CONTIGS
 	my $pm_MARKER_PILEUP =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
