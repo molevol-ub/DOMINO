@@ -2449,12 +2449,12 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		}
 		close (FILE); close (IDS);
 		DOMINO::mothur_retrieve_FASTA_seqs($ref_Fasta, $marker_dir, $Fasta_ids2retrieve, $mothur_path); ## file generated:
-		my $ref_Fasta_ids2retrieve = $ref_taxa."pick.fasta";
+		my $ref_Fasta_ids2retrieve = $marker_dir."/".$ref_taxa."pick.fasta";
 		
 		## Get size for each contig
 		my $size_file_retrieved = DOMINO::get_size($ref_Fasta_ids2retrieve);
 		my $parts2split_retrieved = int($size_file/$num_proc_user);
-		my $fasta_files_split_retrieved = DOMINO::fasta_file_splitter($ref_Fasta_ids2retrieve, $parts2split_retrieved, "fasta", $reference_dir);
+		my $fasta_files_split_retrieved = DOMINO::fasta_file_splitter($ref_Fasta_ids2retrieve, $parts2split_retrieved, "fasta", $marker_dir);
 
 		my $pm_SPLIT_FASTA =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
 		my $total_fasta_files_split_retrieved = scalar @{ $fasta_files_split_retrieved };
