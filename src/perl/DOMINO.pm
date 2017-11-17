@@ -359,6 +359,16 @@ sub mothur_retrieve_seqs {
 	my $system_call = system($line);
 }
 
+sub mothur_retrieve_FASTA_seqs {
+	## This sub retrieve a given number of ids and generates a fastq
+	my $fasta = $_[0]; my $directory = $_[1]; 
+	my $ids2retrieve = $_[2]; my $mothur_path = $_[3];
+	
+	my $line = $mothur_path." '#set.dir(output=$directory); get.seqs(accnos=$ids2retrieve, fasta=$fasta)'";
+	print "\n+ Calling mothur executable for retrieving sequences in file $ids2retrieve...\n\n";
+	my $system_call = system($line);
+}
+
 sub printFormat_message {
 	print "\n\nPlease tag your files using: [xxx](id-)[yyy](_R[*]).fastq\nWhere:\n\txxx: any character or none.Please avoid using dots (.)\n\tid-: Optional. If xxx is too long, please provide 'id-' to identify the name provided with [yyy]\n\tyyy: is any desired name for identifying the taxa reads in these file\n\t(_R[*]): if paired end files, please tag left file using R1 and right using R2\n\n\n";
 }

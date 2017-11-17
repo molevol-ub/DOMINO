@@ -87,7 +87,7 @@ $rfgopen, $MID_taxa_names, $option, $mis_penalty, $msa_fasta_folder, $polymorphi
 $level_significance_coverage_distribution, $map_contig_files, $missing_allowed, $keepbam, 
 $version, $DOMINO_simulations, $minimum_number_taxa_covered, $avoid_mapping, $further_information,
 @user_cleanRead_files, @user_contig_files, $msa_file, $behaviour, $select_markers, $identify_markers,
-$debugger, $helpAsked1, $VAR_inc, $CONS_inc, $option_all,
+$debugger, $helpAsked1, $VAR_inc, $CONS_inc, $option_all, $totalContigs2use4markers,
 
 ## absolute path
 @contigs_fasta_file_abs_path, @clean_fastq_file_abs_path, # toDiscard
@@ -162,6 +162,7 @@ GetOptions(
  	"SI|sliding_interval:i" => \$SLIDING_user,
  	"V-SI_inc:i" => \$VAR_inc,
  	"C-SI_inc:i" => \$CONS_inc,
+ 	"totalContigs2use4markers:i" => \$totalContigs2use4markers,
 
  	"all" => \$option_all, 	
  	"Debug" => \$debugger,
@@ -656,10 +657,10 @@ Keep the BAM files generated during the run.
 	
 Use this flag to skip the mapping phase and the generation of the variation profile. Uses data from a previous DOMINO run.
 
-=item B<-all [Default Off]>
+=item B<-totalContigs2use4markers [int]>
 
-Use all the contigs generated during the assembly. By default and in order to speed the computation, DOMINO would only use the largest 50000 contigs generated.
-	
+By default and in order to speed the computation, DOMINO would only use the largest 20000 contigs generated. Specify a diferent number or use -1 for all the contigs generated during the assembly. [Default: 20000]
+
 =item B<-TempFiles [Default Off]>
 	
 Keep all intermediate files.
@@ -860,10 +861,11 @@ my $pipeline_path = abs_path($0);
 my @script_path_array = split ("/", $pipeline_path);
 for (my $j = 0; $j < $#script_path_array; $j++) { $scripts_path .= $script_path_array[$j]."/"; } 
 
-## General variables
+## General binaries variables
 my $samtools_path = $scripts_path."samtools-1.3.1/samtools";
 my $bowtie_path = $scripts_path."bowtie2-2.2.9/";
 my $BLAST = $scripts_path."NCBI_BLAST/";
+my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
 
 ## Check if a previous DOMINO parameters file exists
 if (-e $param_Detail_file_markers) { File::Copy::move($param_Detail_file_markers, $param_Detail_file_markers."_old_".$random_number); }
@@ -2379,7 +2381,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	my $fasta_files_split = DOMINO::fasta_file_splitter($ref_Fasta, $parts2split, "fasta", $reference_dir);
 		#&debugger_print("Total Size: $size_file\nCharacters to split: $parts2split"); #&debugger_print("Ref", $fasta_files_split);		
 	
-	## Generate a fasta for each contig
+	## Get size for each contig
 	my $pm_SPLIT_FASTA =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
 	my $total_fasta_files_split = scalar @{ $fasta_files_split };
 	my $count_fasta_files_split=0;
@@ -2397,8 +2399,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			my ($titleline, $sequence) = split(/\n/,$_,2);
 			next unless ($sequence && $titleline);
 			chomp $sequence; $sequence =~ s/\n//g; $titleline =~ s/\s/\t/g;
-			my $file = $reference_dir."/".$titleline.".fasta";
-			open(OUT, ">$file"); print OUT ">".$titleline."\n".uc($sequence)."\n"; close (OUT);
 			print SIZE length($sequence)."\t".$titleline."\n";
 		} close(FILE); $/ = "\n"; close (SIZE);
 		$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
@@ -2415,11 +2415,113 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	print "\n+ Sorting contig size...\n";
 	system ("sort -nr $tmp_Fasta_size >> $ref_Fasta_size"); system ("rm $tmp_Fasta_size");
 
+	######
+	######
+	###### FINDING THE GLITCH
+	######	
+	######
+	######
+	
+	## get ordered size of contigs
+	my $total_contigs=0; my @size_contigs;
+	open (FILE, $marker_dir."/".$ref_Fasta_size); while (<FILE>) { $total_contigs++; } close (FILE);	
+	
+	## check all or some
+	if ($totalContigs2use4markers == -1) { ## use all contigs
+		$totalContigs2use4markers = $total_contigs;		 
+	}
+	
+	if ($total_contigs > $totalContigs2use4markers) { 
+		print "\n\nATTENTION: There are too many contigs. DOMINO would only check for markers in the largest 50.000 ones\n";
+		print "ATTENTION: Provide option -all for using the whole set\n\n";
+		
+		print "+ Only retrieve up to $total_contigs...\n";
+		my $counter_stop=0;
+		open (FILE, $marker_dir."/".$ref_Fasta_size);
+		my $Fasta_ids2retrieve = $marker_dir."/".$ref_taxa.".ids2retrieve";
+		open (IDS, ">$Fasta_ids2retrieve");
+		while (<FILE>) {
+			chomp; my @array = split("\t", $_);
+			push (@size_contigs, $array[1]);
+			$counter_stop++;
+			print IDS $array[1]."\n";
+			if ($counter_stop == $totalContigs2use4markers) { last;}
+		}
+		close (FILE); close (IDS);
+		DOMINO::mothur_retrieve_FASTA_seqs($ref_Fasta, $marker_dir, $Fasta_ids2retrieve, $mothur_path); ## file generated:
+		my $ref_Fasta_ids2retrieve = $ref_taxa."pick.fasta";
+		
+		## Get size for each contig
+		my $size_file_retrieved = DOMINO::get_size($ref_Fasta_ids2retrieve);
+		my $parts2split_retrieved = int($size_file/$num_proc_user);
+		my $fasta_files_split_retrieved = DOMINO::fasta_file_splitter($ref_Fasta_ids2retrieve, $parts2split_retrieved, "fasta", $reference_dir);
+
+		my $pm_SPLIT_FASTA =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
+		my $total_fasta_files_split_retrieved = scalar @{ $fasta_files_split_retrieved };
+		my $count_fasta_files_split_retrieved=0;
+		for (my $i=0; $i < scalar @{ $fasta_files_split_retrieved }; $i++) {
+			$count_fasta_files_split_retrieved++;
+			print "\t- Splitting file: [$count_fasta_files_split_retrieved/$total_fasta_files_split_retrieved]\n";
+			my $pid = $pm_SPLIT_FASTA->start($i) and next;
+			open(FILE, $$fasta_files_split_retrieved[$i]) || die "Could not open the $$fasta_files_split_retrieved[$i]...\n";
+			my $size_file = $$fasta_files_split_retrieved[$i]."_size";
+			$/ = ">"; ## Telling perl where a new line starts
+			while (<FILE>) {		
+				next if /^#/ || /^\s*$/;
+				chomp;
+				my ($titleline, $sequence) = split(/\n/,$_,2);
+				next unless ($sequence && $titleline);
+				my $file = $reference_dir."/".$titleline.".fasta";
+				open (OUT, ">$file"); print OUT $titleline."\n".$sequence."\n"; close(OUT);
+				chomp $sequence; $sequence =~ s/\n//g; $titleline =~ s/\s/\t/g;
+			} $/ = "\n"; close (SIZE);
+			$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
+		}
+		$pm_SPLIT_FASTA->wait_all_children;			
+	} else { ## use all contigs
+		$totalContigs2use4markers = $total_contigs;
+		
+		## push into array ids
+		open (FILE, $marker_dir."/".$ref_Fasta_size);
+		while (<FILE>) {
+			chomp; my @array = split("\t", $_); push (@size_contigs, $array[1]);
+		}
+		close (FILE);
+		
+		## If all contigs to be used, generate individual fasta for each
+		my $pm_SPLIT_FASTA =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
+		my $total_fasta_files_split = scalar @{ $fasta_files_split };
+		my $count_fasta_files_split=0;
+		for (my $i=0; $i < scalar @{ $fasta_files_split }; $i++) {
+			$count_fasta_files_split++;
+			print "\t- Splitting file: [$count_fasta_files_split/$total_fasta_files_split]\n";
+			my $pid = $pm_SPLIT_FASTA->start($i) and next;
+			open(FILE, $$fasta_files_split[$i]) || die "Could not open the $$fasta_files_split[$i]...\n";
+			my $size_file = $$fasta_files_split[$i]."_size";
+			open (SIZE, ">$size_file");
+			$/ = ">"; ## Telling perl where a new line starts
+			while (<FILE>) {		
+				next if /^#/ || /^\s*$/;
+				chomp;
+				my ($titleline, $sequence) = split(/\n/,$_,2);
+				next unless ($sequence && $titleline);
+				chomp $sequence; $sequence =~ s/\n//g; $titleline =~ s/\s/\t/g;
+				my $file = $reference_dir."/".$titleline.".fasta";
+				open (OUT, ">$file"); print OUT $titleline."\n".$sequence."\n"; close(OUT);
+			} close(FILE); $/ = "\n";
+			$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
+		} 
+		$pm_SPLIT_FASTA->wait_all_children;	
+	}
+	
+	## Number of contigs in each subset 
+	my $subset_offset = 5;
+	
 	##########################################
 	## 	Merge PILEUP information arrays     ##
 	##########################################
 	print "\n"; DOMINO::printHeader(" Fetching information from all the PROFILEs generated ", "#");
-	my %pileup_files; 
+	my %pileup_files; my $counter=0; 
 	my (@clean_filtered_sam_files, @reference_bam_files, @pileup_Arrays);
 	foreach my $reads (sort keys %domino_files) {
 		unless ($domino_files{$reads}{'taxa'}) {next; }
@@ -2431,31 +2533,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	mkdir $PILEUP_merged_folder_abs_path, 0755; chdir $PILEUP_merged_folder_abs_path; 
 	&debugger_print("Changing dir to $PILEUP_merged_folder_abs_path");
 	push (@{ $domino_files{$ref_taxa}{'PROFILE_FOLDER'}}, $PILEUP_merged_folder_abs_path);
-	
-	######
-	######
-	###### FINDING THE GLITCH
-	######	
-	######
-	######
-	
-	## get ordered size of contigs
-	open (FILE, $marker_dir."/".$ref_Fasta_size);
-	my @size_contigs;
-	while (<FILE>) {
-		chomp; my @array = split("\t", $_);
-		push (@size_contigs, $array[1]);
-	}
-	close (FILE);	
-	my $total_contigs = scalar @size_contigs; my $counter=0; my $stop=0;
-	## check all or some
-	if ($total_contigs > 50) { 
-		$stop = 50; ## check largest ones
-		print "\n\nATTENTION: There are too many contigs. DOMINO would only check for markers in the largest 50.000 ones\n";
-		print "ATTENTION: Provide option -all for using the whole set\n\n";
-	} else { $stop = $total_contigs; }
-	if ($option_all) {	$stop = $total_contigs; }
-	my $subset_offset = 5;
 	
 	print "+ Checking profiles of variation for each contig and merging information...\n";
 	print "+ Using a sliding window approach...\n"; print "+ Using parallel threads ($num_proc_user CPUs)...\n";			
