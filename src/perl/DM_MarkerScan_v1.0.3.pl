@@ -952,6 +952,7 @@ if (!$cigar_pct) { $cigar_pct = 10; }
 if (!$window_var_CONS) { $window_var_CONS = 1;}
 if (!$level_significance_coverage_distribution) { $level_significance_coverage_distribution = 1e-05; }
 if (!$missing_allowed) { $missing_allowed = 0.1;} ## Def. 0.1: When looking for a marker if 10% of the length is missing for any specie, discard 
+if (!$totalContigs2use4markers) {$totalContigs2use4markers = 20000;} ## use by default the largest 20.000 contigs
 
 ## Get ranges
 my ($variable_positions_user_min, $variable_positions_user_max);
@@ -1823,7 +1824,7 @@ if (!$avoid_mapping) {
 					my $pid = $pm_pyRAD->start($name[-1]) and next; 
 					my %domino_files_pyRAD_split;
 					my $counter = 1; my %hash;
-					open(FILE, $$files_ref[$i]) || die "Could not open the $$files_ref[$i] ...\n";
+					open(FILE, $$files_ref[$i]) || die "Could not open the $$files_ref[$i] ... [DM_MarkerScan: pyRAD]\n";
 					while (<FILE>) {		
 						next if /^#/ || /^\s*$/;
 						my $line = $_;
@@ -1868,7 +1869,7 @@ if (!$avoid_mapping) {
 					my %domino_files_STACKS_split;
 					my (%hash, $new_id); my $first = 0; my $previous;
 					$/ = ">"; ## Telling perl where a new line starts
-					open(FILE, $$files_ref[$i]) || die "Could not open the $$files_ref[$i] ...\n";
+					open(FILE, $$files_ref[$i]) || die "Could not open the $$files_ref[$i] ... [DM_MarkerScan: STACKS]\n";
 					while (<FILE>) {		
 						next if /^#/ || /^\s*$/; chomp;
 						my ($titleline, $sequence) = split(/\n/,$_,2);
@@ -1963,7 +1964,7 @@ if (!$avoid_mapping) {
 					my %domino_files_MSA_folder;
 					if ($array_files[$i] =~ /(.*)\.fasta/) {
 						my $name = $1;
-						open(FILE, $file_path) || die "Could not open the $file_path...\n";
+						open(FILE, $file_path) || die "Could not open the $file_path... [DM_MarkerScan: MSA folder provided]\n";
 						$/ = ">"; ## Telling perl where a new line starts
 						while (<FILE>) {		
 							next if /^#/ || /^\s*$/;
@@ -2255,7 +2256,7 @@ if ($option eq "msa_alignment") {
 	##	Once the coordinates are found, print different files with the information ##
 	#################################################################################	
 	### open Output and Error file
-	my $output_file_coord = "DM_markers-summary.txt"; open (OUT_coord,">$output_file_coord")or die "Cannot write the file $output_file_coord";
+	my $output_file_coord = "DM_markers-summary.txt"; open (OUT_coord,">$output_file_coord")or die "Cannot write the file $output_file_coord [DM_MarkerScan: Write OUT_coord]";
 	print OUT_coord "Region\t\tTaxa_included\tVariable_Positions\tEffective_length\tVariation(%)\n";
 	my $out_file = "DM_markers";
 	if ($pyRAD_file) { $out_file .= ".loci"; } elsif ($stacks_file) {$out_file .= ".fa";} else {$out_file .= ".fasta";}
@@ -2388,7 +2389,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		$count_fasta_files_split++;
 		print "\t- Splitting file: [$count_fasta_files_split/$total_fasta_files_split]\n";
 		my $pid = $pm_SPLIT_FASTA->start($i) and next;
-		open(FILE, $$fasta_files_split[$i]) || die "Could not open the $$fasta_files_split[$i]...\n";
+		open(FILE, $$fasta_files_split[$i]) || die "Could not open the $$fasta_files_split[$i]... [DM_MarkerScan: fasta_files_split size]\n";
 		my $size_file = $$fasta_files_split[$i]."_size";
 		open (SIZE, ">$size_file");
 		$/ = ">"; ## Telling perl where a new line starts
@@ -2423,18 +2424,21 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	
 	## get ordered size of contigs
 	my $total_contigs=0; my @size_contigs;
-	open (FILE, $marker_dir."/".$ref_Fasta_size); while (<FILE>) { $total_contigs++; } close (FILE);	
+	open (FILE, $marker_dir."/".$ref_Fasta_size); while (<FILE>) { $total_contigs++; } close (FILE); ## total contigs provided	
 	
 	## check all or some
 	if ($totalContigs2use4markers == -1) { ## use all contigs
 		$totalContigs2use4markers = $total_contigs;		 
+	} elsif ( $totalContigs2use4markers > $total_contigs) {
+		$totalContigs2use4markers = $total_contigs;		 
 	}
+	&debugger_print("totalContigs2use4markers\ttotal_contigs?\n".$totalContigs2use4markers."\t".$total_contigs);
 	
 	if ($total_contigs > $totalContigs2use4markers) { 
 		print "\n\nATTENTION: There are too many contigs. DOMINO would only check for markers in the largest 50.000 ones\n";
 		print "ATTENTION: Provide option -all for using the whole set\n\n";
 		
-		print "+ Only retrieve up to $total_contigs...\n";
+		print "+ Only retrieve up to $totalContigs2use4markers...\n";
 		my $counter_stop=0;
 		open (FILE, $marker_dir."/".$ref_Fasta_size);
 		my $Fasta_ids2retrieve = $marker_dir."/".$ref_taxa.".ids2retrieve";
@@ -2462,7 +2466,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			$count_fasta_files_split_retrieved++;
 			print "\t- Splitting file: [$count_fasta_files_split_retrieved/$total_fasta_files_split_retrieved]\n";
 			my $pid = $pm_SPLIT_FASTA->start($i) and next;
-			open(FILE, $$fasta_files_split_retrieved[$i]) || die "Could not open the $$fasta_files_split_retrieved[$i]...\n";
+			open(FILE, $$fasta_files_split_retrieved[$i]) || die "Could not open the $$fasta_files_split_retrieved[$i]... [DM_MarkerScan: fasta_files_split_retrieved]\n";
 			my $size_file = $$fasta_files_split_retrieved[$i]."_size";
 			$/ = ">"; ## Telling perl where a new line starts
 			while (<FILE>) {		
@@ -2477,15 +2481,14 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
 		}
 		$pm_SPLIT_FASTA->wait_all_children;			
+	
 	} else { ## use all contigs
+	
 		$totalContigs2use4markers = $total_contigs;
 		
 		## push into array ids
 		open (FILE, $marker_dir."/".$ref_Fasta_size);
-		while (<FILE>) {
-			chomp; my @array = split("\t", $_); push (@size_contigs, $array[1]);
-		}
-		close (FILE);
+		while (<FILE>) { chomp; my @array = split("\t", $_); push (@size_contigs, $array[1]); } close (FILE);
 		
 		## If all contigs to be used, generate individual fasta for each
 		my $pm_SPLIT_FASTA =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
@@ -2495,7 +2498,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			$count_fasta_files_split++;
 			print "\t- Splitting file: [$count_fasta_files_split/$total_fasta_files_split]\n";
 			my $pid = $pm_SPLIT_FASTA->start($i) and next;
-			open(FILE, $$fasta_files_split[$i]) || die "Could not open the $$fasta_files_split[$i]...\n";
+			open(FILE, $$fasta_files_split[$i]) || die "Could not open the $$fasta_files_split[$i]...[DM_MarkerScan: pm_SPLIT_FASTA]\n";
 			my $size_file = $$fasta_files_split[$i]."_size";
 			open (SIZE, ">$size_file");
 			$/ = ">"; ## Telling perl where a new line starts
@@ -2514,13 +2517,13 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	}
 	
 	## Number of contigs in each subset 
-	my $subset_offset = 5;
+	my $subset_offset = 2;
 	
 	##########################################
 	## 	Merge PILEUP information arrays     ##
 	##########################################
 	print "\n"; DOMINO::printHeader(" Fetching information from all the PROFILEs generated ", "#");
-	my %pileup_files; my $counter=0; 
+	my %pileup_files;
 	my (@clean_filtered_sam_files, @reference_bam_files, @pileup_Arrays);
 	foreach my $reads (sort keys %domino_files) {
 		unless ($domino_files{$reads}{'taxa'}) {next; }
@@ -2542,16 +2545,27 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		
 	## Check for markers: USING THREADS, ONE FOR EACH BLOCK OF CONTIGS
 	my $pm_MARKER_PILEUP =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
-	my $SETS = int($total_contigs/$subset_offset) + 1;
-	for (my $set=0; $set < $SETS; $set++) {
-		my @subset_array; my $tmp=0;
-		for ($counter=$counter; $counter < $total_contigs; $counter++) {
-			push(@subset_array, $size_contigs[$counter]);
-			$tmp++; if ($tmp eq $subset_offset) { $counter++; last; }
-		}
+ 	my $SETS;
+ 	if ($totalContigs2use4markers % 2) { 	$SETS = int($totalContigs2use4markers/$subset_offset) + 1;			## Even number
+ 	} else { 								$SETS = int($totalContigs2use4markers/$subset_offset); }	## Odd number 	
+ 	print "+ Dataset would be splitted for speeding computation into $SETS subsets...\n";
 
+	my $counter=0; 
+	&debugger_print("TOTAL contigs:\n".$totalContigs2use4markers);
+	for (my $set=1; $set <= $SETS; $set++) {
+		my @subset_array; my $tmp=1;
+		for ($counter=$counter; $counter < $totalContigs2use4markers; $counter++) {
+			&debugger_print("Counter\tTotal\n".$counter."\t".$totalContigs2use4markers);
+			push(@subset_array, $size_contigs[$counter]);
+			&debugger_print("SETS:$SETS\tset:$set\tCounter:".$counter."\ttmp: $tmp\tContig:  $size_contigs[$counter]");
+			if ($tmp eq $subset_offset) { $counter++; last; }
+			$tmp++;
+		}
+		&debugger_print("Ref", \@subset_array);
+		
 		## SEND THREAD 
 		my $pid = $pm_MARKER_PILEUP->start($set) and next;
+		
 		my (%pileup_files_threads, %contigs_pileup_fasta, @pileup_fasta);
 		foreach my $reads (sort keys %domino_files) {
 			next if ($reads eq $ref_taxa);
@@ -2565,6 +2579,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 					push (@{ $contigs_pileup_fasta{$subset_array[$j]} }, $tmp_fasta{$seqs});
 		}}}
 		
+	
 		my $mergeProfile = $PILEUP_merged_folder_abs_path."/SET_$set"."_merged_ARRAY.txt";
 		my $string = $window_size_VARS_range;$string =~ s/\:\:/-/; 
 		my $string2 = $window_size_CONS_range; $string2 =~ s/\:\:/-/;	
@@ -2580,15 +2595,14 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 
 		## NAME for output merged files
 		my ($output_merged_file, $error_merged_file, $file);
-		if ($variable_divergence) { 
-			$file = $PILEUP_merged_folder_abs_path."/SET_$set"."_markers_shared-VD_".$variable_divergence."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
-		} else {  
-			$file = $PILEUP_merged_folder_abs_path."/SET_$set"."_markers_shared-VPmin_".$variable_positions_user_min."-VPmax_".$variable_positions_user_max."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
+		if ($variable_divergence) {	$file = $PILEUP_merged_folder_abs_path."/SET_$set"."_markers_shared-VD_".$variable_divergence."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
+		} else {  					$file = $PILEUP_merged_folder_abs_path."/SET_$set"."_markers_shared-VPmin_".$variable_positions_user_min."-VPmax_".$variable_positions_user_max."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
 		}		
-		$output_merged_file = $file.".out"; $error_merged_file = $file.".err";
+		$output_merged_file = $file.".out";  $error_merged_file = $file.".err";
 		push (@{ $pileup_files_threads{"SET_$set"}{'eachTaxaCoord'} }, $output_merged_file);
 
 		## Merging variable and conserved information into a unique array, profile and generate coordinates
+		my $SLIDING_file = $file."_sliding_window_MERGED.txt";
 		foreach my $seqs (keys %contigs_pileup_fasta) {
 			my $size = $$fasta_seqs{$seqs};
 			my $tmp_string;			
@@ -2620,8 +2634,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			my $infoReturned = &sliding_window_conserve_variable(\$seqs, \$tmp_string);
 			if ($infoReturned) { 
 				my @array = @$infoReturned;
-				my $tmp_file = "tmp_coord_set_".$set.".txt";
-				open (TMP_COORD, ">$tmp_file");
+				open (TMP_COORD, ">$SLIDING_file");
 				for (my $j=0; $j < scalar @array; $j++) {
 					print OUT_COORD $array[$j]."\n";
 					print TMP_COORD $array[$j]."\n";
@@ -2640,12 +2653,11 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 				## For each taxa confirm profile
 				my $pileup_each_taxa = $domino_files{$taxa}{"PROFILE::Ref:".$ref_taxa}[0]."/".$seqs."_ARRAY.txt";
 				if (-f $pileup_each_taxa) {
-					&get_coordinates_each_taxa(\$pileup_each_taxa, "tmp_coord_set_".$set.".txt", $taxa, \$output_merged_file, \$error_merged_file);
+					&get_coordinates_each_taxa(\$pileup_each_taxa, $SLIDING_file, $taxa, \$output_merged_file, \$error_merged_file);
 		}}}
 		close (OUT_COORD);
 		unless (-e -r -s $mergeCoord) { $pm_MARKER_PILEUP->finish(); } #if empty file
 		unless (-e -r -s $mergeProfile) { $pm_MARKER_PILEUP->finish(); } #if empty file
-
 
 		##########################################
 		## Get Coordinates of Molecular Markers ##
@@ -2654,7 +2666,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		my $markers_shared_file_sort = $PILEUP_merged_folder_abs_path."/SET_$set"."_markers_shared.tmp_sort.txt";
 		system("cat $shared_markers_others >> $markers_shared_file ; sort $markers_shared_file > $markers_shared_file_sort");
 		my %coord_contig;
-		open (MERGE_COORD,"<$markers_shared_file_sort") or die "Cannot open file $markers_shared_file_sort";
+		open (MERGE_COORD,"<$markers_shared_file_sort") or die "Cannot open file $markers_shared_file_sort [DM_MarkerScan: Check Merge coordinates]";
 		while(<MERGE_COORD>){
 			chomp;
 			my $line = $_;
@@ -2670,7 +2682,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		## Print in tmp file for sorting and obtaining unique
 		chdir $PILEUP_merged_folder_abs_path;
 		my $tmp_file = $PILEUP_merged_folder_abs_path."/SET_$set"."_markers_shared.txt";
-
 		open(TMP, ">$tmp_file");
 		for my $scaffold (keys %coord_contig) {    		
 			foreach my $marker (keys %{ $coord_contig{$scaffold} }) {
@@ -2686,9 +2697,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			}
 		} close(TMP);	
 		unless (-e -r -s $tmp_file) { $pm_MARKER_PILEUP->finish(); }
-		
+
 		## Collapse markers
-		my $file_markers_collapse = &check_overlapping_markers($tmp_file, \$pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
+		my $file_markers_collapse = &check_overlapping_markers($tmp_file, $pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
 
 		# Retrieve fasta sequences...
 		my $output_file = $PILEUP_merged_folder_abs_path."/SET_".$set."_markers_retrieved.txt";
@@ -2709,7 +2720,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	print "**** All parallel parsing processes have finished ****\n";
 	print "******************************************************\n\n";
 	&time_log(); print "\n";
-
+	
 	######
 	######
 	###### FINDING THE GLITCH
@@ -3128,13 +3139,11 @@ sub check_overlapping_markers {
 
 	## Overlaps and maximizes domino markers obtained
 	my $file = $_[0]; my $mergeArray_file = $_[1];
-	&debugger_print("Checking file $file");
+	&debugger_print("Checking file $file [DM_MarkerScan: check_overlapping_markers]");
 	my $contig_id; my %tmp_hash; my $marker_counter_tmp = 0;
 	my @sequences;
-	open (FILE, $file);
-	while (<FILE>) {
-		my $line = $_;
-		chomp $line; 
+	open (FILE, $file); while (<FILE>) {
+		my $line = $_; chomp $line; 
 		$line =~ s/ /\t/;
 		my @array_lines = split ("\t", $line);		
 		$contig_id = $array_lines[0];
@@ -3188,7 +3197,8 @@ sub check_overlapping_markers {
 	} elsif ($range < 500) { @length = (50, 100, 200, 300, 400, 500); }
 
 	# Debug print Dumper \%tmp_coord
-	my @array = split(".txt", $file); my $hash_ref = DOMINO::readFASTA_hash($mergeArray_file); 
+	my @array = split(".txt", $file); 
+	my $hash_ref = DOMINO::readFASTA_hash($mergeArray_file); 
 	my $file2return = $array[0]."_overlapped_Markers.txt"; open (OUT, ">$file2return"); # print $file2return."\n";	#
 
 	foreach my $contig (sort keys %tmp_coord) {
@@ -3237,7 +3247,7 @@ sub check_DOMINO_marker {
 	my @files; 
 	
 	## Check each group of overlapping markers
-	open (MARKERS, "$DOMINO_markers_file") or die "Could not open file $DOMINO_markers_file";
+	open (MARKERS, "$DOMINO_markers_file") or die "Could not open file $DOMINO_markers_file [DM_MarkerScan: check_DOMINO_marker]";
 	my $j = 1; my %hash_array;
 	while (1) {
 		my $chunk;
@@ -3293,7 +3303,6 @@ sub check_DOMINO_marker {
 				my $reference_file_contig = $domino_files{$ref_taxa_all}{'REF_DIR'}[0]."/".$contig_name[0].".fasta";
 				$fasta_msa_sub{$ref_taxa_all} = $reference_file_contig;
 			}
-
 			foreach my $keys (sort keys %fasta_msa_sub ) {			
 				if ($fasta_msa_sub{$keys} =~ /missing/) {next;}
 				if ($fasta_msa_sub{$keys} =~ /.*fasta/) {
@@ -3462,7 +3471,7 @@ sub check_marker_ALL {
 			push (@taxa, $seqs);
 		}	
 	} else {
-		open(FILE, $file) || die "Could not open the $file ...\n";
+		open(FILE, $file) || die "Could not open the file $file ... [DM_MarkerScan: check_marker_ALL] \n";
 		$/ = ">"; ## Telling perl where a new line starts
 		while (<FILE>) {		
 			next if /^#/ || /^\s*$/;
@@ -3751,7 +3760,7 @@ sub functional_factorial {
 
     my $n = shift(@_);
     my $fact = 1;
-    if (($n < 0) or (170 < $n)) { die "Factorial out of range"; }
+    if (($n < 0) or (170 < $n)) { die "Factorial out of range [DM_MarkerScan: functional_factorial]"; }
     for (my $i = 1; $i <= $n; $i++) { $fact *= $i; }
     return $fact;
 }
