@@ -44,8 +44,9 @@
 ##		[-MCT|--minimum_number_taxa_covered int_value] 
 ##		[-CD|--conserved_differences int_value] [-PV|--polymorphism] 
 ##		[-VP|--variable_positions range] 
-##		[-SI|--sliding_interval int] 
-##		[-dnaSP]
+##		[-SI|--sliding_interval int] [-dnaSP] 
+##		[-V-SI_inc int_value] [-C-SI_inc int_value]
+##		[-subset_offset_user int_value] [-totalContigs2use4markers int_value]
 ##		
 ##      ## Others
 ##
@@ -246,7 +247,7 @@ perl DM_MarkerScan_1.0.3.pl
 
 ## Markers
 
-[-MPA|--missing_perct_allowed float_value] [-MCT|--minimum_number_taxa_covered int_value] [-CD|--conserved_differences int_value] [-PV|--polymorphism] [-VP|--variable_positions range] [-SI|--sliding_interval int] [-dnaSP]
+[-MPA|--missing_perct_allowed float_value] [-MCT|--minimum_number_taxa_covered int_value] [-CD|--conserved_differences int_value] [-PV|--polymorphism] [-VP|--variable_positions range] [-SI|--sliding_interval int] [-dnaSP] [-subset_offset_user int_value] [-totalContigs2use4markers int_value]
 
 ## Others
 
