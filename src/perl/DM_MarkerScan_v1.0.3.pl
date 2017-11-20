@@ -87,7 +87,7 @@ $rfgopen, $MID_taxa_names, $option, $mis_penalty, $msa_fasta_folder, $polymorphi
 $level_significance_coverage_distribution, $map_contig_files, $missing_allowed, $keepbam, 
 $version, $DOMINO_simulations, $minimum_number_taxa_covered, $avoid_mapping, $further_information,
 @user_cleanRead_files, @user_contig_files, $msa_file, $behaviour, $select_markers, $identify_markers,
-$debugger, $helpAsked1, $VAR_inc, $CONS_inc, $option_all, $totalContigs2use4markers,
+$debugger, $helpAsked1, $VAR_inc, $CONS_inc, $option_all, $totalContigs2use4markers,$subset_offset_user,
 
 ## absolute path
 @contigs_fasta_file_abs_path, @clean_fastq_file_abs_path, # toDiscard
@@ -163,6 +163,7 @@ GetOptions(
  	"V-SI_inc:i" => \$VAR_inc,
  	"C-SI_inc:i" => \$CONS_inc,
  	"totalContigs2use4markers:i" => \$totalContigs2use4markers,
+ 	"subset_offset:i" => \$subset_offset_user,
 
  	"all" => \$option_all, 	
  	"Debug" => \$debugger,
@@ -661,6 +662,10 @@ Use this flag to skip the mapping phase and the generation of the variation prof
 
 By default and in order to speed the computation, DOMINO would only use the largest 20000 contigs generated. Specify a diferent number or use -1 for all the contigs generated during the assembly. [Default: 20000]
 
+=item B<-subset_offset [int]
+
+By default and in order to speed the computation, DOMINO would split the set of contigs to use for markers [totalContigs2use4markers] into subsets of this given size. Specify the number according to the RAM available in your computer. [Default: 50]
+
 =item B<-TempFiles [Default Off]>
 	
 Keep all intermediate files.
@@ -953,6 +958,7 @@ if (!$window_var_CONS) { $window_var_CONS = 1;}
 if (!$level_significance_coverage_distribution) { $level_significance_coverage_distribution = 1e-05; }
 if (!$missing_allowed) { $missing_allowed = 0.1;} ## Def. 0.1: When looking for a marker if 10% of the length is missing for any specie, discard 
 if (!$totalContigs2use4markers) {$totalContigs2use4markers = 20000;} ## use by default the largest 20.000 contigs
+if (!$subset_offset_user) {$subset_offset_user = 50;} ## Split subsets into 50 contigs to avoid collapsing RAM
 
 ## Get ranges
 my ($variable_positions_user_min, $variable_positions_user_max);
@@ -1031,6 +1037,8 @@ push (@{ $domino_params{'marker'}{'SLIDING_user'} }, $SLIDING_user);
 push (@{ $domino_params{'marker'}{'cigar_pct'} }, $cigar_pct);
 push (@{ $domino_params{'marker'}{'V-SI_inc'} }, $VAR_inc);
 push (@{ $domino_params{'marker'}{'C-SI_inc'} }, $CONS_inc);
+push (@{ $domino_params{'marker'}{'subset_offset_user'} }, $subset_offset_user);
+push (@{ $domino_params{'marker'}{'totalContigs2use4markers'} }, $totalContigs2use4markers);
 &debugger_print("DOMINO Parameters");&debugger_print("Ref", \%domino_params);
 
 ## Check parameters previous run
@@ -2517,7 +2525,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	}
 	
 	## Number of contigs in each subset 
-	my $subset_offset = 2;
+	my $subset_offset = $subset_offset_user;
 	
 	##########################################
 	## 	Merge PILEUP information arrays     ##
@@ -2577,8 +2585,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 				my %tmp_fasta = %{$tmp_hash_reference};
 				foreach my $seqs (sort keys %tmp_fasta) {
 					push (@{ $contigs_pileup_fasta{$subset_array[$j]} }, $tmp_fasta{$seqs});
-		}}}
-		
+		}}}		
 	
 		my $mergeProfile = $PILEUP_merged_folder_abs_path."/SET_$set"."_merged_ARRAY.txt";
 		my $string = $window_size_VARS_range;$string =~ s/\:\:/-/; 
