@@ -1057,6 +1057,8 @@ if ($avoid_mapping) {
 		&debugger_print("Path: $path_returned");
 		&debugger_print("DOMINO files: $file2dump");
 		&debugger_print("DOMINO param: $file2dump_param");
+
+		## TODO: filter and avoid unnecessary data to put into RAM memory
 		## DUMP.txt
 		open (DUMP_IN, "$file2dump");
 		while (<DUMP_IN>) {
@@ -1065,6 +1067,7 @@ if ($avoid_mapping) {
 			&debugger_print($line);
 			push (@{ $domino_files_dump{$array[0]}{$array[1]}}, $array[2]);
 		} close (DUMP_IN);
+
 		## DUMP_param.txt
 		open (DUMP_PARAM, "$file2dump_param");
 		while (<DUMP_PARAM>) {
@@ -2306,10 +2309,10 @@ if ($option eq "msa_alignment") {
 		}
 		my $array_files_msa = DOMINO::readDir($msa_dir);
 		my @msa_files = @{ $array_files_msa };
-		for (my $j=0; $j < scalar @msa_files; $j++) {
-			if ($msa_files[$j] eq '.' || $msa_files[$j] eq '..' || $msa_files[$j] eq '.DS_Store') { next;}
-			open (MSA, "$msa_dir/$msa_files[$j]"); while (<MSA>) { print OUT $_; } close (MSA); 
-			if ($pyRAD_file) { print OUT "//\n"; }
+		for (my $j=0; $j < scalar @msa_files; $j++) {			
+			if ($msa_files[$j] eq '.' || $msa_files[$j] eq '..' || $msa_files[$j] eq '.DS_Store') { next;}			
+			open (MSA, "$msa_dir/$msa_files[$j]"); while (<MSA>) { print OUT $_; } close (MSA); print OUT "//\n";			
+			if ($pyRAD_file) { print OUT "//\n"; }		
 	}} close(OUT_coord); close (OUT);
 
 	## USE THE SUBROUTINE print_Excel and control if radseq_like_data
@@ -2489,8 +2492,8 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			} $/ = "\n"; close (SIZE);
 			$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
 		}
-		$pm_SPLIT_FASTA->wait_all_children;			
-	
+		$pm_SPLIT_FASTA->wait_all_children;
+		
 	} else { ## use all contigs
 	
 		$totalContigs2use4markers = $total_contigs;
@@ -2561,6 +2564,8 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 
 	my $counter=0; 
 	&debugger_print("TOTAL contigs:\n".$totalContigs2use4markers);
+	
+	## Generate subsets of given amount of contigs to avoid collapsing system with so many files
 	for (my $set=1; $set <= $SETS; $set++) {
 		my @subset_array; my $tmp=1;
 		for ($counter=$counter; $counter < $totalContigs2use4markers; $counter++) {
@@ -2575,7 +2580,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		## SEND THREAD 
 		my $pid = $pm_MARKER_PILEUP->start($set) and next;
 		
-		my (%pileup_files_threads, %contigs_pileup_fasta, @pileup_fasta);
+		my (%pileup_files_threads, %contigs_pileup_fasta);
 		foreach my $reads (sort keys %domino_files) {
 			next if ($reads eq $ref_taxa);
 			next if ($reads eq 'taxa');
@@ -2597,9 +2602,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		}
 		push (@{ $pileup_files_threads{"SET_$set"}{'mergeProfile'} }, $mergeProfile);
 		push (@{ $pileup_files_threads{"SET_$set"}{'mergeCoord'} }, $mergeCoord);
-		open (OUT_COORD, ">$mergeCoord");
 		my $markers_shared_file = $PILEUP_merged_folder_abs_path."/SET_$set"."_markers_shared.tmp.txt";
-		open (SHARED, ">$markers_shared_file");
 
 		## NAME for output merged files
 		my ($output_merged_file, $error_merged_file, $file);
@@ -2610,7 +2613,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		push (@{ $pileup_files_threads{"SET_$set"}{'eachTaxaCoord'} }, $output_merged_file);
 
 		## Merging variable and conserved information into a unique array, profile and generate coordinates
+		my $missing_allowed_species = $minimum_number_taxa_covered;
 		my $SLIDING_file = $file."_sliding_window_MERGED.txt";
+		open (OUT_COORD, ">$mergeCoord"); open (SHARED, ">$markers_shared_file");
 		foreach my $seqs (keys %contigs_pileup_fasta) {
 			my $size = $$fasta_seqs{$seqs};
 			my $tmp_string;			
@@ -2621,7 +2626,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 					push (@tmp, $pb);					
 				}
 				my $flag = 0; my $missing_count = 0; my $missing_flag = 'N';
-				my $missing_allowed_species = $minimum_number_taxa_covered;
 				my $scalar_keys = scalar @tmp;
 				for (my $keys = 0; $keys < scalar @tmp; $keys++) {
 					if ($tmp[$keys] eq 1) { # One specie has a variable position
@@ -2632,8 +2636,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 				my $tmp = $number_sp - $missing_count;
 				if ($tmp < $missing_allowed_species) {
 					$tmp_string .= $missing_flag; 
-				} else { $tmp_string .= $flag; 
-			}}		
+				} else { $tmp_string .= $flag; }
+				undef @tmp;
+			}		
 			my $var_sites = $tmp_string =~ tr/1/1/; ## count variable sites
 			my $cons_sites = $tmp_string =~ tr/0/0/; ## count conserved sites
 			if ($var_sites != 0 && $cons_sites != 0) { 
@@ -2641,16 +2646,16 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			} else { next; } 
 			my $infoReturned = &sliding_window_conserve_variable(\$seqs, \$tmp_string);
 			if ($infoReturned) { 
-				my @array = @$infoReturned;
 				open (TMP_COORD, ">$SLIDING_file");
-				for (my $j=0; $j < scalar @array; $j++) {
-					print OUT_COORD $array[$j]."\n";
-					print TMP_COORD $array[$j]."\n";
-					print SHARED $array[$j]."\t".$ref_taxa."\n";
+				for (my $j=0; $j < scalar @$infoReturned; $j++) {
+					print OUT_COORD $$infoReturned[$j]."\n";
+					print TMP_COORD $$infoReturned[$j]."\n";
+					print SHARED $$infoReturned[$j]."\t".$ref_taxa."\n";
 				}
 				close (TMP_COORD);
-				} else { next; ## if empty next
+			} else { delete $contigs_pileup_fasta{$seqs}; next; ## if empty next
 			}
+			undef %contigs_pileup_fasta; # no longer necessary
 		
 			######################################################################
 			## Check the coordinates foreach taxa against the merge statistics  ##
@@ -2658,14 +2663,18 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			foreach my $taxa (sort keys %domino_files) {
 				unless ($domino_files{$taxa}{'taxa'}) { next; }
 				if ($taxa eq $ref_taxa) {next;}	
-				## For each taxa confirm profile
 				my $pileup_each_taxa = $domino_files{$taxa}{"PROFILE::Ref:".$ref_taxa}[0]."/".$seqs."_ARRAY.txt";
-				if (-f $pileup_each_taxa) {
-					&get_coordinates_each_taxa(\$pileup_each_taxa, $SLIDING_file, $taxa, \$output_merged_file, \$error_merged_file);
+				## For each taxa confirm profile
+				if (-f $pileup_each_taxa) { &get_coordinates_each_taxa(\$pileup_each_taxa, $SLIDING_file, $taxa, \$output_merged_file, \$error_merged_file);
 		}}}
-		close (OUT_COORD);
-		unless (-e -r -s $mergeCoord) { $pm_MARKER_PILEUP->finish(); } #if empty file
-		unless (-e -r -s $mergeProfile) { $pm_MARKER_PILEUP->finish(); } #if empty file
+		close (OUT_COORD); close (SHARED);
+		
+		unless (-e -r -s $mergeCoord) { #if empty file
+			undef %pileup_files_threads; $pm_MARKER_PILEUP->finish(); 
+		} 
+		unless (-e -r -s $mergeProfile) { #if empty file
+			undef %pileup_files_threads; $pm_MARKER_PILEUP->finish(); 
+		} 
 
 		##########################################
 		## Get Coordinates of Molecular Markers ##
@@ -2685,7 +2694,10 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
    			push (@{ $coord_contig{$array[0]}{$array[1].";".$array[2].";".$array[3]}}, $array[4]);
 		}
 		close (MERGE_COORD);	
-		if (!%coord_contig) { $pm_MARKER_PILEUP->finish(); }
+		if (!%coord_contig) { 
+			undef %pileup_files_threads; undef %contigs_pileup_fasta;
+			$pm_MARKER_PILEUP->finish(); 
+		}
 		
 		## Print in tmp file for sorting and obtaining unique
 		chdir $PILEUP_merged_folder_abs_path;
@@ -2703,8 +2715,13 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 				my $string_taxa = join(",", @sort_taxa); #taxa providing variation
 				print TMP "$scaffold\t$string\t$string_taxa\n"; 
 			}
-		} close(TMP);	
-		unless (-e -r -s $tmp_file) { $pm_MARKER_PILEUP->finish(); }
+		} close(TMP);
+		undef %coord_contig;
+			
+		unless (-e -r -s $tmp_file) { 
+			undef %pileup_files_threads; undef %contigs_pileup_fasta;
+			$pm_MARKER_PILEUP->finish(); 
+		}
 
 		## Collapse markers
 		my $file_markers_collapse = &check_overlapping_markers($tmp_file, $pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
@@ -2718,7 +2735,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			push (@{ $pileup_files_threads{"SET_$set"}{'markers_files'} }, @$markers_print_ref);
 			my $dump_folder_files = $dir_Dump_file."/dump_markers_SET_".$set.".txt";
 			DOMINO::printDump(\%pileup_files_threads, $dump_folder_files);	
-			@pileup_fasta = (); %pileup_files_threads = ();
+			undef %pileup_files_threads; undef %contigs_pileup_fasta;
 		}
 		$pm_MARKER_PILEUP->finish(); # finish for each contig
 	} 
@@ -2801,6 +2818,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		# sort uniq
 		my @sort_ALL_contigs = sort @ALL_contigs;
 		my @uniq_contigs = uniq(@sort_ALL_contigs);
+		undef @sort_ALL_contigs; undef @ALL_contigs;
 		
 		## Printing contigs
 		my %hash_contigs;
@@ -4325,173 +4343,173 @@ sub generate_filter_PILEUP {
 	&print_fasta_coordinates(\@fasta_positions, \$previous_contig, $reference_id, $tmp); ## Print array into file $previous_contig
 	chdir $dir_path; &debugger_print("Changing dir to $dir_path");
 	return ($tmp);
+}
+
+sub check_array {
+	my $ref_base = $_[0];
+	my $ref_poly_hash = $_[1];
+	my %polymorphism = %$ref_poly_hash;
+	my $total=0;
+	my ($last_key, $highest_value, $smallest_value);
+	foreach my $keys (sort keys %polymorphism) {
+		$total += $polymorphism{$keys};
+		if (!$highest_value) {
+			$highest_value = $polymorphism{$keys};
+			$smallest_value = $polymorphism{$keys};
+			$last_key = $keys;							
+		} elsif ($polymorphism{$keys} > $highest_value) {
+			$highest_value = $polymorphism{$keys};
+			$last_key = $keys;							
+		} elsif ($polymorphism{$keys} < $smallest_value) {
+			$smallest_value = $polymorphism{$keys};
+	}}		
 	
-	sub check_array {
-		my $ref_base = $_[0];
-		my $ref_poly_hash = $_[1];
-		my %polymorphism = %$ref_poly_hash;
-		my $total=0;
-		my ($last_key, $highest_value, $smallest_value);
-		foreach my $keys (sort keys %polymorphism) {
-			$total += $polymorphism{$keys};
-			if (!$highest_value) {
-				$highest_value = $polymorphism{$keys};
-				$smallest_value = $polymorphism{$keys};
-				$last_key = $keys;							
-			} elsif ($polymorphism{$keys} > $highest_value) {
-				$highest_value = $polymorphism{$keys};
-				$last_key = $keys;							
-			} elsif ($polymorphism{$keys} < $smallest_value) {
-				$smallest_value = $polymorphism{$keys};
-		}}		
-		
-		if ($highest_value >= 170) { return ("N","N");}
-		## Check wether there are more than 8 positions mapping
-		## and if not if there at least for the smallest two
-		## bases.
-		
-		my $prob = &binomial($highest_value, $total, 0.5);
-		my $significance_level = 1 - 0.95;
-		if ($ambiguity_DNA_codes{$ref_base}) {
-			## There is an ambiguous code in the reference
-			my %ref_base_match;
-			my $flag = 0;
-			for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$ref_base}}; $j++) {
-				foreach my $keys (sort keys %polymorphism) {
-					if ($keys eq $ambiguity_DNA_codes{$ref_base}[$j]) {
-						$flag++; $ref_base_match{$ambiguity_DNA_codes{$ref_base}[$j]}++;
-			}}}
-			if ($flag == 2) { 
-				## Only if both possibilities are the same as the ambiguous code
+	if ($highest_value >= 170) { return ("N","N");}
+	## Check wether there are more than 8 positions mapping
+	## and if not if there at least for the smallest two
+	## bases.
+	
+	my $prob = &binomial($highest_value, $total, 0.5);
+	my $significance_level = 1 - 0.95;
+	if ($ambiguity_DNA_codes{$ref_base}) {
+		## There is an ambiguous code in the reference
+		my %ref_base_match;
+		my $flag = 0;
+		for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$ref_base}}; $j++) {
+			foreach my $keys (sort keys %polymorphism) {
+				if ($keys eq $ambiguity_DNA_codes{$ref_base}[$j]) {
+					$flag++; $ref_base_match{$ambiguity_DNA_codes{$ref_base}[$j]}++;
+		}}}
+		if ($flag == 2) { 
+			## Only if both possibilities are the same as the ambiguous code
+			if ($prob < $significance_level) { 
+				return ('0', $last_key); ##Contig1	10	R	10	AAAAAAAAAG
+			} else { 
+				## Contig1	9	R	10	AAAAAAGGGG
+				## Contig1	9	R	10	AAGG
+				## Contig1	9	R	10	AG
+				if ($polymorphism_user) {
+					return ('1', $ref_base);
+				} else {
+					return ('0', $ref_base);
+		}}} else {
+			if ($flag == 1) { ## Only one type of read is within the ambiguous code
 				if ($prob < $significance_level) { 
-					return ('0', $last_key); ##Contig1	10	R	10	AAAAAAAAAG
-				} else { 
-					## Contig1	9	R	10	AAAAAAGGGG
-					## Contig1	9	R	10	AAGG
-					## Contig1	9	R	10	AG
-					if ($polymorphism_user) {
-						return ('1', $ref_base);
-					} else {
-						return ('0', $ref_base);
-			}}} else {
-				if ($flag == 1) { ## Only one type of read is within the ambiguous code
-					if ($prob < $significance_level) { 
-						if ($ref_base_match{$last_key}) { 
-							return ('0', $last_key); ## Contig1	11	R	10	AAAAAAAAAC
-						} else { 
-							return ('1', $last_key); ## Contig1	13	R	10	TTTTTTTTTTA
-					}} else { 
-						## Contig1	12	R	10	AAAAACCCCC
-						## Contig1	12	R	10	AACC
-						## Contig1	12	R	10	AC
-						my $pos = &get_amb_code(\%polymorphism);
-						if ($polymorphism_user) {							
-							return ('1', $pos);
-						} else {
-							return ('0', $pos);
-				}}} else { ## None of the reads mapping are similar to the ambiguous reference
-					if ($prob < $significance_level) { 	
-						return ('1', $last_key); ## Contig1	13	R	10	TTTTTTTTTTC
+					if ($ref_base_match{$last_key}) { 
+						return ('0', $last_key); ## Contig1	11	R	10	AAAAAAAAAC
 					} else { 
-						## Contig1	13	R	10	TTTTTTCCCCC
-						## Contig1	13	R	10	TTCC
-						## Contig1	13	R	10	TC
-						my $pos = &get_amb_code(\%polymorphism);
+						return ('1', $last_key); ## Contig1	13	R	10	TTTTTTTTTTA
+				}} else { 
+					## Contig1	12	R	10	AAAAACCCCC
+					## Contig1	12	R	10	AACC
+					## Contig1	12	R	10	AC
+					my $pos = &get_amb_code(\%polymorphism);
+					if ($polymorphism_user) {							
 						return ('1', $pos);
-		}}}} else { 
-			## There is no ambiguity code in the reference base
-			my $flag = 0;
-			if ($polymorphism{$ref_base}) { ## if any mapping reads are the same as reference
-				if ($total >= 8) {
-					if ($prob < $significance_level) {
-						if ($last_key eq $ref_base) { 
-							return ('0', $last_key); ## Contig1	6	T	10	.........a
-						} else { 
-							return ('1', $last_key); ## Contig1	7	T	10	ccccccccc.
-					}} else { 
-						## Contig1	8	T	10	....cc..cc
-						my $pos = &get_amb_code(\%polymorphism);
-						if ($polymorphism_user) {
-							return ('1', $pos);
-						} else {
-							return ('0', $pos);
-				}}} else { ## less than 8 reads mapping here
-					if ($smallest_value >= 2) {
-						## Contig1	8	T	5	...cc
-						my $pos = &get_amb_code(\%polymorphism);
-						if ($polymorphism_user) {
-							return ('1', $pos);
-						} else {
-							return ('0', $pos);
-					}} else {
-						if ($highest_value == $smallest_value) {
-							return ('N', 'N'); ## Contig1	8	T	2	.c
-						} elsif ($last_key eq $ref_base) { 
-							return ('0', $ref_base); ## Contig1	8	T	4	...c
-						} else {
-							return ('1', $last_key); ## Contig1	8	T	4	.c
-			}}}} else {
-				## None of the reads are similar to reference
-				if ($total >= 8) { 
-					if ($prob < $significance_level) { 	
-						return ('1', $last_key); ## Contig1	15	T	10	ccccccccccca
-					} else { 
-						my $pos = &get_amb_code(\%polymorphism);
-						return ('1', $pos); ## Contig1	15	T	10	ccccccgggggg
-				}} else {
-					if ($smallest_value >= 2) {
-						my $pos = &get_amb_code(\%polymorphism);
-						return ('1', $pos); ## Contig1	8	T	5	GGGcc
 					} else {
-						if ($highest_value == $smallest_value) {
-							return ('1', 'N'); ## Contig1	8	T	2	Gc
-						} else {
-							return ('1', $last_key); ## Contig1	8	T	3	GGc
-	}}}}}}	
+						return ('0', $pos);
+			}}} else { ## None of the reads mapping are similar to the ambiguous reference
+				if ($prob < $significance_level) { 	
+					return ('1', $last_key); ## Contig1	13	R	10	TTTTTTTTTTC
+				} else { 
+					## Contig1	13	R	10	TTTTTTCCCCC
+					## Contig1	13	R	10	TTCC
+					## Contig1	13	R	10	TC
+					my $pos = &get_amb_code(\%polymorphism);
+					return ('1', $pos);
+	}}}} else { 
+		## There is no ambiguity code in the reference base
+		my $flag = 0;
+		if ($polymorphism{$ref_base}) { ## if any mapping reads are the same as reference
+			if ($total >= 8) {
+				if ($prob < $significance_level) {
+					if ($last_key eq $ref_base) { 
+						return ('0', $last_key); ## Contig1	6	T	10	.........a
+					} else { 
+						return ('1', $last_key); ## Contig1	7	T	10	ccccccccc.
+				}} else { 
+					## Contig1	8	T	10	....cc..cc
+					my $pos = &get_amb_code(\%polymorphism);
+					if ($polymorphism_user) {
+						return ('1', $pos);
+					} else {
+						return ('0', $pos);
+			}}} else { ## less than 8 reads mapping here
+				if ($smallest_value >= 2) {
+					## Contig1	8	T	5	...cc
+					my $pos = &get_amb_code(\%polymorphism);
+					if ($polymorphism_user) {
+						return ('1', $pos);
+					} else {
+						return ('0', $pos);
+				}} else {
+					if ($highest_value == $smallest_value) {
+						return ('N', 'N'); ## Contig1	8	T	2	.c
+					} elsif ($last_key eq $ref_base) { 
+						return ('0', $ref_base); ## Contig1	8	T	4	...c
+					} else {
+						return ('1', $last_key); ## Contig1	8	T	4	.c
+		}}}} else {
+			## None of the reads are similar to reference
+			if ($total >= 8) { 
+				if ($prob < $significance_level) { 	
+					return ('1', $last_key); ## Contig1	15	T	10	ccccccccccca
+				} else { 
+					my $pos = &get_amb_code(\%polymorphism);
+					return ('1', $pos); ## Contig1	15	T	10	ccccccgggggg
+			}} else {
+				if ($smallest_value >= 2) {
+					my $pos = &get_amb_code(\%polymorphism);
+					return ('1', $pos); ## Contig1	8	T	5	GGGcc
+				} else {
+					if ($highest_value == $smallest_value) {
+						return ('1', 'N'); ## Contig1	8	T	2	Gc
+					} else {
+						return ('1', $last_key); ## Contig1	8	T	3	GGc
+}}}}}}
 
-	sub initilize_contig {		
-		my $current_contig = $_[0];
-		my $reference_hash_fasta = $_[1];
-		
-		## Initialize new contig
-		my @array_positions_sub;
-		if (${$reference_hash_fasta}{$current_contig}) {
-			my $tmp_size = ${$reference_hash_fasta}{$current_contig};
-			@array_positions_sub = ("-") x $tmp_size;
-		}
-		my $ref = \@array_positions_sub;		
-		return ($current_contig, $ref);
-	}
+sub initilize_contig {		
+	my $current_contig = $_[0];
+	my $reference_hash_fasta = $_[1];
 	
-	sub print_coordinates {
-		## Print array into file $previous_contig
-		my $coord_array_ref = $_[0];
-		my $contig_name = $_[1];
-		my $ref_id = $_[2];
-		my $dir_tmp = $_[3];
-
-		my @coord_array = @$coord_array_ref;
-		my $seq_contig = join "", @coord_array;
-		my $var_sites = $seq_contig =~ tr/1/1/;
-
-		if ($var_sites != 0) {
-			my $array_file = $dir_tmp."/".$$contig_name."_ARRAY.txt";
-			open (FH, ">$array_file"); print FH ">$$contig_name\n$seq_contig\n"; close(FH);	
-		}
+	## Initialize new contig
+	my @array_positions_sub;
+	if (${$reference_hash_fasta}{$current_contig}) {
+		my $tmp_size = ${$reference_hash_fasta}{$current_contig};
+		@array_positions_sub = ("-") x $tmp_size;
 	}
-	
-	sub print_fasta_coordinates {
-		## Print array into file $previous_contig
-		my $coord_array_ref = $_[0];
-		my $contig_name = $_[1];
-		my $ref_id = $_[2];
-		my $dir_tmp = $_[3];
-		
-		my @coord_array_sub = @$coord_array_ref;
-		my $seq_contig = join "", @coord_array_sub;
-		my $array_file = $dir_tmp."/".$$contig_name."_sequence.fasta";
+	my $ref = \@array_positions_sub;		
+	return ($current_contig, $ref);
+}
+
+sub print_coordinates {
+	## Print array into file $previous_contig
+	my $coord_array_ref = $_[0];
+	my $contig_name = $_[1];
+	my $ref_id = $_[2];
+	my $dir_tmp = $_[3];
+
+	my @coord_array = @$coord_array_ref;
+	my $seq_contig = join "", @coord_array;
+	my $var_sites = $seq_contig =~ tr/1/1/;
+
+	if ($var_sites != 0) {
+		my $array_file = $dir_tmp."/".$$contig_name."_ARRAY.txt";
 		open (FH, ">$array_file"); print FH ">$$contig_name\n$seq_contig\n"; close(FH);	
 	}
+}
+
+sub print_fasta_coordinates {
+	## Print array into file $previous_contig
+	my $coord_array_ref = $_[0];
+	my $contig_name = $_[1];
+	my $ref_id = $_[2];
+	my $dir_tmp = $_[3];
+	
+	my @coord_array_sub = @$coord_array_ref;
+	my $seq_contig = join "", @coord_array_sub;
+	my $array_file = $dir_tmp."/".$$contig_name."_sequence.fasta";
+	open (FH, ">$array_file"); print FH ">$$contig_name\n$seq_contig\n"; close(FH);	
 }
 
 sub Poisson_distribution {
