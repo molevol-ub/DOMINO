@@ -2655,8 +2655,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 				close (TMP_COORD);
 			} else { delete $contigs_pileup_fasta{$seqs}; next; ## if empty next
 			}
-			undef %contigs_pileup_fasta; # no longer necessary
-		
+			
+			delete $contigs_pileup_fasta{$seqs}; undef $infoReturned;
+			
 			######################################################################
 			## Check the coordinates foreach taxa against the merge statistics  ##
 			######################################################################
@@ -2668,7 +2669,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 				if (-f $pileup_each_taxa) { &get_coordinates_each_taxa(\$pileup_each_taxa, $SLIDING_file, $taxa, \$output_merged_file, \$error_merged_file);
 		}}}
 		close (OUT_COORD); close (SHARED);
-		
+
+		undef %contigs_pileup_fasta; # no longer necessary
+
 		unless (-e -r -s $mergeCoord) { #if empty file
 			undef %pileup_files_threads; $pm_MARKER_PILEUP->finish(); 
 		} 
