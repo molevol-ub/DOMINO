@@ -2255,8 +2255,7 @@ if ($option eq "msa_alignment") {
 					push (@{ $domino_files_msa{$region_id}{'markers'} }, $output_file);
 					# Dump into file # print Dumper \%domino_files_msa;
 					DOMINO::printDump(\%domino_files_msa, $dump_folder_files);	
-	}}} $pm_MARKER_MSA_files->finish();
-	}
+	}}} $pm_MARKER_MSA_files->finish();}
 	$pm_MARKER_MSA_files->wait_all_children;
 	print "\n\n";
 	print "**********************************************\n";
@@ -2288,7 +2287,6 @@ if ($option eq "msa_alignment") {
 				&debugger_print($line);
 				push (@{ $hashRetrieve{$array[0]}{$array[1]}}, $array[2]);
 		} close (DUMP_IN); }
-
 		foreach my $regions (sort keys %hashRetrieve) {
 			if ($hashRetrieve{$regions}{'markers'}) {
 				my @array_coord = @{$hashRetrieve{$regions}{'markers'}};
@@ -2311,9 +2309,13 @@ if ($option eq "msa_alignment") {
 		my @msa_files = @{ $array_files_msa };
 		for (my $j=0; $j < scalar @msa_files; $j++) {			
 			if ($msa_files[$j] eq '.' || $msa_files[$j] eq '..' || $msa_files[$j] eq '.DS_Store') { next;}			
-			open (MSA, "$msa_dir/$msa_files[$j]"); while (<MSA>) { print OUT $_; } close (MSA); print OUT "//\n";			
-			if ($pyRAD_file) { print OUT "//\n"; }		
-	}} close(OUT_coord); close (OUT);
+			if ($pyRAD_file) { ## print Loci
+				my ($msa_hash_fasta_ref) = DOMINO::readFASTA_hash("$msa_dir/$msa_files[$j]"); ## Obtain reference of a hash
+				foreach my $keys (sort keys %{$msa_hash_fasta_ref}) { print OUT ">".$keys."\t".$$msa_hash_fasta_ref{$keys}."\n"; } print OUT "//\n";			
+			} elsif ($stacks_file) { ## print stacks file
+				open (MSA, "$msa_dir/$msa_files[$j]"); while (<MSA>) { print OUT $_; } close (MSA);
+			} else { open (MSA, "$msa_dir/$msa_files[$j]"); while (<MSA>) { print OUT $_; } close (MSA); print OUT "//\n";			
+	}}} close(OUT_coord); close (OUT);
 
 	## USE THE SUBROUTINE print_Excel and control if radseq_like_data
 	print "+ Done...\n+ Retrieving informative locus has been done...\n+ Generating an Excel file for DOMINO markers identified...\n";
@@ -2671,7 +2673,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		close (OUT_COORD); close (SHARED);
 
 		undef %contigs_pileup_fasta; # no longer necessary
-
 		unless (-e -r -s $mergeCoord) { #if empty file
 			undef %pileup_files_threads; $pm_MARKER_PILEUP->finish(); 
 		} 
@@ -4766,7 +4767,7 @@ sub print_Excel {
 			$worksheet_parameters->write($row, $col, "Minimum read score (MIRA):", $format); $col++;
 			$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'mrs'}, $format_left); $col++;
 			
-			if ($$hash_parameters{'assembly'}{'CAP3'} eq 'YES') {
+			if ($$hash_parameters{'assembly'}{'CAP3'}) {
 				$col = $second_col; $row++;
 				$worksheet_parameters->write($row, $col, "CAP3:", $format); $col++;
 				$worksheet_parameters->write($row, $col, "Enabled", $format_left); $col++;			
