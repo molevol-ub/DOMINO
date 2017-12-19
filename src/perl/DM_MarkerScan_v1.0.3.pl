@@ -1018,7 +1018,8 @@ if (!$minimum_number_taxa_covered) { $minimum_number_taxa_covered = $number_sp; 
 } else { if ($minimum_number_taxa_covered > $number_sp) { &printError("Minimum number of covered taxa (MCT) is bigger than the number of taxa provided...\n"); DOMINO::dieNicely(); }} 
 
 ## push default parameters
-my $answer_PV; if ($polymorphism_user) { $answer_PV = 'YES'; } else { $answer_PV = 'NO';} 
+my $answer_dnaSP; if ($dnaSP_flag) { $answer_dnaSP = 'YES'; $polymorphism_user=1;} else { $answer_dnaSP = 'NO';}
+my $answer_PV; if ($polymorphism_user) { $answer_PV = 'YES'; } else { $answer_PV = 'NO';}
 my $BowtieLocal; if ($bowtie_local) { $BowtieLocal = 'YES'; } else { $BowtieLocal = 'NO';} 
 my $mapContigFiles; if ($map_contig_files) { $mapContigFiles = 'YES'; } else { $mapContigFiles = 'NO';} 
 my $LowCoverageData; if ($DOMINO_simulations) { $LowCoverageData = 'YES'; } else { $LowCoverageData = 'NO';} 
@@ -1031,6 +1032,7 @@ push (@{ $domino_params{'mapping'}{'rfgexten'} }, $rfgexten);
 push (@{ $domino_params{'mapping'}{'mis_penalty'} }, $mis_penalty);
 push (@{ $domino_params{'mapping'}{'level_significance_coverage_distribution'} }, $level_significance_coverage_distribution);
 push (@{ $domino_params{'mapping'}{'polymorphism'} }, $answer_PV);
+push (@{ $domino_params{'mapping'}{'dnaSP'} }, $answer_dnaSP);
 push (@{ $domino_params{'mapping'}{'low_coverage_data'} }, $LowCoverageData);
 push (@{ $domino_params{'mapping'}{'map_contig_files'} }, $mapContigFiles);
 push (@{ $domino_params{'mapping'}{'bowtie_local'} }, $BowtieLocal);
@@ -3577,13 +3579,23 @@ sub check_marker_ALL {
 	}}}}
 	my $string = join ("", @profile); #print "\t\t\t  ".$string."\n";
 	my $var_sites = $string =~ tr/1/1/; ## count variable sites
-	if ($var_sites == 0) { return 'NO'; }
+	my $species = join (",", sort @taxa);
 	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
 	my $count_length = $con_sites + $var_sites;
+	if ($var_sites == 0) { 
+		#print "NO: $species, $var_sites, $length, $string, $count_length\n";
+		#if ($dnaSP_flag) { } else { return 'NO'; } 
+		#if we get to provide these markers there is no need to do DOMINO as we will be reporting everything
+		return 'NO';
+	}
 	my $missing = $length - $count_length;
 	my $missing_allowed_length = $missing_allowed * $length;
-	if ($missing > $missing_allowed_length) { return 'NO';}
-	my $species = join (",", sort @taxa);
+	if ($missing > $missing_allowed_length) { 
+		#print "NO: $species, $var_sites, $length, $string, $count_length\n";
+		if ($dnaSP_flag) {} else { return 'NO';  }
+		#if we get to provide these markers there is no need to do DOMINO as we will be reporting everything
+		return 'NO';
+	}
 	my @array = ($species, $var_sites, $length, $string, $count_length);
 	#print Dumper \@array; print "\n";
 	return \@array;
