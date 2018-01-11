@@ -2733,11 +2733,12 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		}
 
 		## Collapse markers
-		my $file_markers_collapse = &check_overlapping_markers($tmp_file, $pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
+		#my $file_markers_collapse = &check_overlapping_markers($tmp_file, $pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
 
 		# Retrieve fasta sequences...
 		my $output_file = $PILEUP_merged_folder_abs_path."/SET_".$set."_markers_retrieved.txt";
-		my $markers_print_ref = &check_DOMINO_marker($output_file, $dir2print_markers, $file_markers_collapse, $ref_taxa);
+		#my $markers_print_ref = &check_DOMINO_marker($output_file, $dir2print_markers, $file_markers_collapse, $ref_taxa);
+		my $markers_print_ref;
 		
 		unless (scalar @$markers_print_ref == 0) { 
 			push (@{ $pileup_files_threads{"SET_$set"}{'markers'} }, $output_file);
