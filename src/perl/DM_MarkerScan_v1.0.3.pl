@@ -2733,7 +2733,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		}
 
 		## Collapse markers
-		#my $file_markers_collapse = &check_overlapping_markers($tmp_file, $pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
+		my $file_markers_collapse = &check_overlapping_markers($tmp_file, $pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
 
 		# Retrieve fasta sequences...
 		my $output_file = $PILEUP_merged_folder_abs_path."/SET_".$set."_markers_retrieved.txt";
@@ -3215,7 +3215,12 @@ sub check_overlapping_markers {
 						$bad_counter++;
 						if ($bad_counter > 3) { ## We would consider the same marker if overlapping 3 SLIDING_user!!
 							($bool,$counter,$bad_counter) = 0;
-	}}}}}}
+						}
+					}
+				}
+			}
+		}
+	}
 	my %tmp_coord;
 	foreach my $contig (sort keys %tmp_hash) {
 		foreach my $taxa (keys %{ $tmp_hash{$contig} }) {
@@ -3224,7 +3229,9 @@ sub check_overlapping_markers {
 				my @array = sort(@{ $tmp_hash{$contig}{$taxa}{$marker} });
 				my @sort_uniq = uniq(@array);
 				push (@{ $tmp_coord{$contig}{$taxa}{$marker} }, @sort_uniq);
-	}}}
+			}
+		}
+	}
 	undef %coord_seen; undef %tmp_hash; ## release RAM
 
 	## Set range values
@@ -3253,6 +3260,7 @@ sub check_overlapping_markers {
 						#print $$hash_ref{$contig}."\n";
 						if ($marker_seen{$string}) {next;}
 						my $result = &check_given_marker(\@array2check, $$hash_ref{$contig});						
+					
 						if ($result ne 1) {
 							my $id;
 							for (my $j = 0; $j < scalar @length; $j++) {
@@ -3262,14 +3270,21 @@ sub check_overlapping_markers {
 							push (@{ $hash2print{$array_coord[0]}{$id}}, $string);
 							# print $keys_markers."\t".$array_coord[0]."\t".$array_coord2[5]."\t".$result."\t".$id."\t".$string."\n"; 
 							$marker_seen{$string}++;
-				}}}
+						}
+					}
+				}
+		
 				foreach my $keys (keys %hash2print) {
 					foreach my $lent (sort keys %{ $hash2print{$keys} }) {
 						my @array = @{ $hash2print{$keys}{$lent} };					
 						for (my $i=0; $i < scalar @array; $i++) { 
 							print OUT $contig."##".$array[$i]."\n";
 						} print OUT "//\n";
-	}}}}}
+					}
+				}
+			}
+		}
+	}
 	close(OUT); 
 	return $file2return;
 }
