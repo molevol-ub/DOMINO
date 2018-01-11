@@ -2345,6 +2345,9 @@ if ($option eq "msa_alignment") {
 my $genome_marker_bool = 0;
 my $all_markers_file = $marker_dirname."/markers.txt";
 foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obtain putative molecular markers
+
+	sleep(120); ## sleeping during 2 minutes
+
 	unless ($domino_files{$ref_taxa}{'contigs'}) {next; }
 	if ($genome_marker_bool == 1) {last;}
 	print "\n";
@@ -2430,13 +2433,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	}
 	print "\n+ Sorting contig size...\n";
 	system ("sort -nr $tmp_Fasta_size >> $ref_Fasta_size"); system ("rm $tmp_Fasta_size");
-
-	######
-	######
-	###### FINDING THE GLITCH
-	######	
-	######
-	######
 	
 	## get ordered size of contigs
 	my $total_contigs=0; my @size_contigs;
@@ -2568,6 +2564,13 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 
 	my $counter=0; 
 	&debugger_print("TOTAL contigs:\n".$totalContigs2use4markers);
+
+	######
+	######
+	###### FINDING THE GLITCH
+	######	
+	######
+	######
 	
 	## Generate subsets of given amount of contigs to avoid collapsing system with so many files
 	for (my $set=1; $set <= $SETS; $set++) {
@@ -2701,8 +2704,8 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		}
 		close (MERGE_COORD);	
 		if (!%coord_contig) { 
-			undef %pileup_files_threads; undef %contigs_pileup_fasta;
-			$pm_MARKER_PILEUP->finish(); 
+			undef %pileup_files_threads; 
+			$pm_MARKER_PILEUP->finish(); ## finish thread 
 		}
 		
 		## Print in tmp file for sorting and obtaining unique
