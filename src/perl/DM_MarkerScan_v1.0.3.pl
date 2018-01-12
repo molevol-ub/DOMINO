@@ -3194,7 +3194,7 @@ sub check_overlapping_markers {
 	close(FILE);
 	
 	# Debug 
-	print Dumper \%tmp_hash;
+	#print Dumper \%tmp_hash;
 		
 	my %coord_seen;
 	foreach my $contig (sort keys %tmp_hash) {
