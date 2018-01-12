@@ -2565,13 +2565,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	my $counter=0; 
 	&debugger_print("TOTAL contigs:\n".$totalContigs2use4markers);
 
-	######
-	######
-	###### FINDING THE GLITCH
-	######	
-	######
-	######
-	
 	## Generate subsets of given amount of contigs to avoid collapsing system with so many files
 	for (my $set=1; $set <= $SETS; $set++) {
 		my @subset_array; my $tmp=1;
@@ -2710,8 +2703,8 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		
 		## Print in tmp file for sorting and obtaining unique
 		chdir $PILEUP_merged_folder_abs_path;
-		my $tmp_file = $PILEUP_merged_folder_abs_path."/SET_$set"."_markers_shared.txt";
-		open(TMP, ">$tmp_file");
+		my $markers_shared = $PILEUP_merged_folder_abs_path."/SET_$set"."_markers_shared.txt";
+		open(TMP, ">$markers_shared");
 		for my $scaffold (keys %coord_contig) {    		
 			foreach my $marker (keys %{ $coord_contig{$scaffold} }) {
 				my @taxa = @{ $coord_contig{$scaffold}{$marker} };
@@ -2727,13 +2720,17 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		} close(TMP);
 		undef %coord_contig;
 			
-		unless (-e -r -s $tmp_file) { 
+		unless (-e -r -s $markers_shared) { 
 			undef %pileup_files_threads; undef %contigs_pileup_fasta;
 			$pm_MARKER_PILEUP->finish(); 
 		}
 
+		######
+		###### FINDING THE GLITCH
+		######	
+
 		## Collapse markers
-		my $file_markers_collapse = &check_overlapping_markers($tmp_file, $pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
+		my $file_markers_collapse = &check_overlapping_markers($markers_shared, $pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
 
 		# Retrieve fasta sequences...
 		my $output_file = $PILEUP_merged_folder_abs_path."/SET_".$set."_markers_retrieved.txt";
