@@ -3174,10 +3174,11 @@ sub check_given_marker {
 sub check_overlapping_markers {
 
 	## Overlaps and maximizes domino markers obtained
-	my $file = $_[0]; my $mergeArray_file = $_[1];
+	my $file = $_[0]; 				## markers_shared 
+	my $mergeArray_file = $_[1];
 	&debugger_print("Checking file $file [DM_MarkerScan: check_overlapping_markers]");
-	my $contig_id; my %tmp_hash; my $marker_counter_tmp = 0;
-	my @sequences;
+	
+	my $contig_id; my %tmp_hash; my $marker_counter_tmp = 0; my @sequences;
 	open (FILE, $file); while (<FILE>) {
 		my $line = $_; chomp $line; 
 		$line =~ s/ /\t/;
@@ -3191,11 +3192,13 @@ sub check_overlapping_markers {
 		my $taxa;
 		if ($array_lines[4]) { $taxa = $array_lines[4];
 		} else { $taxa = $MID_taxa_names;  }		
-		push (@{ $tmp_hash{$contig_id}{$taxa}{$a[0]} }, $string); ## Keep record of taxa and coordinates
+		push (@{ $tmp_hash{ $contig_id }{ $taxa }{ $a[0] } }, $string); ## Keep record of taxa and coordinates
 	} 
 	close(FILE);
-
+	
 	# Debug 
+	print Dumper \%tmp_hash;
+		
 	my %coord_seen;
 	foreach my $contig (sort keys %tmp_hash) {
 		foreach my $taxa (sort keys %{ $tmp_hash{$contig} }) {		
@@ -3236,8 +3239,11 @@ sub check_overlapping_markers {
 
 	## Set range values
 	my $range = $window_size_VARS_max - $window_size_VARS_min; my @length;
-	if ($range >= 500) { 	 @length = (100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500); 
-	} elsif ($range < 500) { @length = (50, 100, 200, 300, 400, 500); }
+	if ($range >= 500) { 	 
+		@length = (100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500); 
+	} elsif ($range < 500) { 
+		@length = (50, 100, 200, 300, 400, 500);
+	}
 
 	# Debug print Dumper \%tmp_coord
 	my @array = split(".txt", $file); 
