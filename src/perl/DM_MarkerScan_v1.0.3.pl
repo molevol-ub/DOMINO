@@ -2734,9 +2734,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 
 		# Retrieve fasta sequences...
 		my $output_file = $PILEUP_merged_folder_abs_path."/SET_".$set."_markers_retrieved.txt";
-		#my $markers_print_ref = &check_DOMINO_marker($output_file, $dir2print_markers, $file_markers_collapse, $ref_taxa);
+		my $markers_print_ref = &check_DOMINO_marker($output_file, $dir2print_markers, $file_markers_collapse, $ref_taxa);
 		my $markers_print_ref;
-		
+
 		unless (scalar @$markers_print_ref == 0) { 
 			push (@{ $pileup_files_threads{"SET_$set"}{'markers'} }, $output_file);
 			push (@{ $pileup_files_threads{"SET_$set"}{'markers_files'} }, @$markers_print_ref);
@@ -3294,9 +3294,10 @@ sub check_overlapping_markers {
 
 sub check_DOMINO_marker {
 	
-	my $file = $_[0]; my $dir = $_[1];	
-	my $DOMINO_markers_file = $_[2]; 
-	my $ref_taxa_all = $_[3]; # if MSA alignment it is a file containing msa
+	my $file = $_[0]; ## OUTPUT
+	my $dir = $_[1];	
+	my $DOMINO_markers_file = $_[2]; ## markers collapse
+	my $ref_taxa_all = $_[3]; 			# if MSA alignment it is a file containing msa
 
 	my @files; 
 	
@@ -3379,6 +3380,8 @@ sub check_DOMINO_marker {
 					$hash{$keys} = $seq;
 			}}
 			my $seq_name;
+			
+			return (\@files); ## for debugging purposes
 			
 			## Check pairwise MSA
 			my $valueReturned = &check_marker_pairwise(\%hash);
