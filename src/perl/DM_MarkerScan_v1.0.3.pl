@@ -3380,13 +3380,12 @@ sub check_DOMINO_marker {
 			}}
 			my $seq_name;
 			
-			
 			## Check pairwise MSA
 			my $valueReturned = &check_marker_pairwise(\%hash);
-			next; ## for debugging purposes
 			if ($valueReturned == 1) { ## if it is variable for each pairwise comparison
 				## Get variable positions for the whole marker
 				my $array_ref_returned = &check_marker_ALL(\%hash, "Ref");
+				next; ## for debugging purposes
 				if ($array_ref_returned eq 'NO') { 
 					remove_tree($msa_file);
 				} else {
