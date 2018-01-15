@@ -2735,7 +2735,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		# Retrieve fasta sequences...
 		my $output_file = $PILEUP_merged_folder_abs_path."/SET_".$set."_markers_retrieved.txt";
 		my $markers_print_ref = &check_DOMINO_marker($output_file, $dir2print_markers, $file_markers_collapse, $ref_taxa);
-		my $markers_print_ref;
 
 		unless (scalar @$markers_print_ref == 0) { 
 			push (@{ $pileup_files_threads{"SET_$set"}{'markers'} }, $output_file);
@@ -3381,7 +3380,7 @@ sub check_DOMINO_marker {
 			}}
 			my $seq_name;
 			
-			return (\@files); ## for debugging purposes
+			next; ## for debugging purposes
 			
 			## Check pairwise MSA
 			my $valueReturned = &check_marker_pairwise(\%hash);
