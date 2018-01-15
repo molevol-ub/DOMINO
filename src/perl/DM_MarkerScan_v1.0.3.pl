@@ -3380,10 +3380,10 @@ sub check_DOMINO_marker {
 			}}
 			my $seq_name;
 			
-			next; ## for debugging purposes
 			
 			## Check pairwise MSA
 			my $valueReturned = &check_marker_pairwise(\%hash);
+			next; ## for debugging purposes
 			if ($valueReturned == 1) { ## if it is variable for each pairwise comparison
 				## Get variable positions for the whole marker
 				my $array_ref_returned = &check_marker_ALL(\%hash, "Ref");
@@ -3430,19 +3430,23 @@ sub check_marker_pairwise {
 			if ($seen{$keys}) {next;}
 			if ($discard{$keys}) {next;}
 			if ($keys eq $reference) {next;}
+			
 			my $seq2check = $$hash_ref{$keys};			
 			my @array_reference = split("",$$hash_ref{$reference});
 			my @array2check = split("", $$hash_ref{$keys});
 			my @array;
+			
 			for (my $i=0; $i < scalar @array_reference; $i++) {
 				my $reference_nuc = $array_reference[$i];
 				my $base2check = $array2check[$i];
 				push(@array, &check_reference_bp($reference_nuc, $base2check));
 			}
+			
 			my $string = join "", @array;
 			my $var_sites_sub = $string =~ tr/1/1/;
 			my $con_sites_sub = $string =~ tr/0/0/;
 			my $total_sub = $con_sites_sub + $var_sites_sub;			
+			
 			if ($var_sites_sub == 0) { ## If does not fit the necessary divergence
 				$seen{$reference}++; $discard{$keys}++; $pairwise{$reference}{$keys} = "NO!";
 				if ($variable_divergence) { &debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t0\t".$variable_divergence);
@@ -3450,10 +3454,12 @@ sub check_marker_pairwise {
 				}
 				next;
 			}
+			
 			my $percentage_sub = $var_sites_sub/$total_sub;
 			if ($variable_divergence) { &debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t".$percentage_sub."\t".$variable_divergence);
 			} else {					&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t".$percentage_sub."\t".$variable_positions_user_range);
 			}
+			
 			if ($variable_positions_user_min) {
 				if ($var_sites_sub > $variable_positions_user_min) { 
 					if ($var_sites_sub < $variable_positions_user_max) { 
