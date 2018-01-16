@@ -3515,7 +3515,7 @@ sub check_marker_ALL {
 	##########################################################################################
 
 	my $file = $_[0];	my $ref = $_[1];
-	print "check_marker_ALL $file\n";
+	#print "check_marker_ALL $file\n";
 	my (%hash, $length, @taxa, @length_seqs);
 	if ($ref) {
 		## get alignment from hash
@@ -3605,7 +3605,7 @@ sub check_marker_ALL {
 				}}} elsif (scalar @amb > 1) {  			push (@profile, '1');   ## Several
 	}}}}
 	my $string = join ("", @profile); 
-	undef %hash;
+	undef %hash; undef @profile;
 	
 	my $var_sites = $string =~ tr/1/1/; ## count variable sites
 	my $species = join (",", sort @taxa);
