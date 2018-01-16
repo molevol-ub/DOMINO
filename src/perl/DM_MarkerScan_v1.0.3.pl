@@ -2346,8 +2346,6 @@ my $genome_marker_bool = 0;
 my $all_markers_file = $marker_dirname."/markers.txt";
 foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obtain putative molecular markers
 
-	sleep(120); ## sleeping during 2 minutes
-
 	unless ($domino_files{$ref_taxa}{'contigs'}) {next; }
 	if ($genome_marker_bool == 1) {last;}
 	print "\n";
@@ -2753,10 +2751,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	&time_log(); print "\n";
 	
 	######
-	######
 	###### FINDING THE GLITCH
-	######	
-	######	
 	######	
 	
 	## Retrieve info of all markers identified...
@@ -3520,9 +3515,10 @@ sub check_marker_ALL {
 	##########################################################################################
 
 	my $file = $_[0];	my $ref = $_[1];
-	#print "check_marker_ALL $file\n";
+	print "check_marker_ALL $file\n";
 	my (%hash, $length, @taxa, @length_seqs);
-	if ($ref) { 
+	if ($ref) {
+		## get alignment from hash
 		foreach my $seqs (sort keys %{ $file }) {
 			my @array = split("", $$file{$seqs});
 			if (!$domino_files{$seqs}{'taxa'}) {next;}
@@ -3532,6 +3528,7 @@ sub check_marker_ALL {
 			push (@taxa, $seqs);
 		}	
 	} else {
+		## get alignment from file
 		open(FILE, $file) || die "Could not open the file $file ... [DM_MarkerScan: check_marker_ALL] \n";
 		$/ = ">"; ## Telling perl where a new line starts
 		while (<FILE>) {		
@@ -3552,7 +3549,8 @@ sub check_marker_ALL {
 		}
 		close(FILE); $/ = "\n";	
 	}
-
+	
+	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
 	my @tmp_length = sort @length_seqs;
 	my @tmp_length_uniq = uniq(@tmp_length);	
 	if (scalar @tmp_length_uniq > 1) {
@@ -3606,7 +3604,9 @@ sub check_marker_ALL {
 						} else { 						push (@profile, '1');	## The ambiguous is not the present snps  	MGG => [ M > A/C ]
 				}}} elsif (scalar @amb > 1) {  			push (@profile, '1');   ## Several
 	}}}}
-	my $string = join ("", @profile); #print "\t\t\t  ".$string."\n";
+	my $string = join ("", @profile); 
+	undef %hash;
+	
 	my $var_sites = $string =~ tr/1/1/; ## count variable sites
 	my $species = join (",", sort @taxa);
 	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
