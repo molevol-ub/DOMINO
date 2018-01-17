@@ -3554,10 +3554,6 @@ sub check_marker_ALL {
 		close(FILE); $/ = "\n";	
 	}
 	
-	my $total_size_Devel_ram = total_size(\%hash);
-	print "total_size_Devel_ram: $total_size_Devel_ram bytes\n";
-	next;	
-	
 	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
 	my @tmp_length = sort @length_seqs;
 	my @tmp_length_uniq = uniq(@tmp_length);	
@@ -3604,7 +3600,8 @@ sub check_marker_ALL {
 					for (my $i=0; $i < scalar @amb; $i++) {
 						my $flag_yes = 0;
 						for (my $k = 0; $k < scalar @{ $ambiguity_DNA_codes{$amb[$i]}}; $k++) {
-							if (grep /$ambiguity_DNA_codes{$amb[$i]}[$k]/, @tmp) { $flag_yes++; }
+							$flag_yes++;
+							#if (grep /$ambiguity_DNA_codes{$amb[$i]}[$k]/, @tmp) { $flag_yes++; }
 						}
 						if ($flag_yes > 0) {
 							if ($polymorphism_user) { 	push (@profile, '1'); 	## if polymorphism
@@ -3614,6 +3611,7 @@ sub check_marker_ALL {
 	}}}}
 	my $string = join ("", @profile); 
 	undef %hash; undef @profile;
+	next;
 	
 	my $var_sites = $string =~ tr/1/1/; ## count variable sites
 	my $species = join (",", sort @taxa);
