@@ -60,6 +60,7 @@ use Data::Dumper;
 use POSIX qw(strftime);
 use FindBin;
 use lib $FindBin::Bin."/lib";
+use Devel::Size qw(size total_size);
 
 BEGIN {
 	require DOMINO;
@@ -2843,6 +2844,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	
 	} close(OUT); close(OUT_markers); close (OUT_coord);
  	print "+ Marker development for $ref_taxa is finished here...\n\n"; &time_log(); print "\n";
+ 	
+ 	exit(); ## for debugging purposes
+ 	
 } #each reference taxa
 
 ## Move parameters files
@@ -3549,6 +3553,10 @@ sub check_marker_ALL {
 		}
 		close(FILE); $/ = "\n";	
 	}
+	
+	my $total_size_Devel_ram = total_size(\%hash);
+	print "total_size_Devel_ram: $total_size_Devel_ram bytes\n";
+	next;	
 	
 	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
 	my @tmp_length = sort @length_seqs;
