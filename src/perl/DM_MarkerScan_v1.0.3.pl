@@ -3624,7 +3624,8 @@ sub check_marker_ALL {
 							if ($polymorphism_user) { 	
 								#push (@profile, '1'); 	## if polymorphism
 							} else { 					
-								#push (@profile, '0'); } ## The ambiguous is the present snps: 		YCT => [ Y > C/T ]
+								#push (@profile, '0'); ## The ambiguous is the present snps: 	YCT => [ Y > C/T ]
+							} 
 						} else { 						
 							#push (@profile, '1');	## The ambiguous is not the present snps  	MGG => [ M > A/C ]
 						}
