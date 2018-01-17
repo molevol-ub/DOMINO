@@ -3600,8 +3600,7 @@ sub check_marker_ALL {
 					for (my $i=0; $i < scalar @amb; $i++) {
 						my $flag_yes = 0;
 						for (my $k = 0; $k < scalar @{ $ambiguity_DNA_codes{$amb[$i]}}; $k++) {
-							$flag_yes++;
-							#if (grep /$ambiguity_DNA_codes{$amb[$i]}[$k]/, @tmp) { $flag_yes++; }
+							if (grep /$ambiguity_DNA_codes{$amb[$i]}[$k]/, @tmp) { $flag_yes++; }
 						}
 						if ($flag_yes > 0) {
 							if ($polymorphism_user) { 	push (@profile, '1'); 	## if polymorphism
