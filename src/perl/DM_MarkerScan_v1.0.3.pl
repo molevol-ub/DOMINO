@@ -2724,10 +2724,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			$pm_MARKER_PILEUP->finish(); 
 		}
 
-		######
-		###### FINDING THE GLITCH
-		######	
-
 		## Collapse markers
 		my $file_markers_collapse = &check_overlapping_markers($markers_shared, $pileup_files_threads{"SET_$set"}{'mergeProfile'}[0]);
 
@@ -2750,10 +2746,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	print "**** All parallel parsing processes have finished ****\n";
 	print "******************************************************\n\n";
 	&time_log(); print "\n";
-	
-	######
-	###### FINDING THE GLITCH
-	######	
 	
 	## Retrieve info of all markers identified...
 	my $dump_files = DOMINO::readDir($dir_Dump_file);
@@ -3554,7 +3546,12 @@ sub check_marker_ALL {
 		close(FILE); $/ = "\n";	
 	}
 	## %hash is not responsible of RAM comsumption
-	 
+	## @profile is not responsible
+	
+	######
+	###### FINDING THE GLITCH
+	######
+	
 	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
 	my @tmp_length = sort @length_seqs;
 	my @tmp_length_uniq = uniq(@tmp_length);	
@@ -3573,16 +3570,16 @@ sub check_marker_ALL {
 		if (scalar @tmp_uniq_sort == 1) {
 
 			if ($tmp_uniq_sort[0] eq 'N') {
-				#push (@profile, 'N');
+				push (@profile, 'N');
 
 			} elsif ($tmp_uniq_sort[0] eq '-') {
-				#push (@profile, '-');
+				push (@profile, '-');
 
 			} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[0]}) {
-				#push (@profile, '1');
+				push (@profile, '1');
 
 			} else { 
-				#push (@profile, '0'); 
+				push (@profile, '0'); 
 			}
 
 		} else {
@@ -3594,44 +3591,44 @@ sub check_marker_ALL {
 
 			for (my $j=0; $j < scalar @tmp_uniq_sort; $j++) {
 				if ($tmp_uniq_sort[$j] eq '-') { ## Gaps would be codify as -
-				#	push (@tmp, '-'); $escape_flag++;
+					push (@tmp, '-'); $escape_flag++;
 
 				} elsif ($tmp_uniq_sort[$j] eq 'N') { ## Gaps would be codify as -
-				#	push (@tmp, 'N'); $escape_flag++;
+					push (@tmp, 'N'); $escape_flag++;
 
 				} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[$j]}) {
-				#	push(@amb, $tmp_uniq_sort[$j]);
+					push(@amb, $tmp_uniq_sort[$j]);
 
 				} else { 
-					#push(@tmp, $tmp_uniq_sort[$j]); 
+					push(@tmp, $tmp_uniq_sort[$j]); 
 				}
 			}
 
 			if ($escape_flag) { 
-				#push (@profile, '-');			
+				push (@profile, '-');			
 
 			} else {
 				if (scalar @amb == 0) { ## No ambiguous code
-				#	push (@profile, '1');			
+					push (@profile, '1');			
 				
 				} elsif (scalar @amb == 1) { ## 1 amb code
-					for (my $i=0; $i < scalar @amb; $i++) {
+					for (my $h=0; $h < scalar @amb; $h++) {
 						my $flag_yes = 0;
-						for (my $k = 0; $k < scalar @{ $ambiguity_DNA_codes{$amb[$i]}}; $k++) {
-							if (grep /$ambiguity_DNA_codes{$amb[$i]}[$k]/, @tmp) { $flag_yes++; }
+						for (my $k = 0; $k < scalar @{ $ambiguity_DNA_codes{$amb[$h]}}; $k++) {
+							if (grep /$ambiguity_DNA_codes{$amb[$h]}[$k]/, @tmp) { $flag_yes++; }
 						}
 						if ($flag_yes > 0) {
 							if ($polymorphism_user) { 	
-								#push (@profile, '1'); 	## if polymorphism
+								push (@profile, '1'); 	## if polymorphism
 							} else { 					
-								#push (@profile, '0'); ## The ambiguous is the present snps: 	YCT => [ Y > C/T ]
+								push (@profile, '0'); ## The ambiguous is the present snps: 	YCT => [ Y > C/T ]
 							} 
 						} else { 						
-							#push (@profile, '1');	## The ambiguous is not the present snps  	MGG => [ M > A/C ]
+							push (@profile, '1');	## The ambiguous is not the present snps  	MGG => [ M > A/C ]
 						}
 					}
 				} elsif (scalar @amb > 1) {  			
-					#push (@profile, '1');   ## Several
+					push (@profile, '1');   ## Several
 				}
 			}
 		}
@@ -3639,10 +3636,10 @@ sub check_marker_ALL {
 	my $string = join ("", @profile); 
 	undef %hash; undef @profile;
 
-	return 'NO';
+	######
+	###### FINDING THE GLITCH
+	######
 
-	## tested up to here
-	
 	my $var_sites = $string =~ tr/1/1/; ## count variable sites
 	my $species = join (",", sort @taxa);
 	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
