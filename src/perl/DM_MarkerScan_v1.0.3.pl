@@ -3643,9 +3643,8 @@ sub check_marker_ALL {
 			}
 		}
 	}
-	my $string = "";
-	#= join ("", @profile); 
-	undef %hash; undef @profile;
+	#my $string= join ("", @profile); undef @profile;
+	undef %hash; 
 
 	######
 	###### FINDING THE GLITCH
