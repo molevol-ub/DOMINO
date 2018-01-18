@@ -3583,6 +3583,7 @@ sub check_marker_ALL {
 				push (@profile, '0'); 
 			}
 		} else {
+			next;
 			## We are assuming the calling has been correctly done and
 			## the ambiguity codes are due to polymorphism
 
@@ -3658,7 +3659,7 @@ sub check_marker_ALL {
 		#if we get to provide these markers there is no need to do DOMINO as we will be reporting everything
 		return 'NO';
 	}
-	my @array = ($species, $var_sites, $length, $count_length);
+	my @array = ($species, $var_sites, $length, $string, $count_length);
 	#print Dumper \@array; print "\n";
 	return \@array;
 }
