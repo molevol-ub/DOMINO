@@ -3560,9 +3560,9 @@ sub check_marker_ALL {
 		&printError("There is problem: length of the markers do not match for $file..."); return "";
 	} else { $length_seqs[0] = $length; }	
 	
-	return("NO");
+	my ($var_sites, $con_sites, $string, $missing);
 	
-	my @profile;
+	#my @profile;
 	for (my $i=0; $i < $length; $i++) {
 		my $flag_position = 0;
 		my @tmp;
@@ -3573,16 +3573,19 @@ sub check_marker_ALL {
 		if (scalar @tmp_uniq_sort == 1) {
 
 			if ($tmp_uniq_sort[0] eq 'N') {
-				push (@profile, 'N');
+				#push (@profile, 'N');
+				$missing++;
 
 			} elsif ($tmp_uniq_sort[0] eq '-') {
-				push (@profile, '-');
-
+				#push (@profile, '-');
+				$missing++;
 			} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[0]}) {
-				push (@profile, '1');
+				#push (@profile, '1');
+				$var_sites++;
 
 			} else { 
-				push (@profile, '0'); 
+				#push (@profile, '0'); 
+				$con_sites++;
 			}
 		} else {
 			next;
@@ -3608,12 +3611,12 @@ sub check_marker_ALL {
 			}
 
 			if ($escape_flag) { 
-				push (@profile, '-');			
-
+				#push (@profile, '-');			
+				$missing++;
 			} else {
 				if (scalar @amb == 0) { ## No ambiguous code
-					push (@profile, '1');			
-				
+					#push (@profile, '1');			
+					$var_sites++;
 				} elsif (scalar @amb == 1) { ## 1 amb code
 					for (my $h=0; $h < scalar @amb; $h++) {
 						my $flag_yes = 0;
@@ -3622,30 +3625,36 @@ sub check_marker_ALL {
 						}
 						if ($flag_yes > 0) {
 							if ($polymorphism_user) { 	
-								push (@profile, '1'); 	## if polymorphism
+								#push (@profile, '1'); 	## if polymorphism
+								$var_sites++;
 							} else { 					
-								push (@profile, '0'); ## The ambiguous is the present snps: 	YCT => [ Y > C/T ]
+								#push (@profile, '0'); ## The ambiguous is the present snps: 	YCT => [ Y > C/T ]
+								$con_sites++;
 							} 
 						} else { 						
-							push (@profile, '1');	## The ambiguous is not the present snps  	MGG => [ M > A/C ]
+							#push (@profile, '1');	## The ambiguous is not the present snps  	MGG => [ M > A/C ]
+							$var_sites++;
 						}
 					}
 				} elsif (scalar @amb > 1) {  			
-					push (@profile, '1');   ## Several
+					#push (@profile, '1');   ## Several
+					$var_sites++;
 				}
 			}
 		}
 	}
-	my $string = join ("", @profile); 
+	my $string = "";
+	#= join ("", @profile); 
 	undef %hash; undef @profile;
 
 	######
 	###### FINDING THE GLITCH
 	######
 
-	my $var_sites = $string =~ tr/1/1/; ## count variable sites
+	##my $var_sites = $string =~ tr/1/1/; ## count variable sites
+	#my $con_sites = $string =~ tr/0/0/; ## count conserved sites
+	
 	my $species = join (",", sort @taxa);
-	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
 	my $count_length = $con_sites + $var_sites;
 	if ($var_sites == 0) { 
 		#print "NO: $species, $var_sites, $length, $string, $count_length\n";
@@ -3653,7 +3662,7 @@ sub check_marker_ALL {
 		#if we get to provide these markers there is no need to do DOMINO as we will be reporting everything
 		return 'NO';
 	}
-	my $missing = $length - $count_length;
+	#my $missing = $length - $count_length;
 	my $missing_allowed_length = $missing_allowed * $length;
 	if ($missing > $missing_allowed_length) { 
 		#print "NO: $species, $var_sites, $length, $string, $count_length\n";
