@@ -3560,6 +3560,8 @@ sub check_marker_ALL {
 		&printError("There is problem: length of the markers do not match for $file..."); return "";
 	} else { $length_seqs[0] = $length; }	
 	
+	return("NO");
+	
 	my @profile;
 	for (my $i=0; $i < $length; $i++) {
 		my $flag_position = 0;
