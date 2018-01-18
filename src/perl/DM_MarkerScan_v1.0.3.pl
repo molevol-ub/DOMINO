@@ -3377,6 +3377,7 @@ sub check_DOMINO_marker {
 				## Get variable positions for the whole marker
 				my $array_ref_returned = &check_marker_ALL(\%hash, "Ref");
 				next; ## for debugging purposes
+				
 				if ($array_ref_returned eq 'NO') { 
 					remove_tree($msa_file);
 				} else {
@@ -3581,7 +3582,6 @@ sub check_marker_ALL {
 			} else { 
 				push (@profile, '0'); 
 			}
-
 		} else {
 			## We are assuming the calling has been correctly done and
 			## the ambiguity codes are due to polymorphism
@@ -3614,7 +3614,7 @@ sub check_marker_ALL {
 				} elsif (scalar @amb == 1) { ## 1 amb code
 					for (my $h=0; $h < scalar @amb; $h++) {
 						my $flag_yes = 0;
-						for (my $k = 0; $k < scalar @{ $ambiguity_DNA_codes{$amb[$h]}}; $k++) {
+						for (my $k = 0; $k < scalar @{ $ambiguity_DNA_codes{$amb[$h]} }; $k++) {
 							if (grep /$ambiguity_DNA_codes{$amb[$h]}[$k]/, @tmp) { $flag_yes++; }
 						}
 						if ($flag_yes > 0) {
@@ -3658,7 +3658,7 @@ sub check_marker_ALL {
 		#if we get to provide these markers there is no need to do DOMINO as we will be reporting everything
 		return 'NO';
 	}
-	my @array = ($species, $var_sites, $length, $string, $count_length);
+	my @array = ($species, $var_sites, $length, $count_length);
 	#print Dumper \@array; print "\n";
 	return \@array;
 }
