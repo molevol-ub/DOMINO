@@ -60,7 +60,6 @@ use Data::Dumper;
 use POSIX qw(strftime);
 use FindBin;
 use lib $FindBin::Bin."/lib";
-use Devel::Size qw(size total_size);
 
 BEGIN {
 	require DOMINO;
