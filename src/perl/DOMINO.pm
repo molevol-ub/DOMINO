@@ -18,7 +18,7 @@ sub assemblyStats {
 
 sub blastn {
 	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
-	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-10 -db '".$db."' -out $results -outfmt 6";
+	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-10 -max_target_seqs 150 -db '".$db."' -out $results -outfmt 6";
 	my $message = "BLASTN command: $filter\n"; 
 	my $blastn = system($filter);
 	return ($blastn, $message);
@@ -28,7 +28,7 @@ sub check_ID_length {
 	
 	my $file = $_[0];
 	my $option = $_[1];
-	open (F1, "$file") or die "Could not open file $file for reading ID length";
+	open (F1, "$file") or die "Could not open file $file for reading ID length [DOMINO.pm: check_id_length]";
 	
 	if ($option eq 'fastq') {
 		my $isEOF = 1;
@@ -60,7 +60,7 @@ sub check_ID_length {
 sub check_file_format {    
     my $file = $_[0]; my $id; my $count = 3;
     my $fasta = my $fastq = my $qual = 0; my $format = 'unknown';
-    open(FILE, $file) or die "Could not open file $file when checking file format...";
+    open(FILE, $file) or die "Could not open file $file when checking file format... [DOMINO.pm: check_file_format]";
     while (<FILE>) {
         if($count-- == 0) { last;
         } elsif(!$fasta && /^\>\S+\s*/o) { $fasta = 1; $qual = 1;
@@ -84,7 +84,7 @@ sub check_paired_file {
 	my $count = 0;
 	
 	if ($option eq "fastq") {
-		open (F1, "$file") or die "Could not open file $file for checking paired-end reads";
+		open (F1, "$file") or die "Could not open file $file for checking paired-end reads [DOMINO.pm: check_paired_file]";
 		while(<F1>) {
 			my @Read = ();
 			chomp(my $id = $_);
@@ -107,7 +107,7 @@ sub check_paired_file {
 		} close(F1);
 		
 	} else {
-		open (FILE, "$file") or die "Could not open file $file when checking paired-end reads";
+		open (FILE, "$file") or die "Could not open file $file when checking paired-end reads [DOMINO.pm: check_paired_file]";
 		$/ = ">"; ## Telling perl where a new line starts
 		while (<FILE>) {		
 			next if /^#/ || /^\s*$/;
@@ -136,10 +136,10 @@ sub check_paired_file {
 	for (my $i = 1; $i < scalar @pair; $i++) {
 		if ($pair[0] == $pair[$i]) {
 			$pair_return = $pair[$i];
-		} else { die "The reads provided within the file $file do not belong to the same pair...";}
+		} else { die "The reads provided within the file $file do not belong to the same pair...[DOMINO.pm: check_paired_file]";}
 		if ($types[0] eq $types[$i]) {
 			$type = $types[$i];
-		} else { die "The reads provided within the file $file do not belong to the same pair...";}
+		} else { die "The reads provided within the file $file do not belong to the same pair... [DOMINO.pm: check_paired_file]";}
 	}
 	return ($pair_return, $type);
 }
@@ -168,7 +168,7 @@ sub fasta_file_splitter {
 	my $ext = $_[2]; # fasta, fastq, loci, fa
 	my $dir = $_[3];
 
-	open (FH, "<$file") or die "Could not open source file. $!";
+	open (FH, "<$file") or die "Could not open file $file [DOMINO.pm:fasta_file_splitter]";
 	print "\t- Splitting file into blocks of $block characters aprox ...\n";
 	my $j = 0; my @files;
 	while (1) {
@@ -176,7 +176,7 @@ sub fasta_file_splitter {
 	   	my @tmp = split ("\.".$ext, $file);
 		my $block_file = $tmp[0]."_part-".$j."_tmp.".$ext;
 		push (@files, $block_file);
-		open(OUT, ">$block_file") or die "Could not open destination file";
+		open(OUT, ">$block_file") or die "Could not open destination file: $block_file [DOMINO.pm:fasta_file_splitter]";
 		if (!eof(FH)) { read(FH, $chunk,$block);  
 			if ($j > 0) { $chunk = ">".$chunk; }
 			print OUT $chunk;
@@ -202,7 +202,7 @@ sub file_splitter {
 	my @files;
 	
 	# Splits a file such a sam or whatever file that could be read for each line
-	open (FH, "<$file") or die "Could not open source file. $!";
+	open (FH, "<$file") or die "Could not open file $file [DOMINO.pm:file_splitter]";
 	print "+ Splitting file $file into blocks of $block characters...\n";
 	my $j = 0; 
 	while (1) {
@@ -213,7 +213,7 @@ sub file_splitter {
 	   	my $block_file = $file_name."_part-".$j."_tmp.".$ext;
 		print "\t- Printing file: ".$block_file."\n";
     	push (@files, $block_file);
-    	open(OUT, ">$block_file") or die "Could not open destination file";
+    	open(OUT, ">$block_file") or die "Could not open destination file [DOMINO.pm:file_splitter]";
     	$j++;
     	if (!eof(FH)) { read(FH, $chunk,$block);  print OUT $chunk; } ## Print the amount of chars
     	if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken
@@ -290,7 +290,7 @@ sub loci_file_splitter {
 	my $block = $_[1];
 	my $ext = $_[2]; # fasta, fastq, loci, fa
 
-	open (FH, "<$file") or die "Could not open source file. $!";
+	open (FH, "<$file") or die "Could not open file $file [DOMINO.pm:loci_file_splitter]";
 	print "\t- Blocks of $block characters would be generated...\n";
 	my $j = 0; my @files;
 	while (1) {
@@ -300,7 +300,7 @@ sub loci_file_splitter {
 		my $block_file = $file_name."_part-".$j."_tmp.".$ext;
 		print "\t- Printing file $block_file\n";
 		push (@files, $block_file);
-		open(OUT, ">$block_file") or die "Could not open destination file";
+		open(OUT, ">$block_file") or die "Could not open destination file [DOMINO.pm:loci_file_splitter]";
 		if (!eof(FH)) { 
 			read(FH, $chunk,$block);  
 			#if ($j > 0) { $chunk = $chunk; }
@@ -356,6 +356,16 @@ sub mothur_retrieve_seqs {
 	
 	my $line = $mothur_path." '#set.dir(output=$directory); get.seqs(accnos=$ids2retrieve, fasta=$fasta, qfile=$qual)'";
 	print "\n+ Calling mothur executable for retrieving reads in file $ids2retrieve...\n\n";
+	my $system_call = system($line);
+}
+
+sub mothur_retrieve_FASTA_seqs {
+	## This sub retrieve a given number of ids and generates a fastq
+	my $fasta = $_[0]; my $directory = $_[1]; 
+	my $ids2retrieve = $_[2]; my $mothur_path = $_[3];
+	
+	my $line = $mothur_path." '#set.dir(output=$directory); get.seqs(accnos=$ids2retrieve, fasta=$fasta)'";
+	print "\n+ Calling mothur executable for retrieving sequences in file $ids2retrieve...\n\n";
 	my $system_call = system($line);
 }
 
@@ -543,7 +553,7 @@ sub readFASTA_hash {
 
 	my $file = $_[0];
 	my %hash;
-	open(FILE, $file) || die "Could not open the $file ...\n";
+	open(FILE, $file) || die "Could not open the file $file [DOMINO.pm: readFASTA_hash]\n";
 	$/ = ">"; ## Telling perl where a new line starts
 	while (<FILE>) {		
 		next if /^#/ || /^\s*$/;
@@ -564,7 +574,7 @@ sub readFASTA_hashLength {
 	my %hash;
 	my $counter;
 	my $message;
-	open(FILE, $file) || die "Could not open the $file ...\n";
+	open(FILE, $file) || die "Could not open the file $file [DOMINO.pm: readFASTA_hashLength] \n";
 	$/ = ">"; ## Telling perl where a new line starts
 	while (<FILE>) {		
 		next if /^#/ || /^\s*$/;
@@ -605,7 +615,7 @@ sub readFASTQ_IDSfile {
 	
 	my $file = $_[0];
 	my %hash;		
-	open (F1, "$file") or &printError("Could not open file $file") and exit();
+	open (F1, "$file") or &printError("Could not open file $file [DOMINO.pm:readFASTA_IDSfile]") and exit();
 	while(<F1>) {
 		my @Read = ();
 		chomp(my $id = $_);
@@ -628,7 +638,7 @@ sub readFASTA_IDSfile {
 
 	my $file = $_[0];
 	my %hash;
-	open(FILE, $file) || die "Could not open the $file ...\n";
+	open(FILE, $file) || die "Could not open the file $file [DOMINO.pm:readFASTA_IDSfile]\n";
 	$/ = ">"; ## Telling perl where a new line starts
 	while (<FILE>) {		
 		next if /^#/ || /^\s*$/;
@@ -649,15 +659,13 @@ sub readFASTA_IDSfile {
 
 sub time_stamp { return "[ ".(localtime)." ]"; }
 
-
-
 ## TODO
 sub seq_counter {
 	
 	my $file = $_[0];	
 	my $option_format = DOMINO::check_file_format($file);
 	my ($nSequences, $nLines);
-	open (F1, "$file") or &printError("Could not open file $file") and exit(); 
+	open (F1, "$file") or &printError("Could not open file $file [DOMINO.pm: seq_counter]") and exit(); 
 	while (<F1>) { $nLines++; } close(F1);
 	if ($option_format eq "fastq") { 
 		$nSequences = int ($nLines/4);
