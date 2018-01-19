@@ -63,7 +63,6 @@ use lib $FindBin::Bin."/lib";
 
 BEGIN {
 	require DOMINO;
-	require List::Uniq; use List::Uniq qw(uniq);
 	require File::Copy;
 	require File::Path; use File::Path qw(remove_tree);
 	require Cwd; use Cwd qw(abs_path);  
@@ -2137,7 +2136,8 @@ if ($option eq "msa_alignment") {
 						my @string;
 						for (my $i=0; $i < scalar @allele1; $i++) {
 							my @tmp; push(@tmp, $allele1[$i]); push(@tmp, $allele2[$i]);
-							my @tmp_uniq_sort = uniq(sort @tmp);
+							#my @tmp_uniq_sort = uniq(sort @tmp);
+							my @tmp_uniq_sort = do { my %seen; grep { !$seen{$_}++ } @tmp };
 							if (scalar @tmp_uniq_sort == 1) {
 								if ($tmp_uniq_sort[0] eq 'N') {  		push (@string, 'N');
 								} elsif ($tmp_uniq_sort[0] eq '-') { 	push (@string, '-');
@@ -2368,8 +2368,8 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	if ($option eq "msa_alignment") { 
 		push ( @{ $domino_files{$ref_taxa}{'array_all_taxa'} }, $marker_dir."/merged.profile_ARRAY.txt");
 	} else {
-		my @taxa = sort @{ $domino_files{'taxa'}{'user_Taxa'} };
-		my @uniq_sort_taxa = uniq(@taxa);
+		#my @taxa = sort @{ $domino_files{'taxa'}{'user_Taxa'} }; my @uniq_sort_taxa = uniq(@taxa);
+		my @uniq_sort_taxa = do { my %seen; grep { !$seen{$_}++ } @{ $domino_files{'taxa'}{'user_Taxa'} } };
 		my $name = join("_", @uniq_sort_taxa);
 		push ( @{ $domino_files{$ref_taxa}{'array_all_taxa'} }, $marker_dir."/$name.profile_ARRAY.txt");
 	}
@@ -2466,7 +2466,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		
 		## Get size for each contig
 		my $size_file_retrieved = DOMINO::get_size($ref_Fasta_ids2retrieve);
-		my $parts2split_retrieved = int($size_file/$num_proc_user);
+		my $parts2split_retrieved = int($size_file_retrieved/$num_proc_user);
 		my $fasta_files_split_retrieved = DOMINO::fasta_file_splitter($ref_Fasta_ids2retrieve, $parts2split_retrieved, "fasta", $marker_dir);
 
 		my $pm_SPLIT_FASTA =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
@@ -2477,7 +2477,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			print "\t- Splitting file: [$count_fasta_files_split_retrieved/$total_fasta_files_split_retrieved]\n";
 			my $pid = $pm_SPLIT_FASTA->start($i) and next;
 			open(FILE, $$fasta_files_split_retrieved[$i]) || die "Could not open the $$fasta_files_split_retrieved[$i]... [DM_MarkerScan: fasta_files_split_retrieved]\n";
-			my $size_file = $$fasta_files_split_retrieved[$i]."_size";
 			$/ = ">"; ## Telling perl where a new line starts
 			while (<FILE>) {		
 				next if /^#/ || /^\s*$/;
@@ -2488,6 +2487,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 				open (OUT, ">$file"); print OUT $titleline."\n".$sequence."\n"; close(OUT);
 				chomp $sequence; $sequence =~ s/\n//g; $titleline =~ s/\s/\t/g;
 			} $/ = "\n"; close (SIZE);
+			remove_tree($$fasta_files_split_retrieved[$i]);
 			$pm_SPLIT_FASTA->finish($i); # pass an exit code to finish
 		}
 		$pm_SPLIT_FASTA->wait_all_children;
@@ -2509,8 +2509,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			print "\t- Splitting file: [$count_fasta_files_split/$total_fasta_files_split]\n";
 			my $pid = $pm_SPLIT_FASTA->start($i) and next;
 			open(FILE, $$fasta_files_split[$i]) || die "Could not open the $$fasta_files_split[$i]...[DM_MarkerScan: pm_SPLIT_FASTA]\n";
-			my $size_file = $$fasta_files_split[$i]."_size";
-			open (SIZE, ">$size_file");
 			$/ = ">"; ## Telling perl where a new line starts
 			while (<FILE>) {		
 				next if /^#/ || /^\s*$/;
@@ -2525,6 +2523,14 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		} 
 		$pm_SPLIT_FASTA->wait_all_children;	
 	}
+
+	## remove files	
+	my $new_count_fasta_files_split=0;
+	for (my $i=0; $i < scalar @{ $fasta_files_split }; $i++) {
+		$new_count_fasta_files_split++;
+		remove_tree($$fasta_files_split[$i]);
+		print "\t- Remove file: [$new_count_fasta_files_split/$total_fasta_files_split]\r";
+	} print "\n";
 	
 	## Number of contigs in each subset 
 	my $subset_offset = $subset_offset_user;
@@ -2809,10 +2815,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		} close (IN_marker);
 		
 		# sort uniq
-		my @sort_ALL_contigs = sort @ALL_contigs;
-		my @uniq_contigs = uniq(@sort_ALL_contigs);
-		undef @sort_ALL_contigs; undef @ALL_contigs;
-		
+		my @uniq_contigs = do { my %seen; grep { !$seen{$_}++ } @ALL_contigs };
+		#my @sort_ALL_contigs = sort @ALL_contigs; my @uniq_contigs = uniq(@sort_ALL_contigs);
+				
 		## Printing contigs
 		my %hash_contigs;
 		for (my $c = 0; $c < scalar @uniq_contigs; $c++) {
@@ -2901,9 +2906,26 @@ if ($blast_DB eq "1") {
 	my $msg= "\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"; 
 	print $msg; DOMINO::printError_log($msg); &finish_time_stamp();  exit();
 } 
-my $blast_search = "blast_search.txt"; print "+ BLAST search now...\n"; 
-my ($blastn, $blastn_message) = DOMINO::blastn($all_coordinates_file, $blast_DB, $blast_search, $BLAST);
-&debugger_print($blastn_message);
+
+## Parallelize BLAST
+print "+ BLAST search now...\n";
+my $size_file_BLAST = DOMINO::get_size($all_coordinates_file);
+my $parts2split_BLAST = int($size_file_BLAST/$num_proc_user);
+my $fasta_files_split_BLAST = DOMINO::fasta_file_splitter($all_coordinates_file, $parts2split_BLAST, "fasta", $blast_dir);
+
+## SEND THREAD 
+my $pm_BLAST = new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
+for (my $j = 0; $j < scalar @{ $fasta_files_split_BLAST }; $j++) {
+	my $pid = $pm_BLAST->start($j) and next;
+	print "\t- Sending BLASTn command for clustering...\n";
+	my $blast_search_tmp = "blast_search.txt_tmp".$j; 
+	my ($blastn, $blastn_message) = DOMINO::blastn($all_coordinates_file, $blast_DB, $blast_search_tmp, $BLAST);
+	&debugger_print($blastn_message);
+	$pm_BLAST->finish(); # finish for each contig
+} 
+$pm_BLAST->wait_all_children; #each marker
+my $blast_search = "blast_search.txt";
+system("cat blast_search.txt_tmp* >> $blast_search; rm blast_search.txt_tmp*");
 
 ## Filter BLAST results
 print "+ Filtering BLAST search now...\n";
@@ -3201,23 +3223,15 @@ sub check_overlapping_markers {
 						$bad_counter++;
 						if ($bad_counter > 3) { ## We would consider the same marker if overlapping 3 SLIDING_user!!
 							($bool,$counter,$bad_counter) = 0;
-						}
-					}
-				}
-			}
-		}
-	}
+	}}}}}}
 	my %tmp_coord;
 	foreach my $contig (sort keys %tmp_hash) {
 		foreach my $taxa (keys %{ $tmp_hash{$contig} }) {
 			foreach my $marker (keys %{ $tmp_hash{$contig}{$taxa} }) {
 				if ($tmp_hash{$contig}{$taxa}{$marker} == 1) {next;}
-				my @array = sort(@{ $tmp_hash{$contig}{$taxa}{$marker} });
-				my @sort_uniq = uniq(@array);
+				my @sort_uniq = do { my %seen; grep { !$seen{$_}++ } @{ $tmp_hash{$contig}{$taxa}{$marker} } };
 				push (@{ $tmp_coord{$contig}{$taxa}{$marker} }, @sort_uniq);
-			}
-		}
-	}
+	}}}
 	undef %coord_seen; undef %tmp_hash; ## release RAM
 
 	## Set range values
@@ -3259,21 +3273,14 @@ sub check_overlapping_markers {
 							push (@{ $hash2print{$array_coord[0]}{$id}}, $string);
 							# print $keys_markers."\t".$array_coord[0]."\t".$array_coord2[5]."\t".$result."\t".$id."\t".$string."\n"; 
 							$marker_seen{$string}++;
-						}
-					}
-				}
-		
+				}}}
 				foreach my $keys (keys %hash2print) {
 					foreach my $lent (sort keys %{ $hash2print{$keys} }) {
 						my @array = @{ $hash2print{$keys}{$lent} };					
 						for (my $i=0; $i < scalar @array; $i++) { 
 							print OUT $contig."##".$array[$i]."\n";
 						} print OUT "//\n";
-					}
-				}
-			}
-		}
-	}
+	}}}}}
 	close(OUT); 
 	return $file2return;
 }
@@ -3394,10 +3401,7 @@ sub check_DOMINO_marker {
 					my @array2print = ($marker2write, $array[0].":".$array[1], $array[2].":".$array[3], $array[4].":".$array[5], $arrayReturned[2], $variation_sprintf, $array[6]); 
 					my $string = join("\t", @array2print);
 					open (OUT, ">>$file"); print OUT $string."\n"; close(OUT); last;		
-				}
-			}
-		}
-	} close (MARKERS);	
+	}}}} close (MARKERS);	
 	return (\@files);
 }
 
@@ -3456,8 +3460,7 @@ sub check_marker_pairwise {
 					$seen{$reference}++; $discard{$keys}++; ## avoid checking if it is not variable
 					$pairwise{$reference}{$keys} = "NO!";
 					&debugger_print("NO");
-				}
-			} elsif ($variable_divergence) {
+			}} elsif ($variable_divergence) {
 				if ($percentage_sub > $variable_divergence) { 
 					$pairwise{$reference}{$keys} = "YES!";
 					&debugger_print("YES");
@@ -3541,13 +3544,9 @@ sub check_marker_ALL {
 		close(FILE); $/ = "\n";	
 	}
 
-	######
-	###### FINDING THE GLITCH
-	######
-	
 	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
-	my @tmp_length = sort @length_seqs;
-	my @tmp_length_uniq = uniq(@tmp_length);	
+	my @tmp_length_uniq = do { my %seen; grep { !$seen{$_}++ } @length_seqs };
+	#my @tmp_length = sort @length_seqs; my @tmp_length_uniq = uniq(@tmp_length);	
 	if (scalar @tmp_length_uniq > 1) {
 		&printError("There is problem: length of the markers do not match for $file..."); return "";
 	} else { $length_seqs[0] = $length; }	
@@ -3558,7 +3557,6 @@ sub check_marker_ALL {
 		my $flag_position = 0;
 		my @tmp;
 		foreach my $seqs (sort keys %hash) { push (@tmp, $hash{$seqs}[$i]); }
-
 		my @tmp_uniq_sort = do { my %seen; grep { !$seen{$_}++ } @tmp };
 		#my @tmp_uniq = sort @tmp; my @tmp_uniq_sort = uniq(@tmp_uniq);
 
@@ -3571,24 +3569,18 @@ sub check_marker_ALL {
 		} else {
 			## We are assuming the calling has been correctly done and
 			## the ambiguity codes are due to polymorphism
-
 			my $escape_flag = 0;
 			my (@tmp, @amb);
-
 			for (my $j=0; $j < scalar @tmp_uniq_sort; $j++) {
 				if ($tmp_uniq_sort[$j] eq '-') { ## Gaps would be codify as -
 					$escape_flag++;
-
 				} elsif ($tmp_uniq_sort[$j] eq 'N') { ## Gaps would be codify as -
 					$escape_flag++;
-
 				} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[$j]}) {
 					push(@amb, $tmp_uniq_sort[$j]);
-
 				} else { 
 					push(@tmp, $tmp_uniq_sort[$j]); 
-				}
-			}
+			}}
 
 			if ($escape_flag) {  push (@profile, '-');			
 			} else {
@@ -3605,19 +3597,12 @@ sub check_marker_ALL {
 								push (@profile, '1'); 	## if polymorphism
 							} else { 					
 								push (@profile, '0'); ## The ambiguous is the present snps: 	YCT => [ Y > C/T ]
-							} 
-						} else { 						
+						}} else { 						
 							push (@profile, '1');	## The ambiguous is not the present snps  	MGG => [ M > A/C ]
-						}
-					}
-				} elsif (scalar @amb > 1) {  			
+				}}} elsif (scalar @amb > 1) {  			
 					push (@profile, '1');   ## Several
-				}
-			}
-		}
-	}
-	my $string = join ("", @profile); 
-	undef %hash; undef @profile;
+	}}}}
+	my $string = join ("", @profile); undef %hash; undef @profile;
 
 	######
 	###### FINDING THE GLITCH

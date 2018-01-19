@@ -18,7 +18,7 @@ sub assemblyStats {
 
 sub blastn {
 	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
-	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-10 -db '".$db."' -out $results -outfmt 6";
+	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-10 -max_target_seqs 150 -db '".$db."' -out $results -outfmt 6";
 	my $message = "BLASTN command: $filter\n"; 
 	my $blastn = system($filter);
 	return ($blastn, $message);
@@ -658,8 +658,6 @@ sub readFASTA_IDSfile {
 }
 
 sub time_stamp { return "[ ".(localtime)." ]"; }
-
-
 
 ## TODO
 sub seq_counter {
