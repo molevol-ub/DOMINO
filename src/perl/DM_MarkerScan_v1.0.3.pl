@@ -3550,6 +3550,7 @@ sub check_marker_ALL {
 	###### FINDING THE GLITCH
 	######
 	
+=head	
 	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
 	my @tmp_length = sort @length_seqs;
 	my @tmp_length_uniq = uniq(@tmp_length);	
@@ -3637,10 +3638,14 @@ sub check_marker_ALL {
 	######
 	###### FINDING THE GLITCH
 	######
+=cut
 
-	my $var_sites = $string =~ tr/1/1/; ## count variable sites
+	#my $var_sites = $string =~ tr/1/1/; ## count variable sites
+	#my $con_sites = $string =~ tr/0/0/; ## count conserved sites
+	my $string ="";
+	my $var_sites = 1;
+	my $con_sites = 1;
 	my $species = join (",", sort @taxa);
-	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
 	my $count_length = $con_sites + $var_sites;
 	if ($var_sites == 0) { 
 		#print "NO: $species, $var_sites, $length, $string, $count_length\n";
