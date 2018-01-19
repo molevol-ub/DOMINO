@@ -3550,7 +3550,6 @@ sub check_marker_ALL {
 	###### FINDING THE GLITCH
 	######
 	
-=head	
 	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
 	my @tmp_length = sort @length_seqs;
 	my @tmp_length_uniq = uniq(@tmp_length);	
@@ -3560,6 +3559,7 @@ sub check_marker_ALL {
 	
 	my @profile;
 	for (my $i=0; $i < $length; $i++) {
+=head
 		my $flag_position = 0;
 		my @tmp;
 		foreach my $seqs (sort keys %hash) { push (@tmp, $hash{$seqs}[$i]); }
@@ -3631,6 +3631,7 @@ sub check_marker_ALL {
 				}
 			}
 		}
+=cut
 	}
 	my $string = join ("", @profile); 
 	undef %hash; undef @profile;
@@ -3638,7 +3639,6 @@ sub check_marker_ALL {
 	######
 	###### FINDING THE GLITCH
 	######
-=cut
 
 	#my $var_sites = $string =~ tr/1/1/; ## count variable sites
 	#my $con_sites = $string =~ tr/0/0/; ## count conserved sites
