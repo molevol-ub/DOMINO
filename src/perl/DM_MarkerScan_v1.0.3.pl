@@ -3559,29 +3559,21 @@ sub check_marker_ALL {
 	
 	my @profile;
 	for (my $i=0; $i < $length; $i++) {
-=head
+
 		my $flag_position = 0;
 		my @tmp;
 		foreach my $seqs (sort keys %hash) { push (@tmp, $hash{$seqs}[$i]); }
-		my @tmp_uniq = sort @tmp;
-		my @tmp_uniq_sort = uniq(@tmp_uniq);
+
+		my @tmp_uniq_sort = do { my %seen; grep { !$seen{$_}++ } @tmp };
+		#my @tmp_uniq = sort @tmp; my @tmp_uniq_sort = uniq(@tmp_uniq);
 
 		if (scalar @tmp_uniq_sort == 1) {
-
-			if ($tmp_uniq_sort[0] eq 'N') {
-				push (@profile, 'N');
-
-			} elsif ($tmp_uniq_sort[0] eq '-') {
-				push (@profile, '-');
-
-			} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[0]}) {
-				push (@profile, '1');
-
-			} else { 
-				push (@profile, '0'); 
+			if ($tmp_uniq_sort[0] eq 'N') { 						push (@profile, 'N');
+			} elsif ($tmp_uniq_sort[0] eq '-') { 					push (@profile, '-');
+			} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[0]}) { 	push (@profile, '1');
+			} else {  												push (@profile, '0'); 
 			}
 		} else {
-			next;
 			## We are assuming the calling has been correctly done and
 			## the ambiguity codes are due to polymorphism
 
@@ -3590,10 +3582,10 @@ sub check_marker_ALL {
 
 			for (my $j=0; $j < scalar @tmp_uniq_sort; $j++) {
 				if ($tmp_uniq_sort[$j] eq '-') { ## Gaps would be codify as -
-					push (@tmp, '-'); $escape_flag++;
+					$escape_flag++;
 
 				} elsif ($tmp_uniq_sort[$j] eq 'N') { ## Gaps would be codify as -
-					push (@tmp, 'N'); $escape_flag++;
+					$escape_flag++;
 
 				} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[$j]}) {
 					push(@amb, $tmp_uniq_sort[$j]);
@@ -3603,13 +3595,10 @@ sub check_marker_ALL {
 				}
 			}
 
-			if ($escape_flag) { 
-				push (@profile, '-');			
-
+			if ($escape_flag) {  push (@profile, '-');			
 			} else {
 				if (scalar @amb == 0) { ## No ambiguous code
 					push (@profile, '1');			
-				
 				} elsif (scalar @amb == 1) { ## 1 amb code
 					for (my $h=0; $h < scalar @amb; $h++) {
 						my $flag_yes = 0;
@@ -3631,7 +3620,6 @@ sub check_marker_ALL {
 				}
 			}
 		}
-=cut
 	}
 	my $string = join ("", @profile); 
 	undef %hash; undef @profile;
@@ -3639,6 +3627,8 @@ sub check_marker_ALL {
 	######
 	###### FINDING THE GLITCH
 	######
+	
+	return("NO");
 
 	#my $var_sites = $string =~ tr/1/1/; ## count variable sites
 	#my $con_sites = $string =~ tr/0/0/; ## count conserved sites
