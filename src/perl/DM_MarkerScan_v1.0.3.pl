@@ -2835,9 +2835,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	
 	} close(OUT); close(OUT_markers); close (OUT_coord);
  	print "+ Marker development for $ref_taxa is finished here...\n\n"; &time_log(); print "\n";
- 	
- 	exit(); ## for debugging purposes
- 	
 } #each reference taxa
 
 ## Move parameters files
@@ -3375,8 +3372,6 @@ sub check_DOMINO_marker {
 			if ($valueReturned == 1) { ## if it is variable for each pairwise comparison
 				## Get variable positions for the whole marker
 				my $array_ref_returned = &check_marker_ALL(\%hash, "Ref");
-				next; ## for debugging purposes
-				
 				if ($array_ref_returned eq 'NO') { 
 					remove_tree($msa_file);
 				} else {
@@ -3627,14 +3622,10 @@ sub check_marker_ALL {
 	######
 	###### FINDING THE GLITCH
 	######
-	
-	return("NO");
 
-	#my $var_sites = $string =~ tr/1/1/; ## count variable sites
-	#my $con_sites = $string =~ tr/0/0/; ## count conserved sites
+	my $var_sites = $string =~ tr/1/1/; ## count variable sites
+	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
 	my $string ="";
-	my $var_sites = 1;
-	my $con_sites = 1;
 	my $species = join (",", sort @taxa);
 	my $count_length = $con_sites + $var_sites;
 	if ($var_sites == 0) { 
