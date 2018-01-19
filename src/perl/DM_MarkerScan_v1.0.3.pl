@@ -3625,7 +3625,6 @@ sub check_marker_ALL {
 
 	my $var_sites = $string =~ tr/1/1/; ## count variable sites
 	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
-	my $string ="";
 	my $species = join (",", sort @taxa);
 	my $count_length = $con_sites + $var_sites;
 	if ($var_sites == 0) { 
