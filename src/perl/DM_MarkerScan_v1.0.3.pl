@@ -1194,10 +1194,13 @@ if ($option eq 'user_assembly_contigs') {
 		} ## user provides reads to map
 }} elsif ($option eq 'genome') {
 	my $tmp = abs_path($genome_fasta);
-	push (@{ $domino_files{'genome'}{'contigs'}}, $tmp); 
+
+	#push (@{ $domino_files{'genome'}{'contigs'}}, $tmp); 
 	if ($genome_fasta =~/.*id-(.*)\.fasta/) {
-		push (@{ $domino_files{'genome'}{'taxa'}}, $1); &check_file($tmp, $1);
+	        push (@{ $domino_files{$1}{'contigs'}}, $tmp);
+		push (@{ $domino_files{$1}{'taxa'}}, "genome"); &check_file($tmp, $1);
 	} else {
+                push (@{ $domino_files{'genome'}{'contigs'}}, $tmp);
 		push (@{ $domino_files{'genome'}{'taxa'}}, "1"); &check_file($tmp);
 	}
 	if (scalar @user_cleanRead_files == 0) {
