@@ -1,11 +1,11 @@
-#!/usr/bin/perl
+﻿#!/usr/bin/perl
 #######################################################################################
-###	DOMINO: Development of molecular markers in non-model organisms using NGS data 	###
-###																					###
-###	Authors:																		###
-###	Cristina Frías-López, José F. Sánchez-Herrero, Miquel A. Arnedo, Alejandro 		###
-###	Sánchez-Gracia, and Julio Rozas.					     						###
-###																					###
+###	DOMINO: Development of molecular markers in non-model organisms using NGS data  ###
+###											###
+###	Authors:									###
+###	Cristina Frías-López, José F. Sánchez-Herrero, Miquel A. Arnedo, Alejandro 	###
+###	Sánchez-Gracia, and Julio Rozas.					     	###
+###											###
 #######################################################################################
 ##	Usage:
 ##      perl DM_MarkerScan_1.0.3.pl
@@ -822,7 +822,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 =over 2
 
-07 - 11 - 2016
+23 - 01 - 2018
 
 =back
 
@@ -1113,6 +1113,7 @@ if ($avoid_mapping) {
 			$MID_taxa_names = $domino_files{'taxa_string'}{'string'}[0];
 }}}
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
+exit();
 
 ## Print Different options
 if (!$avoid_mapping) {
