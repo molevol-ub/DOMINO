@@ -1,3 +1,516 @@
+commit 2805f244ebe4c173a5fa527eaee2583627f7135a
+Author: jfsanchezherrero <jfsanchezherrero@ub.edu>
+Date:   Tue Jan 23 12:09:10 2018 +0100
+
+    Genome option fixed
+
+commit 812698a36593414d0a46c349c6c36bc1ec311384
+Merge: b29547f 00b0fdd
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 19 16:38:50 2018 +0100
+
+    Merge pull request #7 from molevol-ub/developer
+    
+    Developer branch
+
+commit 00b0fddfc06af385051ec27bcadcfb322073f44d
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 19 16:35:45 2018 +0100
+
+    fixed memory RAM leak
+
+commit 04693feb929c9efe850c055ae58a4f0de170f638
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 19 12:54:48 2018 +0100
+
+    Did I Find it?
+
+commit 3eaaa1c923b112a0d892e1c44b94289362f6c8c8
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 19 12:53:25 2018 +0100
+
+    Did I Find it?
+
+commit b2c2c3ab96868058c6a42ce337498c1500f63355
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 19 12:19:33 2018 +0100
+
+    last test
+
+commit 564c8309e60e0fa661a3503858fcc20ecfb27c8e
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 19 11:48:58 2018 +0100
+
+    last test
+
+commit c104eef033aef5eff2106fd15522faaba7e66625
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 19 10:04:25 2018 +0100
+
+    last test
+
+commit 9077b99f66fef74b4d2242b3540689a1b25b3c20
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 18 16:22:33 2018 +0100
+
+    No Devel::size module
+
+commit 402a72b9161b4dce90d2cf999f2d1eb550de9a97
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 18 16:21:22 2018 +0100
+
+    Giving up...
+
+commit b8133ac45ebe8e238e220b6aaaaf4ae795ad4770
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 18 15:23:39 2018 +0100
+
+    no filling profile
+
+commit 68f1600db67e86c69c28358fba1b47e9dd0afd7d
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 18 15:22:13 2018 +0100
+
+    no filling profile
+
+commit 6f32e3c785ec04dcec6b9a2ba1bbe9bb51d02423
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 18 14:28:25 2018 +0100
+
+    No returning string
+
+commit d89763bc3ae3ee68788e279862a96d66c655917d
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 18 12:29:46 2018 +0100
+
+    No returning string
+
+commit 08dd1fa88ac469957aa28a86c687d9e7d3f8e927
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 18 11:09:27 2018 +0100
+
+    No returning string
+
+commit 79f1acd596cd5b7f13d8c7a441c828398ffefdfd
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Jan 17 18:11:56 2018 +0100
+
+    Finding
+
+commit d7c9a90171d7ca216ec80e7d76467cbf989273d8
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Jan 17 16:20:57 2018 +0100
+
+    Keep on
+
+commit 5b5cc4cdaceb283d97c437dc867876c99a795f25
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Jan 17 16:19:19 2018 +0100
+
+    Working on bug
+
+commit 8946de8cb94a48c2992f714dfa5bb0ad443e3479
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Jan 17 14:47:12 2018 +0100
+
+    Working on bug
+
+commit d38e56fee5c3032d95aae817f648a364e73f3cb7
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Jan 17 13:19:58 2018 +0100
+
+    Working on bug
+
+commit f2a5565198723b053c0600126159fb40f3e97131
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Jan 17 11:18:13 2018 +0100
+
+    Checking RAM Devel::Size
+
+commit fd27d91c735b187b5d79675916f2a4e840fe4d1f
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Jan 16 14:15:29 2018 +0100
+
+    Working on bug
+
+commit 4e04b50720b2f55832defc6ae2c593bffaeaa113
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Jan 16 10:47:30 2018 +0100
+
+    Working on bug
+
+commit 84a0c43a77d3c26435bce8af16ff9442e3996a0b
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Jan 15 11:48:39 2018 +0100
+
+    next after check_marker_all
+
+commit f12feb8262aea5845908e166d186e3a95a62cb5d
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Jan 15 11:18:42 2018 +0100
+
+    next after check_marker_pairwise
+
+commit 3962cc2e2b2ae7aa036ecd441b3ee9c415534284
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Jan 15 10:46:06 2018 +0100
+
+    return -> next
+
+commit ecaf1f6ce8eb85b87ef6bce81bdd8301380fa325
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 12 18:03:14 2018 +0100
+
+    Finding the bug...
+
+commit 466a9bd9221032646543f6a34ddf4359c605e243
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 12 13:34:33 2018 +0100
+
+    Discard dump hash
+
+commit 9ee28f9f291a569452642e9d48dffa7a9ab64621
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 12 13:07:41 2018 +0100
+
+     Let collapse..[DEBUGGING]
+
+commit 488998e99ecaeaf0eda3d092a9fd03701a74d612
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Jan 12 11:20:07 2018 +0100
+
+    Finding the bug
+
+commit 9b0819560f7ba5036b13926edca38e735b9d406c
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 11 15:31:59 2018 +0100
+
+    Let collapse..[DEBUGGING]
+
+commit 5eed145004fddbf001eb7c1e9f7c1cc38aa8cfc7
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 11 11:24:28 2018 +0100
+
+    checking possibles glitch
+
+commit 788673b1562b24cbf4ec324340071cc201970684
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Jan 11 10:53:09 2018 +0100
+
+    Sleeping for debugging
+
+commit 3aa16c63f1d2b5ef250e0ff6cb90e55ee7d780b9
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Dec 19 15:04:28 2017 +0100
+
+    Marker selection fixed for dnaSP
+
+commit dac6fdc341dbae92e912e856b10fbc13500e6b4b
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Dec 19 10:55:05 2017 +0100
+
+    Marker selection fixed for dnaSP
+
+commit 9c88eddbf15e6ed1ad621f620be65ff8dc526b8c
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 22 18:13:32 2017 +0100
+
+    Fixed bug
+
+commit 16f25cba5f1cc330a479d876b8251f58bd1d7b0d
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 22 13:00:26 2017 +0100
+
+    Undef not useful variables
+
+commit 970283df6999be9e8ceb12f64d161ca011c602d8
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 20 13:11:12 2017 +0100
+
+    Added subset_offset_user option
+
+commit 81239ea69ad59065be0a4244e45a547be699e6d0
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 20 13:06:17 2017 +0100
+
+    Added subset_offset_user option
+
+commit c77024e91cec5948f133dfbedb1a38b2af7c2541
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 20 12:53:43 2017 +0100
+
+    Fixed bug
+
+commit 5eb67a2134957cd2355772d80983e38bed770f17
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 17 12:44:49 2017 +0100
+
+    Fixing
+
+commit dce4bb986b7201a1da6ca67b637101071dc8c0d1
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 17 12:13:25 2017 +0100
+
+    Updating and fixing bug
+
+commit 4f11929466a262d3a11bc870570fbc67dea59fed
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 17 12:02:50 2017 +0100
+
+    Updating and fixing bug
+
+commit 09ae22b1ada0addb4ab438931a638f93e03f2b5c
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 17 10:48:35 2017 +0100
+
+    Fixing bug
+
+commit 69c83e4dd00c19ce7b9f7c7386c65d4052966d34
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 17 09:33:40 2017 +0100
+
+    Working on bug
+
+commit 9b93e053bf078c713f97e7ff4270d9174a2dc570
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 17 09:06:30 2017 +0100
+
+    Working on bug
+
+commit 0e0d09a68ebfe92d3044ec43d9736f5992225450
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Nov 16 11:24:22 2017 +0100
+
+    Useless use bug fix: => ERROR
+
+commit 176133f029e73ab473d71c48abc85870157bd7ed
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Nov 16 10:09:04 2017 +0100
+
+    Fixed excel output
+
+commit f48db48b62335b6b7d57cac1b605d1cb48a64879
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 15 13:36:38 2017 +0100
+
+    Updated discovery MSA
+
+commit 5520f8ad3e75bf7976c21bfd07ab20546f604e6d
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 15 12:33:46 2017 +0100
+
+    Update MSA selection
+
+commit 4d9db1573895f8f5e0dadae12f5ea54859df9ad4
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 15 11:04:28 2017 +0100
+
+    Fix experimental keys hash
+
+commit c10280d568859e053b5530104910a9c5749ad4ac
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 15 10:58:51 2017 +0100
+
+    Checking the ram glitch
+
+commit b29547f128368428cd52ebd5b5efe477b95a5f90
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Sep 18 17:44:39 2017 +0200
+
+    Closing file
+
+commit 3c5b14ca38c78a70b28b7fc4428f84b861ba07b7
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Sep 18 17:15:49 2017 +0200
+
+    TODOs added to do
+
+commit ea3bd8b482c4d269b8a6f97c4dc96d46ac7bdc7e
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Sep 18 16:53:34 2017 +0200
+
+    Finding the glitch?
+
+commit adeffa48d8a1f04e705d4844f8929c0f60b1cc59
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Sep 15 11:59:02 2017 +0200
+
+    Fix bug
+
+commit 1c7c29ee13d0184574585b33d445e7e0cb34d8ee
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Sep 15 11:56:33 2017 +0200
+
+    Checking the glitch
+
+commit a754f8b6e741c011584c11f6963b78e6872400fa
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Dec 7 11:40:56 2016 +0100
+
+    Overlapping and sliding changed
+
+commit 974b28c2d27cdee76eefb78f900ed8cc43787270
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Nov 22 18:10:11 2016 +0100
+
+    Overlapping markers changed
+
+commit 5b76c81669f20f53caa08207ea93159b6a9cdf09
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 18 17:27:58 2016 +0100
+
+    V-SI_inc & C-SI_inc options added
+
+commit 5b29bb0314740062ce3ba764a8219315898a9010
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Nov 17 13:31:11 2016 +0100
+
+    Threads implemented for mapping reads
+
+commit 039e711d91047fcf52c13e6501844ebeab0e0fa9
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 16 18:33:18 2016 +0100
+
+    keep on debugging
+
+commit 3733a533137236fc08d0d14599afd3d7a7d9dcdd
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 14 14:58:27 2016 +0100
+
+    Commit 24892dd85f10322098a7f5dc5b8139daa7abc484 fixed
+
+commit 24892dd85f10322098a7f5dc5b8139daa7abc484
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 14 13:11:56 2016 +0100
+
+    Assembly stats bug fixed
+
+commit 75d6a857d178e0e3a70927df5c61998c4e8fa324
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 9 10:27:42 2016 +0100
+
+    Some bugs fixed, still missing
+
+commit a77b39902e0212bed89aed0c40807ce14041fe73
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 7 18:28:47 2016 +0100
+
+    Updating manual and setting clustering
+
+commit 1b66edb41139a92ec1e4502f43054e81651273bd
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 7 14:59:56 2016 +0100
+
+    Updated version and date
+
+commit 6afe16dc6c3bdeadce526fd96f345c07afdb7f3f
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 7 12:59:23 2016 +0100
+
+    Ambiguous bases bug fixed and parallel fasta splitting fixed
+
+commit a4ff6caaa9bda098128045d4c25e31e19bb3eae7
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 4 19:40:16 2016 +0100
+
+    Closing files...
+
+commit 144d11c633f32c0b3ce5636216a3aa432d7990ed
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 4 19:06:50 2016 +0100
+
+    Debugging: too fast committing on friday evening
+
+commit 6280de3f5f88edca81893ef05bcdab4fd01f8a4c
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 4 18:51:19 2016 +0100
+
+    Discarding comment lines
+
+commit e234d03c42c9bb2c9636173a95c514f5d29aaecf
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 4 18:45:05 2016 +0100
+
+    Debugging necessary
+
+commit a1ac5e9500cb3550da035aee8b29eca5a6d6b378
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 4 15:22:23 2016 +0100
+
+    Threads implemented but still fixing and debugging necessary
+
+commit 91501fc580f037c5dc92d96fa445bfe2938ec5ea
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 2 17:19:44 2016 +0100
+
+    Sliding window improved. -SI|--sliding_interval added
+
+commit 2600536b847e87e6b23af35975aac9fe0e866bc6
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 26 18:51:00 2016 +0200
+
+    Range for VAR and CONS region size
+
+commit d332c6705b4cfa713aa670cc54cf60b7ae6c706f
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Oct 25 19:34:58 2016 +0200
+
+    Threads implemented but still fixing and debugging necessary
+
+commit 616b529683cdd904fa033b6182fb0078c0457572
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Oct 21 18:50:59 2016 +0200
+
+    Threads for SAM parsing
+
+commit bf4725591dc8c7cf4ed494a22531e8c446a16c54
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Oct 20 19:09:14 2016 +0200
+
+    Implemented threads: mapping and parsing of sam Files
+
+commit 5b9098becc80f7ecc26aab9c7e179545ded07498
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Sep 22 11:34:25 2016 +0200
+
+    TODOs done
+
+commit 3cc2169a5b5ec3a6d1fda4d2aec9ab229bdb7b0c
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Sep 21 10:36:13 2016 +0200
+
+    Update date, availability and citation
+
+commit efadc9fc758f5ecad5cf425cd9f00e3a390f5dc7
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Sep 21 10:20:30 2016 +0200
+
+    check_Threads flag debugged
+
+commit 7cb729d44030ec0cbbeb3a9544b6b196278726b5
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Sep 21 10:17:35 2016 +0200
+
+    check_Threads flag implemented
+
+commit 12ed5aec1004ebc084657103f82fe81a9cf1ac2c
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Sep 20 13:35:09 2016 +0200
+
+    Updated Installer BitRock xml file (Mac)
+
+commit df14c01106842c43c02c04889dfa39a4d7ff49ba
+Author: molevol <jfsanchezherrero@ub.edu>
+Date:   Tue Sep 20 13:34:20 2016 +0200
+
+    Updated Installer BitRock xml file (Linux)
+
+commit 49da0e69ae2c2c90561a1ac703d8c52938b94c5f
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Sep 20 13:25:59 2016 +0200
+
+    Release v1.0.1
+
 commit 591bc5f740eb4912ee1675433cb9e059b9b5b467
 Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
 Date:   Tue Sep 20 13:16:55 2016 +0200
