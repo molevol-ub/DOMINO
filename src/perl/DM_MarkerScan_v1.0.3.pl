@@ -1085,21 +1085,44 @@ if ($avoid_mapping) {
 			unless ($prev eq $curr ) {
 				$undef_mapping++; &printError("There is difference: $keys $curr =/= $prev\n"); ## test
 		}}
-
 		## Check files generated
-		foreach my $ref_taxa ( keys %domino_files ) {
-			next if $ref_taxa eq 'taxa';
-			if ($domino_files_dump{$ref_taxa}{'taxa'}) {
-				## Check for file
-				unless ($domino_files_dump{$ref_taxa}{'contigs'}[0]){
-					&printError("There is not a contig file for $ref_taxa ...\n"); $undef_mapping++;
+		if ($option eq "genome") {
+			my $ref_genome;
+                        foreach my $ref_taxa_dump ( keys %domino_files_dump ) {
+				#print  $domino_files_dump{$ref_taxa_dump}{'taxa'}[0]."\n";
+                                unless ($domino_files_dump{$ref_taxa_dump}{'taxa'}[0]) {next;}
+				if ( $domino_files_dump{$ref_taxa_dump}{'taxa'}[0] eq 'genome') {
+					$ref_genome = $ref_taxa_dump; 
+					unless ($domino_files_dump{$ref_taxa_dump}{'contigs'}[0]){
+                                               &printError("There is not a contig file for genome taxa: $ref_taxa_dump ...\n"); $undef_mapping++;
+					}
 				}
-				foreach my $taxa ( keys %domino_files ) {
-					next if $ref_taxa eq $taxa; next if $taxa eq 'taxa';
-					unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:'.$taxa} ) {
-						$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-		}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
-	}}}
+			}
+			print "Ref genome: $ref_genome\n";
+			print $domino_files_dump{$ref_genome}{'contigs'}[0]."\n";
+	                
+			foreach my $ref_taxa_here ( keys %domino_files ) {
+                                next if $ref_taxa_here eq $ref_genome;
+				if ($domino_files_dump{$ref_taxa_here}{'taxa'}[0]) {
+                                        unless ($domino_files_dump{$ref_taxa_here}{'PROFILE::Ref:'.$ref_genome}[0]){
+                                               &printError("There is not a profile file for reference genome taxa: $ref_genome vs. $ref_taxa_here ...\n"); $undef_mapping++;
+					}
+                       		}
+			}
+		} else {
+			foreach my $ref_taxa ( keys %domino_files ) {
+				next if $ref_taxa eq 'taxa';
+				if ($domino_files_dump{$ref_taxa}{'taxa'}) {
+					## Check for file
+					unless ($domino_files_dump{$ref_taxa}{'contigs'}[0]){
+						&printError("There is not a contig file for $ref_taxa ...\n"); $undef_mapping++;}
+					foreach my $taxa ( keys %domino_files ) {
+						next if $ref_taxa eq $taxa; next if $taxa eq 'taxa';
+						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:'.$taxa} ) {
+							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
+				}}} else { $undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
+			}}}}
+
 	if ($undef_mapping > 0) {
 		undef $avoid_mapping;
 		DOMINO::printDetails("+ Although option -No_Profile_Generation was provided, it would be done again as parameters do not match with the available mapping folder...\n",$mapping_parameters, $param_Detail_file_markers);
@@ -1113,7 +1136,6 @@ if ($avoid_mapping) {
 			$MID_taxa_names = $domino_files{'taxa_string'}{'string'}[0];
 }}}
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
-exit();
 
 ## Print Different options
 if (!$avoid_mapping) {
