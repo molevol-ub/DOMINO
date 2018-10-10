@@ -1086,42 +1086,38 @@ if ($avoid_mapping) {
 			unless ($prev eq $curr ) {
 				$undef_mapping++; &printError("There is difference: $keys $curr =/= $prev\n"); ## test
 		}}
+		&debugger_print("DOMINO params dump");&debugger_print("Ref", \%domino_files_dump);
+
 		## Check files generated
-		if ($option eq "genome") {
-			my $ref_genome;
-                        foreach my $ref_taxa_dump ( keys %domino_files_dump ) {
-				#print  $domino_files_dump{$ref_taxa_dump}{'taxa'}[0]."\n";
-                                unless ($domino_files_dump{$ref_taxa_dump}{'taxa'}[0]) {next;}
-				if ( $domino_files_dump{$ref_taxa_dump}{'taxa'}[0] eq 'genome') {
-					$ref_genome = $ref_taxa_dump; 
-					unless ($domino_files_dump{$ref_taxa_dump}{'contigs'}[0]){
-                                               &printError("There is not a contig file for genome taxa: $ref_taxa_dump ...\n"); $undef_mapping++;
+		if ($genome_fasta) {
+			foreach my $ref_taxa ( keys %domino_files ) {
+				next if $ref_taxa eq 'taxa';
+				next if $ref_taxa eq 'genome';	
+			
+				if ($domino_files_dump{$ref_taxa}{'taxa'}) {
+					foreach my $taxa ( keys %domino_files ) {
+						next if $ref_taxa eq $taxa; 
+						next if $taxa eq 'taxa';
+					
+						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:genome'} ) {
+							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
+						}
+					
 					}
-				}
-			}
-			print "Ref genome: $ref_genome\n";
-			print $domino_files_dump{$ref_genome}{'contigs'}[0]."\n";
-	                
-			foreach my $ref_taxa_here ( keys %domino_files ) {
-                                next if $ref_taxa_here eq $ref_genome;
-				if ($domino_files_dump{$ref_taxa_here}{'taxa'}[0]) {
-                                        unless ($domino_files_dump{$ref_taxa_here}{'PROFILE::Ref:'.$ref_genome}[0]){
-                                               &printError("There is not a profile file for reference genome taxa: $ref_genome vs. $ref_taxa_here ...\n"); $undef_mapping++;
-					}
-                       		}
-			}
-		} else {
+				} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n");
+		}}} else {
 			foreach my $ref_taxa ( keys %domino_files ) {
 				next if $ref_taxa eq 'taxa';
 				if ($domino_files_dump{$ref_taxa}{'taxa'}) {
 					## Check for file
 					unless ($domino_files_dump{$ref_taxa}{'contigs'}[0]){
-						&printError("There is not a contig file for $ref_taxa ...\n"); $undef_mapping++;}
+						&printError("There is not a contig file for $ref_taxa ...\n"); $undef_mapping++;
+					}
 					foreach my $taxa ( keys %domino_files ) {
 						next if $ref_taxa eq $taxa; next if $taxa eq 'taxa';
 						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:'.$taxa} ) {
 							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-				}}} else { $undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
+			}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
 			}}}}
 
 	if ($undef_mapping > 0) {
@@ -1135,7 +1131,9 @@ if ($avoid_mapping) {
 			$number_sp = $domino_files{'number_taxa'}{'number'}[0]; 
 			$minimum_number_taxa_covered = $domino_files{'number_taxa'}{'MCT'}[0];
 			$MID_taxa_names = $domino_files{'taxa_string'}{'string'}[0];
-}}}
+	}
+	}
+}
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 
 ## Print Different options
@@ -1482,7 +1480,8 @@ if (!$avoid_mapping) {
 				my $system_bowtie_call = system ($botwie_system);
 				if ($system_bowtie_call != 0) {
 					&printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); DOMINO::dieNicely();
-				} 			
+				}
+							 			
 				push (@{$domino_files_split_mapping{$reads}{"SAM::Ref:".$reference_identifier}}, $sam_name);
 				open (IN, $error_bowtie); while (<IN>) {print LOG $_; } close(IN);
 				print LOG "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n";
@@ -2884,7 +2883,7 @@ if ($genome_fasta) {
 		unless ($domino_files{$ref_taxa}{'contigs'}) {next; }
 		$coordinates = $domino_files{$ref_taxa}{'coordinates'}[0];
 	}
-	my $excelbook = &print_Excel($coordinates, \$marker_dirname);
+	my $excelbook = &print_Excel(\$coordinates, \$marker_dirname);
 	## Move parameters and error file to folder
 	File::Copy::move($param_Detail_file_markers, $marker_dirname."/");
 	if (-z $mapping_markers_errors_details) { remove_tree($mapping_markers_errors_details); 
@@ -2948,7 +2947,8 @@ my $fasta_files_split_BLAST = DOMINO::fasta_file_splitter($all_coordinates_file,
 my $pm_BLAST = new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
 for (my $j = 0; $j < scalar @{ $fasta_files_split_BLAST }; $j++) {
 	my $pid = $pm_BLAST->start($j) and next;
-	print "\t- Sending BLASTn command for clustering...\n";
+	my $total = scalar @{ $fasta_files_split_BLAST };
+	print "\t- Sending BLASTn command for clustering [($j+1)/$total]...\n";
 	my $blast_search_tmp = "blast_search.txt_tmp".$j; 
 	my ($blastn, $blastn_message) = DOMINO::blastn($all_coordinates_file, $blast_DB, $blast_search_tmp, $BLAST);
 	&debugger_print($blastn_message);
@@ -4605,9 +4605,10 @@ sub printError {
 
 sub print_Excel {
 
-	my $markers_file = $_[0]; my $path = $_[1];
+	my $markers_file_ref = $_[0]; my $path = $_[1];
 	my @array_markers;
-	open (FILE, "$$markers_file");
+	my $markers_file = $$markers_file_ref;
+	open (FILE, "$markers_file");
 	while (<FILE>) {
 		chomp; if ($_ =~ /.*Vari.*/) {next;}
 		push (@array_markers, $_);
