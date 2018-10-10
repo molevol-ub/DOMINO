@@ -845,7 +845,9 @@ if (!$folder) { DOMINO::dieNicely(); }
 #######################################
 ## Directory names
 my $folder_abs_path = abs_path($folder);
-if (-d $folder_abs_path) { } else { mkdir $folder_abs_path, 0755; }
+if (-d $folder_abs_path) { print "Exists!\n"; } else { print "Create!\n"; mkdir $folder_abs_path, 0755; }
+exit();
+
 ## Setting a timestamp
 my $random_number = int(rand(100));
 my $datestring = strftime "%Y%m%d%H%M", localtime;
@@ -1093,18 +1095,13 @@ if ($avoid_mapping) {
 			foreach my $ref_taxa ( keys %domino_files ) {
 				next if $ref_taxa eq 'taxa';
 				next if $ref_taxa eq 'genome';	
-			
 				if ($domino_files_dump{$ref_taxa}{'taxa'}) {
 					foreach my $taxa ( keys %domino_files ) {
 						next if $ref_taxa eq $taxa; 
 						next if $taxa eq 'taxa';
-					
 						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:genome'} ) {
 							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-						}
-					
-					}
-				} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n");
+		}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n");
 		}}} else {
 			foreach my $ref_taxa ( keys %domino_files ) {
 				next if $ref_taxa eq 'taxa';
@@ -1117,8 +1114,8 @@ if ($avoid_mapping) {
 						next if $ref_taxa eq $taxa; next if $taxa eq 'taxa';
 						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:'.$taxa} ) {
 							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-			}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
-			}}}}
+		}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
+		}}}}
 
 	if ($undef_mapping > 0) {
 		undef $avoid_mapping;
