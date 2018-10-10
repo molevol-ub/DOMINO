@@ -838,13 +838,20 @@ doi:10.1093/bioinformatics/btw534
 =cut
 
 ## Check mandatory options
-if (!$folder) { DOMINO::dieNicely(); } 
+if (!$folder) { &printError("No folder provided...\n"); DOMINO::dieNicely(); }
+my %type_input = (
+	"single_end" => 1,
+	"pair_end" => 1,
+);
+if (!$type_input{$input_type}) {
+	&printError("Input type provided ($input_type) does not match single_end or pair_end\n");
+	DOMINO::dieNicely();}
 
 #######################################
 ###	Initialise some PATH variables	### 
 #######################################
 ## Directory names
-if (-d $folder) { print "Exists!\n"; } else { mkdir $folder, 0755; }
+unless (-d $folder) { mkdir $folder, 0755; }
 my $folder_abs_path = abs_path($folder);
 
 ## Setting a timestamp
@@ -1460,6 +1467,7 @@ if (!$avoid_mapping) {
 					my $second_Read_file = $domino_files{$reads}{'reads'}[1];
 					print LOG "+ Reads 1: $mapping_file\n+ Reads 2: $second_Read_file\n";
 					$botwie_system .= " -x ".$reference_tag." -q -1 $mapping_file -2 $second_Read_file -S ".$sam_name." ".$R_group_id.$R_group_name.$threads.$mismatches." --no-unal".$read_gap_open.$ref_gap_open.$mismatch_penalty;   
+				
 				} elsif ($input_type eq 'single_end') { ## Illumin single end, 454
 					print LOG "+ Reads 1: $mapping_file...\n";
 					if ($map_contig_files) { ## Mapping contigs
