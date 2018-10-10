@@ -1086,20 +1086,43 @@ if ($avoid_mapping) {
 				$undef_mapping++; &printError("There is difference: $keys $curr =/= $prev\n"); ## test
 		}}
 
+		&debugger_print("DOMINO params dump");&debugger_print("Ref", \%domino_files_dump);
+
 		## Check files generated
-		foreach my $ref_taxa ( keys %domino_files ) {
-			next if $ref_taxa eq 'taxa';
-			if ($domino_files_dump{$ref_taxa}{'taxa'}) {
-				## Check for file
-				unless ($domino_files_dump{$ref_taxa}{'contigs'}[0]){
-					&printError("There is not a contig file for $ref_taxa ...\n"); $undef_mapping++;
-				}
-				foreach my $taxa ( keys %domino_files ) {
-					next if $ref_taxa eq $taxa; next if $taxa eq 'taxa';
-					unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:'.$taxa} ) {
-						$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-		}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
-	}}}
+		if ($genome_fasta) {
+			foreach my $ref_taxa ( keys %domino_files ) {
+				next if $ref_taxa eq 'taxa';
+				next if $ref_taxa eq 'genome';
+			
+			
+				if ($domino_files_dump{$ref_taxa}{'taxa'}) {
+					foreach my $taxa ( keys %domino_files ) {
+						next if $ref_taxa eq $taxa; 
+						next if $taxa eq 'taxa';
+					
+						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:genome'} ) {
+							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
+						}
+					
+					}
+				} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n");
+		}}} else {
+			foreach my $ref_taxa ( keys %domino_files ) {
+				next if $ref_taxa eq 'taxa';
+				if ($domino_files_dump{$ref_taxa}{'taxa'}) {
+					## Check for file
+					unless ($domino_files_dump{$ref_taxa}{'contigs'}[0]){
+						&printError("There is not a contig file for $ref_taxa ...\n"); $undef_mapping++;
+					}
+					foreach my $taxa ( keys %domino_files ) {
+						next if $ref_taxa eq $taxa; next if $taxa eq 'taxa';
+						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:'.$taxa} ) {
+							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
+			}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
+		}}}
+	
+	
+	}
 	if ($undef_mapping > 0) {
 		undef $avoid_mapping;
 		DOMINO::printDetails("+ Although option -No_Profile_Generation was provided, it would be done again as parameters do not match with the available mapping folder...\n",$mapping_parameters, $param_Detail_file_markers);
@@ -1113,7 +1136,6 @@ if ($avoid_mapping) {
 			$MID_taxa_names = $domino_files{'taxa_string'}{'string'}[0];
 }}}
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
-
 
 ## Print Different options
 if (!$avoid_mapping) {
