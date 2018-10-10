@@ -844,9 +844,8 @@ if (!$folder) { DOMINO::dieNicely(); }
 ###	Initialise some PATH variables	### 
 #######################################
 ## Directory names
+if (-d $folder) { print "Exists!\n"; } else { mkdir $folder, 0755; }
 my $folder_abs_path = abs_path($folder);
-if (-d $folder_abs_path) { print "Exists!\n"; } else { print "Create!\n"; mkdir $folder_abs_path, 0755; }
-exit();
 
 ## Setting a timestamp
 my $random_number = int(rand(100));
