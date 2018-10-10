@@ -1113,7 +1113,7 @@ if ($avoid_mapping) {
 			$MID_taxa_names = $domino_files{'taxa_string'}{'string'}[0];
 }}}
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
-exit();
+
 
 ## Print Different options
 if (!$avoid_mapping) {
@@ -1455,7 +1455,8 @@ if (!$avoid_mapping) {
 				my $system_bowtie_call = system ($botwie_system);
 				if ($system_bowtie_call != 0) {
 					&printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); DOMINO::dieNicely();
-				} 			
+				}
+							 			
 				push (@{$domino_files_split_mapping{$reads}{"SAM::Ref:".$reference_identifier}}, $sam_name);
 				open (IN, $error_bowtie); while (<IN>) {print LOG $_; } close(IN);
 				print LOG "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n";
@@ -2854,7 +2855,7 @@ if ($genome_fasta) {
 		unless ($domino_files{$ref_taxa}{'contigs'}) {next; }
 		$coordinates = $domino_files{$ref_taxa}{'coordinates'}[0];
 	}
-	my $excelbook = &print_Excel($coordinates, \$marker_dirname);
+	my $excelbook = &print_Excel(\$coordinates, \$marker_dirname);
 	## Move parameters and error file to folder
 	File::Copy::move($param_Detail_file_markers, $marker_dirname."/");
 	if (-z $mapping_markers_errors_details) { remove_tree($mapping_markers_errors_details); 
@@ -2918,7 +2919,8 @@ my $fasta_files_split_BLAST = DOMINO::fasta_file_splitter($all_coordinates_file,
 my $pm_BLAST = new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
 for (my $j = 0; $j < scalar @{ $fasta_files_split_BLAST }; $j++) {
 	my $pid = $pm_BLAST->start($j) and next;
-	print "\t- Sending BLASTn command for clustering...\n";
+	my $total = scalar @{ $fasta_files_split_BLAST };
+	print "\t- Sending BLASTn command for clustering [($j+1)/$total]...\n";
 	my $blast_search_tmp = "blast_search.txt_tmp".$j; 
 	my ($blastn, $blastn_message) = DOMINO::blastn($all_coordinates_file, $blast_DB, $blast_search_tmp, $BLAST);
 	&debugger_print($blastn_message);
@@ -4575,9 +4577,10 @@ sub printError {
 
 sub print_Excel {
 
-	my $markers_file = $_[0]; my $path = $_[1];
+	my $markers_file_ref = $_[0]; my $path = $_[1];
 	my @array_markers;
-	open (FILE, "$$markers_file");
+	my $markers_file = $$markers_file_ref;
+	open (FILE, "$markers_file");
 	while (<FILE>) {
 		chomp; if ($_ =~ /.*Vari.*/) {next;}
 		push (@array_markers, $_);
