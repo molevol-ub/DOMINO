@@ -845,7 +845,7 @@ if (!$folder) { DOMINO::dieNicely(); }
 #######################################
 ## Directory names
 my $folder_abs_path = abs_path($folder);
-unless (-d $folder_abs_path) { mkdir $folder_abs_path, 0755; }
+if (-d $folder_abs_path) { } else { mkdir $folder_abs_path, 0755; }
 ## Setting a timestamp
 my $random_number = int(rand(100));
 my $datestring = strftime "%Y%m%d%H%M", localtime;
