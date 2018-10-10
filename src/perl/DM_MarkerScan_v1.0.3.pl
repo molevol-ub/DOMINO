@@ -935,6 +935,7 @@ unless ($option eq "msa_alignment" || $option eq "RADseq") {
 		push (@{$domino_files{$MID_name_array[$j]}{'taxa'}}, 1);
 		$number_sp++;
 }}
+if ($option eq "genome") {$number_sp++;} ## when reference genome provided, the ref taxa also counts
 
 ## Start the Analysis
 print "\n"; DOMINO::printHeader("","#"); DOMINO::printHeader(" DOMINO Molecular Marker Development Stage ","#"); DOMINO::printHeader("","#"); print "\n"; DOMINO::printHeader("","+");  DOMINO::printHeader(" Analysis Started ","+");  DOMINO::printHeader("","+"); 
@@ -1281,6 +1282,7 @@ if ($option eq 'user_assembly_contigs') {
 unless (!$MID_taxa_names) {
 	DOMINO::printDetails("\n\n+ Taxa to use for the DOMINO development of molecular markers:\n", $mapping_parameters, $param_Detail_file_markers);
 	foreach my $keys (sort keys %domino_files) { 
+		next if $keys eq "taxa";
 		if ($domino_files{$keys}{'taxa'}) {
 			DOMINO::printDetails("\tName: $keys\n", $mapping_parameters, $param_Detail_file_markers);
 }}}
@@ -1349,7 +1351,7 @@ DOMINO::printDetails("\t- DM markers errors occurred during the process would be
 print "\n"; &time_log(); print "\n";
 	
 ################################################################################################
-################# 		Mapping/Alignment of the contigs 		################################
+##########	Mapping/Alignment of the contigs 		################################
 ################################################################################################
 if (!$avoid_mapping) {	
 	if ($option ne "msa_alignment") {
@@ -2375,6 +2377,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	unless ($domino_files{$ref_taxa}{'contigs'}) {next; }
 	if ($genome_marker_bool == 1) {last;}
 	print "\n";
+
 	## Create a dir for each taxa
 	DOMINO::printHeader(" Checking taxa files user specified ", "#"); 
 	my $marker_dir;
@@ -2561,9 +2564,9 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	## Number of contigs in each subset 
 	my $subset_offset = $subset_offset_user;
 	
-	##########################################
-	## 	Merge PILEUP information arrays     ##
-	##########################################
+	#########################################
+	## Merge PILEUP information arrays     ##
+	#########################################
 	print "\n"; DOMINO::printHeader(" Fetching information from all the PROFILEs generated ", "#");
 	my %pileup_files;
 	my (@clean_filtered_sam_files, @reference_bam_files, @pileup_Arrays);
@@ -2692,8 +2695,10 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			## Check the coordinates foreach taxa against the merge statistics  ##
 			######################################################################
 			foreach my $taxa (sort keys %domino_files) {
+				if ($taxa eq 'taxa') {next;}
 				unless ($domino_files{$taxa}{'taxa'}) { next; }
 				if ($taxa eq $ref_taxa) {next;}	
+				#print "Ref_taxa: $ref_taxa Taxa: $taxa\n";
 				my $pileup_each_taxa = $domino_files{$taxa}{"PROFILE::Ref:".$ref_taxa}[0]."/".$seqs."_ARRAY.txt";
 				## For each taxa confirm profile
 				if (-f $pileup_each_taxa) { &get_coordinates_each_taxa(\$pileup_each_taxa, $SLIDING_file, $taxa, \$output_merged_file, \$error_merged_file);
