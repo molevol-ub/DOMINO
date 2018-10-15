@@ -264,17 +264,6 @@ sub get_seq_sizes {
 sub get_size { # Multiplatform	
 	my $size = -s $_[0]; #To get only size
 	return $size;	
-	# only UNIX
-	# Get lines, words and characters
-	#my $wc_out = `wc $_[0]`;
-	#$wc_out =~ s/\s/-/g;
-	#my $array = &splitter("\-", $wc_out);
-	#my @word_count;
-	#for (my $i=0; $i < scalar @$array; $i++) {
-	#	if ($$array[$i] =~ /\S+/) {
-	#		push (@word_count, $$array[$i]);			
-	#	}
-	#} return \@word_count;
 }
 
 sub line_splitter {
@@ -658,6 +647,18 @@ sub readFASTA_IDSfile {
 }
 
 sub time_stamp { return "[ ".(localtime)." ]"; }
+
+sub time_log {	
+	my $given_step_time = $_[0];
+	my $current_time = time;
+
+	print DOMINO::time_stamp."\t";
+	my $secs = $current_time - $given_step_time; 
+	my $hours = int($secs/3600); $secs %= 3600; 
+	my $mins = int($secs/60); $secs %= 60; 
+	printf ("Step took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
+	return \$current_time;
+}
 
 ## TODO
 sub seq_counter {

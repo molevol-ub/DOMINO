@@ -5234,18 +5234,11 @@ sub sliding_window_conserve_variable {
 	return \@output_file_info;	
 }
 
-sub time_log {
-	
-	my $current_time = time;
-	print DOMINO::time_stamp();
-	my $secs = $current_time - $step_time; 
-	my $hours = int($secs/3600); 
-	$secs %= 3600; 
-	my $mins = int($secs/60); 
-	$secs %= 60; 
-	$step_time = $current_time;
-	printf ("\tStep took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
+sub time_log {	
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
+	$step_time = $$step_time_tmp;
 }
+
 
 sub user_cleanRead_files {
 	my $user_cleanRead_files_ref = \@user_cleanRead_files;

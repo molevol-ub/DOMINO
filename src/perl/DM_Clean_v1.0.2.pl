@@ -1826,13 +1826,8 @@ sub splitting_fastq {
 }
 
 sub time_log {	
-	my $current_time = time;
-	print DOMINO::time_stamp."\t";
-	my $secs = $current_time - $step_time; 
-	my $hours = int($secs/3600); $secs %= 3600; 
-	my $mins = int($secs/60); $secs %= 60; 
-	$step_time = $current_time;
-	printf ("Step took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
+	$step_time = $$step_time_tmp;
 }
 
 sub printError {
