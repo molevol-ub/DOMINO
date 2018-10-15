@@ -1803,7 +1803,8 @@ if (!$avoid_mapping) {
 				print STATS "Reads discarded (multimapping, unmapped, low quality reads): $discard_reads\n";	print LOG "Reads discarded (multimapping, unmapped, low quality reads): $discard_reads\n";
 				print STATS "Reads remaining: $good_reads\t( ".$h." %)\n";										print LOG "Reads remaining: $good_reads\t( ".$h." %)\n";
 				print LOG "============================================================\n"; 
-				print LOG "\n\n\n";			
+				print STATS "============================================================\n"; 
+				print LOG "\n\n\n"; close (STATS);			
 
 				DOMINO::printDump(\%domino_files_split_mapping, $domino_files{$reads}{"DUMP_Mapping::Ref:".$reference_identifier}[0]);
 				$pm_read_Reference->finish(); # pass an exit code to finish
