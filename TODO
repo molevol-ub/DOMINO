@@ -23,4 +23,5 @@ Wrap the package into docker
 
 - Implement independent files
 
-- Check every time you run any DOMINO script a small script that checks every module/dependency is OK: DM_dependencies.pl
+- Check every time you run any DOMINO script a small script that checks every module/dependency is OK: 
+	Update: DM_dependencies.pl

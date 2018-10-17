@@ -532,6 +532,7 @@ my $MIRA_exec = $scripts_path."mira_v4.0/bin/mira";
 my $CAP3_exec = $scripts_path."cap3/bin/cap3";
 my $BLAST = $scripts_path."NCBI_BLAST/";
 my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
+my $domino_Scripts = $scripts_path."/scripts";
 
 ## Checking if the Directory already exists because a previous analysis
 unless (-d $path_abs_folder) { mkdir $path_abs_folder; } 
@@ -1198,174 +1199,12 @@ sub clean_assembling_folders {
 sub Contig_Stats { 
 	
 	my $fasta_file = $_[0];
-
-	# Parameter variables
-	my (@len, %contig_length, $all_bases, %nucleotides, @all_contigs, %parts_array);
-
-	if(!defined($fasta_file)) { print "ERROR: No input files are provided\nDOMINO would not die here but not perform any statistics on for the assembly contigs\n"; return; }
 	my @name = split("\.fasta", $fasta_file);
-	my $outFile = $name[0]."-statistics.txt";
-	open(OUT, ">$outFile");
-	my @parts = (150, 500, 1000, 5000, 10000);
-	open(FILE, $fasta_file) || die "Could not open the $fasta_file ...\n";
-	$/ = ">"; ## Telling perl where a new line starts
-	while (<FILE>) {		
-		next if /^#/ || /^\s*$/;
-		chomp;
-		my ($titleline, $sequence) = split(/\n/,$_,2);
-		next unless ($sequence && $titleline);
-		my @split_titleline = split(" ",$titleline);
-		chomp $sequence;
+	my $outFile = $name[0]."-statistics.csv";
 	
-		## Get total bases A+T+C+G
-		my $len = length $sequence;
-		if ($len < $parts[0]) { next; }
-		my $tAs += $sequence =~ s/A/A/gi; 
-		my $tTs += $sequence =~ s/T/T/gi;
-		my $tGs += $sequence =~ s/G/G/gi; 
-		my $tCs += $sequence =~ s/C/C/gi;
-		my $Ns += (length $sequence) - $tAs - $tTs - $tGs - $tCs;
-		$nucleotides{"A"} += $tAs; $nucleotides{"T"} += $tTs;
-		$nucleotides{"C"} += $tCs; $nucleotides{"G"} += $tGs;
-		$nucleotides{"N"} += $Ns;
-		$all_bases += $len; $total_Contigs_all_sets++;
-		push(@all_contigs, $len);
-
-		for (my $j = 0; $j < scalar @parts; $j++) {
-			if ($len <= $parts[$j] ) {
-				my $id = "$parts[$j - 1] - $parts[$j]";
-				$parts_array{$id}{$titleline} = $len; last;
-			} elsif ($len > $parts[-1]) {
-				$parts_array{"bigger"}{$titleline} = $len; last;			
-	}}}
-	close(FILE);
-	$/ = "\n";
-	
-	##			Set	average   median N95	Count_Genomic_Contigs  		CountContigs_%  pb_this_set	pb_this_set_%	Reads_RNA_Count			 Reads_RNA_Count_%	Unmapped_contigs_Count				Unmapped_contigs_%							
-	#print Dumper (\%parts_array);
-
-	DOMINO::printHeader("","#"); 
-	DOMINO::printHeader(" Assembly Statistics ","#"); 
-	DOMINO::printHeader("","#"); 
-	print "Assembly Statisitcs for file: $fasta_file\n\n";
-	print "## General Statistics ##\n";
-	print "\nTotal sequences: $total_Contigs_all_sets\n\n";
-	printf "%-25s %0.2f %s\n", "As", $nucleotides{"A"}/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "Ts", $nucleotides{"T"}/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "Cs", $nucleotides{"C"}/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "Gs", $nucleotides{"G"}/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "(A + T)s", ($nucleotides{"A"} + $nucleotides{"T"})/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "(G + C)s", ($nucleotides{"G"} + $nucleotides{"C"})/$all_bases*100, "%";
-	printf "%-25s %0.2f %s\n", "Ns", $nucleotides{"N"}/$all_bases*100, "%";
-	print "\nAssembly Statistics for the whole set\n";
-
-	print OUT "Assembly Statisitcs for file: $fasta_file\n\n";
-	print OUT "## General Statistics ##\n";
-	print OUT "\nTotal sequences: $total_Contigs_all_sets\n\n";
-	printf OUT "%-25s %0.2f %s\n", "As", $nucleotides{"A"}/$all_bases*100, "%";
-	printf OUT "%-25s %0.2f %s\n", "Ts", $nucleotides{"T"}/$all_bases*100, "%";
-	printf OUT "%-25s %0.2f %s\n", "Cs", $nucleotides{"C"}/$all_bases*100, "%";
-	printf OUT "%-25s %0.2f %s\n", "Gs", $nucleotides{"G"}/$all_bases*100, "%";
-	printf OUT "%-25s %0.2f %s\n", "(A + T)s", ($nucleotides{"A"} + $nucleotides{"T"})/$all_bases*100, "%";
-	printf OUT "%-25s %0.2f %s\n", "(G + C)s", ($nucleotides{"G"} + $nucleotides{"C"})/$all_bases*100, "%";
-	printf OUT "%-25s %0.2f %s\n", "Ns", $nucleotides{"N"}/$all_bases*100, "%";
-	print OUT "\nAssembly Statistics for the whole set\n";
-	
-	my $array_ref_3 = \@all_contigs;
-	&get_stats($array_ref_3, $all_bases);
-	
-	DOMINO::printHeader("","#"); 
-	foreach my $keys (keys %parts_array) {
-		my %hash = %{$parts_array{$keys}};
-		my $total_pb_this_set;
-		my @tmp;
-		foreach my $contigs (keys %hash) {
-			$total_pb_this_set += $hash{$contigs};
-			push (@tmp, $hash{$contigs});
-		}
-		if ($keys eq 'bigger') { 
-			print "\nSet: > $parts[-1]\n";
-			print OUT "\nSet: > $parts[-1]\n";
-		} else { 
-			print "\nSet: ".$keys."\n";
-			print OUT "\nSet: ".$keys."\n";
-		}
-		my @sort_array = sort @tmp;
-		my $array_ref_2 = \@sort_array;
-		&get_stats($array_ref_2, $all_bases);
-		DOMINO::printHeader("","#"); 
-	}
-
-	close (OUT); return $outFile;
-	
-	sub get_stats {
-	
-		my $array_ref = $_[0];
-		my $all_bases = $_[1];
-		my @array = @$array_ref;
-		my $totalContigs = scalar @array;
-		
-		my $bases = 0;
-		for (my $i=0; $i < scalar @array; $i++) { $bases += $array[$i]; }
-		my @sort_array = sort{$a<=>$b} @array;
-		my $minReadLen = $sort_array[0];
-		my $maxReadLen = $sort_array[-1];
-		
-		my $percentage_pb_bases_this_set = ($bases/$all_bases)*100;
-		my $percentage_pb_bases_this_set_print = sprintf "%0.5f",$percentage_pb_bases_this_set;
-		my $percentage_contigs_this_set = ($totalContigs/$total_Contigs_all_sets)*100;
-		my $percentage_contigs_returned = sprintf "%0.5f",$percentage_contigs_this_set;
-	
-		my $avgReadLen = sprintf "%0.2f", $bases/$totalContigs;
-		my $medianLen = &calcMedian(@array);
-		my $n50 = &calcN50($array_ref, 50);
-
-		printf "%-25s %d\n" , "Total sequences", $totalContigs;
-		printf "%-25s %0.2f\n" , "Total sequences (%)", $percentage_contigs_returned;
-		printf "%-25s %d\n" , "Total bases", $bases;
-		printf "%-25s %0.2f\n" , "Total bases(%)", $percentage_pb_bases_this_set_print;
-		printf "%-25s %d\n" , "Min sequence length", $minReadLen;
-		printf "%-25s %d\n" , "Max sequence length", $maxReadLen;
-		printf "%-25s %0.2f\n", "Average sequence length", $avgReadLen;
-		printf "%-25s %0.2f\n", "Median sequence length", $medianLen;
-		printf "%-25s %0.2f\n", "N50: ", $n50;
-		
-		printf OUT "%-25s %d\n" , "Total sequences", $totalContigs;
-		printf OUT "%-25s %0.2f\n" , "Total sequences (%)", $percentage_contigs_returned;
-		printf OUT "%-25s %d\n" , "Total bases", $bases;
-		printf OUT "%-25s %0.2f\n" , "Total bases(%)", $percentage_pb_bases_this_set_print;
-		printf OUT "%-25s %d\n" , "Min sequence length", $minReadLen;
-		printf OUT "%-25s %d\n" , "Max sequence length", $maxReadLen;
-		printf OUT "%-25s %0.2f\n", "Average sequence length", $avgReadLen;
-		printf OUT "%-25s %0.2f\n", "Median sequence length", $medianLen;
-		printf OUT "%-25s %0.2f\n", "N50: ", $n50;	
-	}
-	sub calcN50 {
-		my @x = @{$_[0]};
-		my $n = $_[1];
-		my $total;
-		for (my $j=0; $j<@x; $j++){ $total += $x[$j]; }
-		my ($count, $n50) = (0,0);
-		for (my $j=0; $j<@x; $j++){
-    	    $count += $x[$j];
-    	    if($count >= ($total*$n/100)){
-    	        $n50=$x[$j]; last;
-    	}}
-		return $n50;
-	}
-	
-	sub calcMedian {
-		my @arr = @_;
-		my @sArr = sort{$a<=>$b} @arr;
-		my $arrLen = @arr;
-		my $median;
-		if($arrLen % 2 == 0) {
-			$median = ($sArr[$arrLen/2-1] + $sArr[$arrLen/2])/2;
-		} else {
-			$median = $sArr[$arrLen/2];
-		}
-		return $median;
-	}
+	my $domino_Scripts_contig = $domino_Scripts."/DM_contig_stats.pl";
+	system("perl $domino_Scripts_contig $fasta_file $outFile");
+	return $outFile;
 }
 
 sub debugger_print {

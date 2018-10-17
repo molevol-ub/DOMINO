@@ -12,10 +12,6 @@ use lib $FindBin::Bin."/lib";
 require List::MoreUtils;
 use List::MoreUtils qw(firstidx);
 
-sub assemblyStats {
-	## toAdd contig statistics
-}
-
 sub blastn {
 	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
 	my $filter = $BLAST."blastn -query ".$file." -evalue 1e-10 -max_target_seqs 150 -db '".$db."' -out $results -outfmt 6";
@@ -658,6 +654,33 @@ sub time_log {
 	my $mins = int($secs/60); $secs %= 60; 
 	printf ("Step took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
 	return \$current_time;
+}
+
+sub print_succes_Step {
+	my $name = $_[0];
+	my $new = $name.".success";
+	open (OUT, ">$new");
+	print OUT "OK\n";
+	close OUT;
+}
+
+sub sum {
+	my $array_ref = $_[0];
+	my $sum=0;
+	for (my $i=0; $i < scalar @{ $array_ref } ; $i++) {
+		$sum += $$array_ref[$i];
+	}
+	return $sum;
+}
+
+sub min_max {
+	my $array_ref = $_[0];
+	my $min=9999999999999999999999999999; my $max=0;
+	for (my $i=0; $i < scalar @{ $array_ref }; $i++) {
+		if ($$array_ref[$i] < $min) {$min = $$array_ref[$i]; }
+		if ($$array_ref[$i] > $max) {$max = $$array_ref[$i]; }
+	}
+	return ($min, $max)
 }
 
 ## TODO

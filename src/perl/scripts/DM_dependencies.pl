@@ -23,7 +23,7 @@ BEGIN {
 
 	use DOMINO;
 	use File::Copy;
-	use File::Find qw(find);			
+	use File::Find qw(find);
 	use List::Uniq qw(uniq);
 
 	use File::Path qw(remove_tree);
@@ -48,7 +48,8 @@ my @modules = (
 	"Cwd",
 	"Parallel::ForkManager",
 	"Spreadsheet::WriteExcel",
-	"Time::HiRes"
+	"Time::HiRes",
+	"List::Util"
 	);
 
 $| = 1; ## Flush output after every print and do not wait until full
@@ -76,10 +77,20 @@ my %binaries = (
 	"bowtie2 v2.2.9", $scripts_path."bowtie2-2.2.9/",
 	"BLAST", $scripts_path."NCBI_BLAST/",
 	"mothur v1.32", $scripts_path."MOTHUR_v1.32.0/mothur",
+	"MIRA", $scripts_path."mira_v4.0/bin/mira",
+	"CAP3", $scripts_path."cap3/bin/cap3",
+
 	
 );
 
+## check each binary
 foreach my $path (keys %binaries) {
 	print "\tChecking $path:...\n"
 }
+
+## if everything ok
+DOMINO::print_succes_Step("dependencies");
+
+
+
 
