@@ -2366,7 +2366,7 @@ if ($option eq "msa_alignment") {
 	File::Copy::move($param_Detail_file_markers, $marker_dirname."/");
 	if (-z $mapping_markers_errors_details) { remove_tree($mapping_markers_errors_details); 
 	} else { File::Copy::move($mapping_markers_errors_details, $marker_dirname."/"); }	## Finish and exit
-	&finish_time_stamp(); print "\n\n Job done succesfully, exiting the script\n\n\n"; exit();
+	DOMINO::finish_time_stamp($start_time); print "\n\n Job done succesfully, exiting the script\n\n\n"; exit();
 }
 &time_log(); print "\n";
 
@@ -2894,7 +2894,8 @@ if ($genome_fasta) {
 	if (-z $mapping_markers_errors_details) { remove_tree($mapping_markers_errors_details); 
 	} else { File::Copy::move($mapping_markers_errors_details, $marker_dirname."/"); }
 	
-	&finish_time_stamp(); print "\n\n Job done succesfully, exiting the script\n\n\n"; exit();
+	DOMINO::finish_time_stamp($start_time);
+	print "\n\n Job done succesfully, exiting the script\n\n\n"; exit();
 }
 
 #############################################################
@@ -2939,7 +2940,7 @@ my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($all_coordinates_file, $
 if ($blast_DB eq "1") {
 	&printError("Early termination of the DOMINO Marker Scan...");
 	my $msg= "\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"; 
-	print $msg; DOMINO::printError_log($msg); &finish_time_stamp();  exit();
+	print $msg; DOMINO::printError_log($msg); DOMINO::finish_time_stamp($start_time);  exit();
 } 
 
 ## Parallelize BLAST
@@ -3097,7 +3098,7 @@ if (-z $mapping_markers_errors_details) { remove_tree($mapping_markers_errors_de
 } else { File::Copy::move($mapping_markers_errors_details, $marker_dirname."/"); }
 
 ## Finish and exit
-&finish_time_stamp(); print "\n\n Job done succesfully, exiting the script\n\n\n"; 
+DOMINO::finish_time_stamp($start_time); print "\n\n Job done succesfully, exiting the script\n\n\n"; 
 exit();
 
 
@@ -3848,21 +3849,6 @@ sub fetching_range_seqs_array_Pileup {
 			my $sub_array = substr ($array_seq_desired, $real_start, $length);
 			return $sub_array;
 }}}
-
-sub finish_time_stamp {
-
-	my $finish_time = time;
-	print "\n\n"; DOMINO::printHeader("","+"); 
-	DOMINO::printHeader(" ANALYSIS FINISHED ","+"); 
-	DOMINO::printHeader("","+"); 
-	print DOMINO::time_stamp();
-	my $secs = $finish_time - $start_time; 
-	my $hours = int($secs/3600); 
-	$secs %= 3600; 	
-	my $mins = int($secs/60); 
-	$secs %= 60; 
-	printf (" Whole process took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
-}
 
 sub functional_factorial {
 

@@ -3,10 +3,7 @@ use strict;
 use warnings;
 use FindBin;
 use lib $FindBin::Bin."/../lib";
-
 use DOMINO;
-use Cwd qw(abs_path);
-
 use Data::Dumper;
 
 my $fasta = $ARGV[0];

@@ -929,7 +929,7 @@ if ($onlyTagging_files) {
 	}} # else unique file?
 	&debugger_print("domino_files"); &debugger_print("Ref", \%domino_files);	
 	&sort_files_and_folders();
-	print "\n+ Exiting the script...\n"; &finish_time_stamp(); exit();	 
+	print "\n+ Exiting the script...\n"; DOMINO::finish_time_stamp($start_time); exit();	 
 		
 } else {
 
@@ -1314,7 +1314,8 @@ print "+ Deleting or renaming some files...\n";
 ##########################################################################
 #DOMINO::printHeader("","#"); DOMINO::printHeader(" STATISTICS ","#"); DOMINO::printHeader("","#");
 #&printing_statistics($hash_reads_Ref);  
-print "\n Job done succesfully, exiting the script\n"; &finish_time_stamp(); print "\n";
+print "\n Job done succesfully, exiting the script\n"; 
+DOMINO::finish_time_stamp($start_time); print "\n";
 exit(0);
 
 

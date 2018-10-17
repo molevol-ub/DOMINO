@@ -831,7 +831,7 @@ if ($flagSpades) {
 			#######################
 			### Finish the job	###
 			#######################
-			&finish_time_log(); print "\n Job done succesfully, exiting the script\n"; exit();
+			DOMINO::finish_time_stamp($start_time); print "\n Job done succesfully, exiting the script\n"; exit();
 		} else { &printError("Only $total_available GiB available of memory RAM, please bear in mind SPAdes would not complete the task...") and DOMINO::dieNicely();}	
 	} else { &printError("There was an error when retrieving Memory RAM information...\n\nAre you sure this is a linux sever?...") and DOMINO::dieNicely();}
 } else {
@@ -1104,7 +1104,7 @@ unless ($avoidDelTMPfiles) {
 ###########################
 ### 	Finish the job	###
 ###########################
-&finish_time_log(); print "\n Job done succesfully, exiting the script\n"; exit(0);
+DOMINO::finish_time_stamp($start_time); print "\n Job done succesfully, exiting the script\n"; exit(0);
 
 ##########################
 ##	SUBROUTINES	##
@@ -1219,19 +1219,6 @@ sub debugger_print {
 		} else {
 			print "DEBUG:\t".$string."\n";
 }}}
-
-sub finish_time_log {
-
-	my $finish_time = time;
-	print "\n\n"; DOMINO::printHeader("","+"); 
-	DOMINO::printHeader(" ANALYSIS FINISHED ","+"); 
-	DOMINO::printHeader("","+"); 
-	print DOMINO::time_stamp."\t";
-	my $secs = $finish_time - $start_time; 
-	my $hours = int($secs/3600); $secs %= 3600; 	
-	my $mins = int($secs/60); $secs %= 60; 
-	printf ("Whole process took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
-}
 
 sub Generate_manifest_file {
 	

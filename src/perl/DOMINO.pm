@@ -683,6 +683,24 @@ sub min_max {
 	return ($min, $max)
 }
 
+sub finish_time_stamp {
+
+	my $start_time = $_[0];
+	my $finish_time = time;
+	print "\n\n"; DOMINO::printHeader("","+"); 
+	DOMINO::printHeader(" ANALYSIS FINISHED ","+"); 
+	DOMINO::printHeader("","+"); 
+	print DOMINO::time_stamp();
+	my $secs = $finish_time - $start_time; 
+	my $hours = int($secs/3600); 
+	$secs %= 3600; 	
+	my $mins = int($secs/60); 
+	$secs %= 60; 
+	printf (" Whole process took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
+}
+
+
+
 ## TODO
 sub seq_counter {
 	
