@@ -77,7 +77,7 @@ use List::MoreUtils qw(firstidx);
 ##################################
 ##	Initializing some variables	##
 ##################################
-my $domino_version = "v1.0.3 ## Revised 15-11-2017";
+my $domino_version = "v1.0.3 ## Revised 17-10-2018";
 my (
 ## User options
 $folder, $helpAsked, $avoidDelete_tmp_files, $num_proc_user, $window_var_CONS, 
