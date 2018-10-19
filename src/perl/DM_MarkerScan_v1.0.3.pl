@@ -1097,7 +1097,10 @@ if ($avoid_mapping) {
 		&debugger_print("DOMINO params dump");&debugger_print("Ref", \%domino_files_dump);
 
 		## Check files generated
-		if ($genome_fasta) {
+		if ($genome_fasta) {		
+			my $ref_genome_id;
+			if ($genome_fasta =~/.*id-(.*)\.fasta/) {$ref_genome_id=$1;} else {$ref_genome_id="genome";}		
+			my $profile = "PROFILE::Ref:$ref_genome_id";		
 			foreach my $ref_taxa ( keys %domino_files ) {
 				next if $ref_taxa eq 'taxa';
 				next if $ref_taxa eq 'genome';	
@@ -1105,9 +1108,10 @@ if ($avoid_mapping) {
 					foreach my $taxa ( keys %domino_files ) {
 						next if $ref_taxa eq $taxa; 
 						next if $taxa eq 'taxa';
-						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:genome'} ) {
+						unless ( $domino_files_dump{$ref_taxa}{$profile} ) {
 							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-		}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n");
+						}		
+		}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n");
 		}}} else {
 			foreach my $ref_taxa ( keys %domino_files ) {
 				next if $ref_taxa eq 'taxa';
