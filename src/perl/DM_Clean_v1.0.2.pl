@@ -70,7 +70,7 @@ $avoidDelTMPfiles, @user_blast_db, $skipping_BLAST, $user_option_file_type, $onl
 $further_information, $onlyTagging_files, $debugger, @user_blast_db_tmp, @user_files,
 
 ## Others
-$step_time, %domino_files, @file_abs_path, @file_names
+$step_time, %domino_files, @file_abs_path, @file_names, %domino_params
 );	
 
 my %input_options = (
@@ -91,21 +91,17 @@ GetOptions(
 	"thr|threshold_DUST=i" => \$threshold,
 	"o|outputFolder=s" => \$outFolder, 
 	"p|number_cpu=i" => \$noOfProcesses,
-	"b|barcode_file=s" => \$user_barcodes_file,
-			
-	"db|blast_database=s" => \@user_blast_db_tmp,
-			
+	"b|barcode_file=s" => \$user_barcodes_file,			
+	"db|blast_database=s" => \@user_blast_db_tmp,			
 	"TempFiles" => \$avoidDelTMPfiles,
 	"no_db_search" => \$skipping_BLAST,
 	"only_user_db" => \$only_user_db,
-	"only_tag_files|OTG" => \$onlyTagging_files,
-			
+	"only_tag_files|OTG" => \$onlyTagging_files,			
 	"h" => \$helpAsked1,
 	"help" => \$helpAsked,
 	"man" => \$manual,
 	"v|version" => \$version,
-	"MoreInfo" => \$further_information,
-	
+	"MoreInfo" => \$further_information,	
 	"Debug" => \$debugger,
 );
 
@@ -115,8 +111,6 @@ pod2usage( -exitstatus => 0, -verbose => 0 ) if ($helpAsked1);
 pod2usage( -exitstatus => 0, -verbose => 2 ) if ($manual);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "VERSION") if ($version);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPTION|AUTHOR|COPYRIGHT|LICENSE|DATE|CITATION") if ($further_information);
-my $domino_version = "v1.0.2 ## Revised 7-11-2016";
-
 
 =pod
 
@@ -148,7 +142,7 @@ DM_Clean_v1.0.2.pl
 
 =item B<>
 
-DOMINO v1.0.2
+DOMINO v1.1 ## Revised 23-10-2018
 
 =back
 
@@ -625,6 +619,7 @@ print "\n";
 DOMINO::printHeader("","#"); DOMINO::printHeader(" DOMINO Cleaning Stage ","#"); DOMINO::printHeader("","#"); 
 print "\n"; DOMINO::printHeader("","+"); DOMINO::printHeader(" Analysis Started ","+");  DOMINO::printHeader("","+"); 
 DOMINO::printDetails("Starting the process: [ ".(localtime)." ]\n\n", $param_Detail_file);
+my $localtime = localtime; push (@{ $domino_params{'clean_data'}{'start'} }, $localtime);
 
 ## Getting scripts path variable
 my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
@@ -633,7 +628,7 @@ my $db_dirname_default = $scripts_path."db_default"; # Default databases provide
 my $db_dirname = $dirname."/db";
 
 DOMINO::printHeader(" Input File and Parameter Preprocessing ","#");
-DOMINO::printDetails("\n+ Output Directory: ".$dirname." ...OK\n\n", $param_Detail_file);
+DOMINO::printDetails("\n+ Output Directory: ".$dirname." ...OK\n\n", $param_Detail_file); push (@{ $domino_params{'clean_data'}{'folder'} }, $dirname);
 if (scalar (@user_files) == 0 || !$user_option_file_type) {
 	&printError("No input files provided"); DOMINO::dieNicely();
 } else {
@@ -684,7 +679,8 @@ if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_f
 ###################
 my $file_type = $input_options{$user_option_file_type};
 if ($input_options{$user_option_file_type}) {
-	DOMINO::printDetails("+ Type of file(s): Option: $user_option_file_type -- $file_type ...OK\n", $param_Detail_file);
+	DOMINO::printDetails("+ Type of file(s): Option: $user_option_file_type -- $file_type ...OK\n", $param_Detail_file); 
+	push (@{ $domino_params{'clean_data'}{'option'} }, "$user_option_file_type"."--".$file_type);
 } else { 
 	&printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n");
 	DOMINO::printInput_type(); DOMINO::dieNicely();
@@ -791,14 +787,27 @@ if ($file_type eq "Illumina_pair_end_multiple_fastq") {
 if ($onlyTagging_files) {
 	DOMINO::printDetails("+ Cleaning process would be skipped...OK\n", $param_Detail_file);
 	DOMINO::printDetails("+ Only extracting and tagging of the reads would be done...OK\n", $param_Detail_file);	
+	push (@{ $domino_params{'clean_data'}{'onlyTagging_files'} }, "1");
 } else {
 	## Print information of the input parameters
 	DOMINO::printDetails("+ Number of Processor: ".$noOfProcesses." ...OK\n", $param_Detail_file);
+	push (@{ $domino_params{'clean_data'}{'CPU'} }, $noOfProcesses);
+
 	DOMINO::printDetails("+ Number of mismatches allowed in the barcode sequence: $bdiffs ...OK\n", $param_Detail_file);	
+	push (@{ $domino_params{'clean_data'}{'mismatches'} }, $bdiffs);
+
 	DOMINO::printDetails("+ Minimum read length: $minimum_length_GUI pb ...OK\n", $param_Detail_file);
+	push (@{ $domino_params{'clean_data'}{'read_length'} }, $minimum_length_GUI);
+
 	DOMINO::printDetails("+ Minimum QUAL: $minimum_qual_GUI ...OK\n", $param_Detail_file);
+	push (@{ $domino_params{'clean_data'}{'QUAL'} }, $minimum_qual_GUI);
+
 	DOMINO::printDetails("+ Minimum length of a read satisfying QUAL cutoff: $read_length_GUI % ...OK\n", $param_Detail_file);
+	push (@{ $domino_params{'clean_data'}{'QUAL_cutoff'} }, $read_length_GUI);
+
 	DOMINO::printDetails("+ Threshold for complexity/entropy of a read: $threshold ...OK\n", $param_Detail_file);
+	push (@{ $domino_params{'clean_data'}{'entropy'} }, $threshold);
+
 	unless ($avoidDelTMPfiles) {
 		DOMINO::printDetails("+ Deleting of temporary files would be done ...OK\n", $param_Detail_file);
 	} else { 
@@ -811,16 +820,20 @@ if ($onlyTagging_files) {
 		mkdir $db_dirname, 0755; chdir $db_dirname;
 		if ($only_user_db) {
 			DOMINO::printDetails("\t\tNo default databases would be used and only user provided databases would be used instead\n", $param_Detail_file);
+			push (@{ $domino_params{'clean_data'}{'only_user_DB'} }, "1");
 		} else {
 			DOMINO::printDetails("\tDefault databases provided in the package would be used\n\tCopying...\n", $param_Detail_file);
+			push (@{ $domino_params{'clean_data'}{'default_DB'} }, "1");
 			&download_db(); 
 		}
 
 		## Check if User provide any database
 		if (@user_blast_db_tmp) {
 			DOMINO::printDetails("\t+ Additional user provided databases would be used:\n", $param_Detail_file);
+			push (@{ $domino_params{'clean_data'}{'additional'} }, "1");
 			for (my $i = 0; $i < scalar @user_blast_db_tmp; $i++) {
 				print "\t$user_blast_db_tmp[$i]\n";
+				push (@{ $domino_params{'clean_data'}{'additional_db'} }, $user_blast_db_tmp[$i]);
 				my $tmp_abs_name = abs_path($user_blast_db_tmp[$i]);
 				my $format_returned = DOMINO::check_file_format($tmp_abs_name);
 				if ($format_returned !~ /fasta/) { 
@@ -831,6 +844,8 @@ if ($onlyTagging_files) {
 		DOMINO::printDetails("\n\t+ Database(s):\n", $param_Detail_file); &looking4db();
 	} else {
 		DOMINO::printDetails("+ No BLAST search of contaminants ...OK\n", $param_Detail_file);
+		push (@{ $domino_params{'clean_data'}{'NO_search'} }, "1");
+
 }}
 ## Print info about where to print info and error
 DOMINO::printDetails("\n+ Parameters details would be print into file: ".$clean_folder."/".$datestring."_DM_Cleaning_Parameters.txt...\n", $param_Detail_file);
@@ -850,6 +865,8 @@ if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_f
 	
 	print "\n"; DOMINO::printHeader(" Extracting taxa sequences from the file provided ","%"); 
 	my $file_tmp_barcodes = $domino_files{"original"}{"barcodes_file"}[0];
+	push (@{ $domino_params{'clean_data'}{'barcodes'} },$file_tmp_barcodes);
+
 	DOMINO::printDetails("+ Barcodes file provided: $file_tmp_barcodes ...OK\n", $param_Detail_file);
 	
 	for (my $i=0; $i < scalar @file_abs_path; $i++) {
@@ -904,7 +921,7 @@ if ($onlyTagging_files) {
 			for (my $j=0; $j < scalar @array; $j++) {	
 				my $copy_name = &rename_seqs($domino_files{'original'}{$keys}[$j], $keys, "fastq");
 				File::Copy::copy($domino_files{'original'}{$keys}[$j], $copy_name);
-				push (@{ $domino_files_threads_OTG{$keys}{"FINAL"} }, $copy_name);			
+				push (@{ $domino_files_threads_OTG{$keys}{"FINAL_fq"} }, $copy_name);			
 			}
 			my $domino_files_threads_OTG_text = $dir."/dumper-hash_OTG.txt";
 			DOMINO::printDump(\%domino_files_threads_OTG, $domino_files_threads_OTG_text);			
@@ -1087,13 +1104,13 @@ foreach my $keys (sort keys %domino_files) {
 						$final_name .= $path_name[$j]."/";
 					} $final_name .= "QC-filtered_id-".$1."_R".$2.".fastq";
 				}
-				push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $final_name);
-				File::Copy::move( $domino_files_threads_QC{$keys}{"NGS_QC"}[$i], $domino_files_threads_QC{$keys}{"FINAL"}[$i]);
+				push (@{ $domino_files_threads_QC{$keys}{"FINAL_fq"} }, $final_name);
+				File::Copy::move( $domino_files_threads_QC{$keys}{"NGS_QC"}[$i], $domino_files_threads_QC{$keys}{"FINAL_fq"}[$i]);
 			}
 		} else {			
 			my $final_name = $taxa_dir."/QC-filtered_id-".$keys.".fastq";
 			my $final_file = DOMINO::qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"NGS_QC"}[0], $domino_files_threads_QC{$keys}{"NGS_QC"}[1], $keys, $final_name, $file_type);
-			push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $final_file);
+			push (@{ $domino_files_threads_QC{$keys}{"FINAL_fq"} }, $final_file);
 		}			
 		DOMINO::printHeader(" Cleaning Step 2: BLAST and Vector screen ","#"); 
 		print "+ Skipping the BLAST step for searching against databases for putative contaminants\n";
@@ -1231,7 +1248,7 @@ foreach my $keys (sort keys %domino_files) {
 							} $final_name .= "QC-filtered_id-".$1.".fastq";
 					}}
 					my $fastq_filtered = DOMINO::qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"FASTA4BLAST_filtered"}[$j], $domino_files_threads_QC{$keys}{"QUAL4BLAST_filtered"}[$j], $keys, $final_name, $file_type);
-					push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $fastq_filtered);
+					push (@{ $domino_files_threads_QC{$keys}{"FINAL_fq"} }, $fastq_filtered);
 				} print "\n+ BLAST search and parsing of results for $keys done...\n";		
 				
 				## Get contaminants for each taxa
@@ -1253,7 +1270,7 @@ foreach my $keys (sort keys %domino_files) {
 						} $final_name .= "QC-filtered_id-".$1."_R".$2.".fastq";
 					}
 					my $fastq_filtered = DOMINO::qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[$i], $domino_files_threads_QC{$keys}{"QUAL4BLAST"}[$i], $keys, $final_name, $file_type);
-					push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $fastq_filtered);
+					push (@{ $domino_files_threads_QC{$keys}{"FINAL_fq"} }, $fastq_filtered);
 			}} else {
 				my $final_name;
 				my @path_name = split("/", $domino_files_threads_QC{$keys}{"FASTA4BLAST"}[0]);
@@ -1263,7 +1280,7 @@ foreach my $keys (sort keys %domino_files) {
 					} $final_name .= "QC-filtered_id-".$1.".fastq";
 				}
 				my $fastq_filtered = DOMINO::qualfa2fq_modified_bwa($domino_files_threads_QC{$keys}{"FASTA4BLAST"}[0], $domino_files_threads_QC{$keys}{"QUAL4BLAST"}[0], $keys, $final_name, $file_type);
-				push (@{ $domino_files_threads_QC{$keys}{"FINAL"} }, $fastq_filtered);
+				push (@{ $domino_files_threads_QC{$keys}{"FINAL_fq"} }, $fastq_filtered);
 	}}} 
 	print "\n"; &time_log(); print "\n";
 	
@@ -1309,13 +1326,15 @@ print "\n\n"; DOMINO::printHeader(" Deleting Temporary Files ","#");
 print "+ Deleting or renaming some files...\n"; 
 &sort_files_and_folders(); print "\n";
 
-##########################################################################
-## 	Printing some STATISTICS, generating output folders					##
-##########################################################################
-#DOMINO::printHeader("","#"); DOMINO::printHeader(" STATISTICS ","#"); DOMINO::printHeader("","#");
-#&printing_statistics($hash_reads_Ref);  
+##################################################
+## 	Generating output folders					##
+##################################################
+#print "DOMINO Files\n"; print Dumper \%domino_files;
+my $dump_info_DOMINO = $clean_folder."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_info_DOMINO);
+my $dump_param_DOMINO = $clean_folder."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param_DOMINO);
 print "\n Job done succesfully, exiting the script\n"; 
 DOMINO::finish_time_stamp($start_time); print "\n";
+
 exit(0);
 
 
@@ -1380,7 +1399,7 @@ sub checking_names {
 	my @files = readdir(DIR);
 	for (my $i = 0; $i <scalar @files; $i++) {
 		if ($files[$i] =~ /.*gz/) {
-			&gunzipping($db_dirname."/".$files[$i]);
+			DOMINO::gunzipping($db_dirname."/".$files[$i]);
 		}
 	}
 	close(DIR);
@@ -1428,8 +1447,7 @@ sub sort_files_and_folders {
 	push (@{ $domino_files{"main"}{"tmp_clean_data"} }, $intermediate_folder);
 	push (@{ $domino_files{"main"}{"clean_data"} }, $clean_folder);
 		
-	my $domino_files_general = $intermediate_folder."/dumper-hash_DOMINO_files.txt";
-	DOMINO::printDump(\%domino_files, $domino_files_general);
+	#my $domino_files_general = $intermediate_folder."/dumper-hash_DOMINO_files.txt"; DOMINO::printDump(\%domino_files, $domino_files_general);
 
 	print "+ Deleting temporary files...\n";	
 	my $files_ref = DOMINO::readDir($dirname); my @files = @$files_ref;
@@ -1460,8 +1478,8 @@ sub sort_files_and_folders {
 			next;	
 		} else {
 			my @array_final;		
-			if ($domino_files{$tags}{'FINAL'}) {
-				@array_final = @{$domino_files{$tags}{'FINAL'}};
+			if ($domino_files{$tags}{'FINAL_fq'}) {
+				@array_final = @{$domino_files{$tags}{'FINAL_fq'}};
 			} else { 
 				@array_final = @{ $domino_files{$tags}{'EXTRACTED'} };
 			}
@@ -1477,12 +1495,15 @@ sub sort_files_and_folders {
 				if ($files_taxa_ref[$f] eq ".DS_Store" || $files_taxa_ref[$f] eq "." || $files_taxa_ref[$f] eq ".." ) { next;
 				} elsif ($files_taxa_ref[$f] =~ /.*_stat/) {
 					File::Copy::move($dir."/".$files_taxa_ref[$f], $intermediate_folder."/Quality_Filtering_statistics_".$tags.".txt");
+					push (@{ $domino_files{$tags}{"QC_stats"} }, $intermediate_folder."/Quality_Filtering_statistics_".$tags.".txt");
 				} elsif ($files_taxa_ref[$f] =~ /.*unPair.*/) {
 					File::Copy::move($dir."/".$files_taxa_ref[$f], $intermediate_folder);
 				} elsif ($files_taxa_ref[$f] =~ /.*singleton.*/) {
 					File::Copy::move($dir."/".$files_taxa_ref[$f], $intermediate_folder);
 				} elsif ($files_taxa_ref[$f] =~ /.*html/) { 
 					File::Copy::move($dir."/".$files_taxa_ref[$f], $intermediate_folder."/Cleaning_step_report_".$tags."_QC-Analysis.html"); 		
+					push (@{ $domino_files{$tags}{"QC_stats_html"} }, $intermediate_folder."/Cleaning_step_report_".$tags."_QC-Analysis.html");
+										
 				} elsif ($files_taxa_ref[$f] =~ /.*png/) {
 					File::Copy::move($dir."/".$files_taxa_ref[$f], $intermediate_folder);
 				} else {
@@ -1491,9 +1512,7 @@ sub sort_files_and_folders {
 			remove_tree($dir);
 	}}
 	unless ($avoidDelTMPfiles) { remove_tree($temp_dir); }
-	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-
-	
+	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";	
 }
 
 sub debugger_print {
@@ -1567,42 +1586,8 @@ sub extracting_fastq {
 	} close(F1); close (FASTA); close (QUAL);
 }
 
-sub finish_time_stamp {
-	my $finish_time = time;
-	print "\n\n"; DOMINO::printHeader("","+"); DOMINO::printHeader(" ANALYSIS FINISHED ","+");  DOMINO::printHeader("","+");  
-	print DOMINO::time_stamp."\t";
-	my $secs = $finish_time - $start_time; 
-	my $hours = int($secs/3600); $secs %= 3600; 	
-	my $mins = int($secs/60); $secs %= 60; 
-	printf ("Whole process took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs);
-}
-
 sub FormatError_barcodes { &printError("The only format accepted for the Barcodes file is:\n\n##########\nbarcode, ACACGACGACT, MID1, Dmelanogaster\nbarcode, ACTACGTCTCT, MID2, Dsimulans\nbarcode, ACTACGTATCT, MID3, Dyakuba\n##########\nPlease note this is a comma-separated value file (.csv)"); }
 	
-sub gunzipping {
-
-	##########################################################################################
-	##	 																					##
-	##  This function unzips the files zipped. Only valid for UNIX and if gunzip installed	##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 20/02/2014 jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
-	
-	my $gunzip_file = $_[0];
-	my $process;
-	if ($gunzip_file =~ /.*tar.*/) {
-		my $tar_gz = "tar -zxvf $gunzip_file";
-		$process = system($tar_gz);
-	} else {
-		my $gunzip = "gunzip -d ".$gunzip_file;
-		$process = system($gunzip);
-	}
-	if ($process != 0) {
-		&printError("Gunzipping the file failed when trying to process the file...\n");
-		&printError("DOMINO would not die here...\n");
-}}
- 
 sub looking4db {
 
 	##########################################################################################

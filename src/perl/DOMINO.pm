@@ -11,6 +11,7 @@ use FindBin;
 use lib $FindBin::Bin."/lib";
 require List::MoreUtils;
 use List::MoreUtils qw(firstidx);
+use Data::Dumper;
 
 sub blastn {
 	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
@@ -344,6 +345,27 @@ sub mothur_retrieve_seqs {
 	my $system_call = system($line);
 }
 
+sub retrieve_info {
+	
+	my $dump_files_ref = $_[0];
+	my $hash_Ref = $_[1];
+	my %hash;
+	unless ($hash_Ref eq 1) { %hash = %{$hash_Ref}; }
+	my @dump_files = @{ $dump_files_ref };
+	for (my $j=0; $j < scalar @dump_files; $j++) {
+		if ($dump_files[$j] eq '.' || $dump_files[$j] eq '..' || $dump_files[$j] eq '.DS_Store') { next;}
+		unless (-e -r -s $dump_files[$j]) { next; }
+		open (DUMP_IN, "$dump_files[$j]");
+		while (<DUMP_IN>) {
+			my $line = $_; chomp $line;
+			my @array = split("\t", $line);
+			if ($hash_Ref eq 1) { $hash{$array[0]} = $array[1];
+			} else { push (@{ $hash{$array[0]}{$array[1]}}, $array[2]); }
+		} close (DUMP_IN);
+	} 
+	return \%hash;
+}
+
 sub mothur_retrieve_FASTA_seqs {
 	## This sub retrieve a given number of ids and generates a fastq
 	my $fasta = $_[0]; my $directory = $_[1]; 
@@ -656,11 +678,19 @@ sub time_log {
 	return \$current_time;
 }
 
-sub print_succes_Step {
+sub print_success_Step {
 	my $name = $_[0];
 	my $new = $name.".success";
 	open (OUT, ">$new");
 	print OUT "OK\n";
+	close OUT;
+}
+
+sub print_fail_Step {
+	my $name = $_[0];
+	my $new = $name.".failed";
+	open (OUT, ">$new");
+	print OUT "FAIL\n";
 	close OUT;
 }
 
@@ -699,7 +729,60 @@ sub finish_time_stamp {
 	printf (" Whole process took %.2d hours, %.2d minutes, and %.2d seconds\n", $hours, $mins, $secs); 
 }
 
+sub get_parameters {
 
+	my $path = $_[0];
+	my %parameters;
+	my $array_files_ref=DOMINO::readDir($path);
+	my @array_files = @$array_files_ref;
+	my (%dirs, $earliest);
+	for (my $i=0; $i<scalar @array_files;$i++) {
+		if ($array_files[$i] eq "." || $array_files[$i] eq ".." || $array_files[$i] eq ".DS_Store") {next;}
+		next if ($array_files[$i] =~ /.*old.*/);
+		if ($array_files[$i] =~ /(\d+)\_DM\_(.*)/) {
+			unless (-d $path."/".$array_files[$i]) {next; };
+			my $time_stamp=$1; my $type = $2;
+			$dirs{$type}{$time_stamp} = $path.$array_files[$i];
+	}}
+	#print Dumper \%dirs;
+	
+	my @params; my @info; my %initial_files;
+	foreach my $dir (sort keys %dirs) {
+		my $last;
+		foreach my $times (sort {$a<=>$b} keys %{$dirs{$dir}}) {
+			$last = $times;	## Only used the last folder for each process			
+		}
+		if ($dir eq "assembly" || $dir eq "clean_data" || $dir eq "mapping" || $dir eq "markers" ) {
+			my $params = $dirs{$dir}{$last}."/DOMINO_dump_param.txt"; 		push (@params, $params);
+			my $files = $dirs{$dir}{$last}."/DOMINO_dump_information.txt";	push (@info, $files);
+	}}
+
+	my $hash_param = &retrieve_info(\@params, \%parameters);
+	my $hash_info = &retrieve_info(\@info, \%initial_files);
+	%parameters = %{$hash_param};
+	foreach my $keys (keys %{$hash_info}) {
+		if ($$hash_info{$keys}{"QC_stats"}) {
+			$parameters{"clean_data"}{"QC_analysis"}{$keys} = $$hash_info{$keys}{"QC_stats"}[0];
+		} 
+		if ($$hash_info{$keys}{"FINAL_stats"}) {
+			$parameters{"assembly"}{"stats"}{$keys} = $$hash_info{$keys}{"FINAL_stats"}[0];
+	}}
+	if (!%parameters) { return 0;	
+	} else { return \%parameters;}
+}
+
+sub debugger_print {
+	my $string = $_[0];
+	my $ref = $_[1];
+	## Print to a file
+	if ($string eq "Ref") {
+		print "\n******\nDEBUG:\n";
+		print Dumper $ref; ## if filehandle OUT: print OUT Dumper $ref;
+		print "******\n";
+	} else {
+		print "\n******\nDEBUG:\n".$string."\n******\n\n";
+	}
+}
 
 ## TODO
 sub seq_counter {

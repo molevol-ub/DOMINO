@@ -58,11 +58,8 @@ BEGIN {
 my ($helpAsked, %domino_files, $avoidDelTMPfiles, $file_type, $cap3flag,
 $manual, $abs_folder, $mrs, $debugger, $flagSpades, $noOfProcesses, $version,
 @user_files, $DOMINO_files, $overlap_CAP3, $similar_CAP3, $user_files, $further_information,
-@file_abs_path, $step_time, $check_threads,$helpAsked1,
+@file_abs_path, $step_time, $check_threads, $helpAsked1, %domino_params);
 
-$total_Contigs_all_sets);
-
-my %bases = ("A" => 0, "C" => 0, "T" => 0, "G" => 0, "N" => 0);
 my %input_options = (1 =>'454_sff', 2 =>'454_fastq', 3=>'454_multiple_fastq', 
 	4 => 'Illumina', 5 => 'Illumina_multiple_fastq', 6 => 'Illumina_pair_end', 
 	7 => 'Illumina_pair_end_multiple_fastq');
@@ -105,7 +102,6 @@ pod2usage( -exitstatus => 0, -verbose => 0 ) if ($helpAsked1);
 pod2usage( -exitstatus => 0, -verbose => 2 ) if ($manual);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "VERSION") if ($version);
 pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPTION|AUTHOR|COPYRIGHT|LICENSE|DATE|CITATION") if ($further_information);
-my $domino_version = "v1.0.2 ## Revised 7-11-2016";
 
 =pod
 
@@ -125,7 +121,7 @@ my $domino_version = "v1.0.2 ## Revised 7-11-2016";
 
 =over 2
 
-DM_Assembly_v1.0.2.pl  
+DM_Assembly_v1.1.pl  
 
 =back	
 
@@ -133,7 +129,7 @@ DM_Assembly_v1.0.2.pl
 
 =over 2
 
-DOMINO v1.0.2
+DOMINO v1.1 ## Revised 23-10-2018
 
 =back	
 	
@@ -143,7 +139,7 @@ DOMINO v1.0.2
 
 =item B<>
 
-perl DM_Assembly_v1.0.2.pl  
+perl DM_Assembly_v1.1.pl  
 
 =item B<###########################>
 	
@@ -406,40 +402,40 @@ Available option for Illumina reads (single or paired-end reads). 454 is not sup
 
 =item B<454: DOMINO Multiple fastq files>
 
- perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 3 -p 3 -mrs 80
+ perl DM_Assembly_v1.1.pl -o test_folder -DOMINO_files -type_file 3 -p 3 -mrs 80
 
 =item B<454: DOMINO Multiple fastq files. Use CAP3 for scaffolding>
 
- perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 3 -p 3 -mrs 80 
+ perl DM_Assembly_v1.1.pl -o test_folder -DOMINO_files -type_file 3 -p 3 -mrs 80 
  -useCAP3 -overCAP3 80 -simCAP3 97 -TempFiles
 
 =item B<Illumina: DOMINO Multiple fastq files>
 
- perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 5
+ perl DM_Assembly_v1.1.pl -o test_folder -DOMINO_files -type_file 5
 
 =item B<Illumina: DOMINO Multiple fastq files -- SPAdes >
 
- perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 5 -SPAdes
+ perl DM_Assembly_v1.1.pl -o test_folder -DOMINO_files -type_file 5 -SPAdes
 
 =item B<Illumina Paired-end Files: DOMINO Multiple Paired-end FASTQ files>
 
- perl DM_Assembly_v1.0.2.pl -o test_folder -DOMINO_files -type_file 7
+ perl DM_Assembly_v1.1.pl -o test_folder -DOMINO_files -type_file 7
 
 =item B<454: User Multiple fastq files>
 
- perl DM_Assembly_v1.0.2.pl -o test_folder -type_file 3 -user_files 
+ perl DM_Assembly_v1.1.pl -o test_folder -type_file 3 -user_files 
  -input_file 454_user_file1.fastq -input_file 454_user_file2.fastq 
  -input_file 454_user_file3.fastq
 
 =item B<Illumina: User Multiple fastq files>
 
- perl DM_Assembly_v1.0.2.pl -o test_folder -type_file 5 -user_files 
+ perl DM_Assembly_v1.1.pl -o test_folder -type_file 5 -user_files 
  -input_file illumina_user_file1.fastq -input_file illumina_user_file2.fastq 
  -input_file illumina_user_file3.fastq
 
 =item B<Illumina Paired-end Files: User Multiple Paired-end FASTQ files>
 
- perl DM_Assembly_v1.0.2.pl -o test_folder -type_file 7 -user_files 
+ perl DM_Assembly_v1.1.pl -o test_folder -type_file 7 -user_files 
  -input_file user_file_left_1.fastq -input_file user_file_right_1.fastq 
  -input_file user_file_left_2.fastq -input_file user_file_right_2.fastq
 
@@ -521,6 +517,7 @@ if (!$mrs) { $mrs = 80; } #default
 if (!$overlap_CAP3) { $overlap_CAP3 = 80; } #default
 if (!$similar_CAP3) { $similar_CAP3 = 97; } #default
 if (!$noOfProcesses) { $noOfProcesses = 2; } #default
+push (@{ $domino_params{'assembly'}{'CPU'} }, $noOfProcesses);
 
 ## Getting some PATH variables
 my $pipeline_path = abs_path($0); ## abs_path($0) is where the perl script is
@@ -565,18 +562,25 @@ mkdir $dirname_tmp, 0755;
 print "\n"; DOMINO::printHeader("","+");  DOMINO::printHeader(" Analysis Started ","+"); DOMINO::printHeader("","+"); print "\n";
 my $start_time = $step_time = time;
 DOMINO::printDetails("Starting the process: [ ".(localtime)." ]\n\n", $param_Detail_file);
+my $localtime = localtime; push (@{ $domino_params{'assembly'}{'start'} }, $localtime);
+
 # Checking user options
 DOMINO::printHeader(" Input File and Parameter Preprocessing ","#");
 DOMINO::printDetails("\n+ Output Directory: ".$dirname." ....OK\n", $param_Detail_file);
+push (@{ $domino_params{'assembly'}{'folder'} }, $dirname);
 
 ## If using SPADES for assembly instead of MIRA
 my ($assembly_directory, $CAP3_directory);
 if ($flagSpades) {
 	$assembly_directory = $dirname."/spades_assemblies";
+	push (@{ $domino_params{'assembly'}{'spades'} }, "YES");
+
 } else {
 	$assembly_directory = $dirname."/MIRA_assemblies"; 
+	push (@{ $domino_params{'assembly'}{'MIRA'} }, "YES");
 	if ($cap3flag) {
 		$CAP3_directory = $dirname."/CAP3_assemblies"; 
+		push (@{ $domino_params{'assembly'}{'CAP3'} }, "YES");
 	}
 }
 mkdir $assembly_directory, 0755; chdir $assembly_directory;
@@ -600,6 +604,8 @@ if ($user_files) { ## If users provides files for the assembly either than the D
 	} else {
 		## Checking files
 		DOMINO::printDetails("+ Type of file(s): Option $file_type : $input_options{$file_type} ...OK\n", $param_Detail_file);
+		push (@{ $domino_params{'assembly'}{'input_type'} }, "$file_type"."--".$input_options{$file_type});
+
 		DOMINO::printDetails("+ User files option provided: ....OK\n", $param_Detail_file);
 		DOMINO::printDetails("+ Checking file(s) user provided:\n", $param_Detail_file);
 		
@@ -667,10 +673,16 @@ foreach my $keys (keys %domino_files) {
 ## Print information of the input parameters
 DOMINO::printDetails("+ Threads: ".$noOfProcesses." ...OK\n", $param_Detail_file);
 DOMINO::printDetails("+ Minimum relative Score (mrs) to use in MIRA assembly: $mrs ...OK\n", $param_Detail_file);
+push (@{ $domino_params{'assembly'}{'mrs'}}, $mrs);
+
 if ($cap3flag) {
 	DOMINO::printDetails("+ CAP3 would be used in a second round of assembly ...OK\n", $param_Detail_file);
 	DOMINO::printDetails("+ Similarity between reads for CAP3 assembly: $similar_CAP3 ...OK\n", $param_Detail_file);
+	push (@{ $domino_params{'assembly'}{'simCAP3'} }, $similar_CAP3);
+
 	DOMINO::printDetails("+ Overlapping between reads for CAP3 assembly: $overlap_CAP3 ...OK\n", $param_Detail_file);
+	push (@{ $domino_params{'assembly'}{'overCAP3'} }, $overlap_CAP3);
+
 } else { 
 if ($flagSpades) { DOMINO::printDetails("+ MIRA has been disabled, SPAdes would perform the assembly ...OK\n", $param_Detail_file);	
 } else { DOMINO::printDetails("+ CAP3 has been disabled, only MIRA would perform the assembly ...OK\n", $param_Detail_file);
@@ -1068,10 +1080,7 @@ if ($flagSpades) {
 		} else { 
 			&change_seq_names($contigsMIRA_Fasta_file, $FINAL_fasta_file, $taxa);
 }}} print "\n"; &time_log();
-
 &debugger_print("DOMINO files"); &debugger_print("Ref", \%domino_files);
-my $dump_hash = $dirname_tmp."/dumper_assembly_files.txt";
-DOMINO::printDump(\%domino_files, $dump_hash);
 
 ###############################
 ## Generating some statistics #
@@ -1084,11 +1093,12 @@ foreach my $taxa (keys %domino_files) {
 	if ($cap3flag) {
 		print "+ Statistics for MIRA assembly:\n";
 		my $stats_file_MIRA = &Contig_Stats($domino_files{$taxa}{'contigsMIRA'}[0]);
-		$domino_files{$taxa}{'MIRA_stats'} = $stats_file_MIRA;
+		push (@{ $domino_files{$taxa}{'MIRA_stats'} }, $stats_file_MIRA);
 		print "+ Statistics for CAP3 scaffolding:\n";
 	}
 	my $stats_file = &Contig_Stats($domino_files{$taxa}{'FINAL'}[0]);
-	$domino_files{$taxa}{'FINAL_stats'} = $stats_file;	
+	print $stats_file."\n";
+	push (@{ $domino_files{$taxa}{'FINAL_stats'} }, $stats_file);	
 	print "\n\n";
 }
 
@@ -1100,6 +1110,8 @@ unless ($avoidDelTMPfiles) {
 	DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
 	&clean_assembling_folders(); print "\n\n";
 }
+my $dump_file = $dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
+my $dump_param = $dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
 
 ###########################
 ### 	Finish the job	###
@@ -1201,7 +1213,6 @@ sub Contig_Stats {
 	my $fasta_file = $_[0];
 	my @name = split("\.fasta", $fasta_file);
 	my $outFile = $name[0]."-statistics.csv";
-	
 	my $domino_Scripts_contig = $domino_Scripts."/DM_contig_stats.pl";
 	system("perl $domino_Scripts_contig $fasta_file $outFile");
 	return $outFile;
