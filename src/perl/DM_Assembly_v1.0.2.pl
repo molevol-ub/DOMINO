@@ -574,7 +574,6 @@ my ($assembly_directory, $CAP3_directory);
 if ($flagSpades) {
 	$assembly_directory = $dirname."/spades_assemblies";
 	push (@{ $domino_params{'assembly'}{'spades'} }, "YES");
-
 } else {
 	$assembly_directory = $dirname."/MIRA_assemblies"; 
 	push (@{ $domino_params{'assembly'}{'MIRA'} }, "YES");
@@ -584,23 +583,24 @@ if ($flagSpades) {
 	}
 }
 mkdir $assembly_directory, 0755; chdir $assembly_directory;
+push (@{ $domino_params{'assembly'}{'dir'} }, $assembly_directory);
 
 ####################
 ##	Checking files 	
 ####################
 if ($input_options{$file_type}) {
 	if ($file_type == 1 || $file_type == 2 || $file_type == 4|| $file_type == 6) {
-		&printError("Input file type provided not supported, please read the documentation..."); 
+		DOMINO::printError("Input file type provided not supported, please read the documentation..."); 
 		DOMINO::printInput_type(); DOMINO::dieNicely();	
 	}
 } else {
-	&printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n");
+	DOMINO::printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n");
 	DOMINO::printInput_type(); DOMINO::dieNicely();
 }
 
 if ($user_files) { ## If users provides files for the assembly either than the DOMINO_clean_data
 	if (scalar (@user_files) == 0 || !$file_type) {
-		&printError("No input files provided"); DOMINO::printInput_type(); DOMINO::dieNicely();		
+		DOMINO::printError("No input files provided"); DOMINO::printInput_type(); DOMINO::dieNicely();		
 	} else {
 		## Checking files
 		DOMINO::printDetails("+ Type of file(s): Option $file_type : $input_options{$file_type} ...OK\n", $param_Detail_file);
@@ -612,11 +612,11 @@ if ($user_files) { ## If users provides files for the assembly either than the D
 		my @file_abs_path_user = @{$domino_files{"USER_FILES"}};
 		if (scalar (@file_abs_path_user) == 1) {
 			if ($file_type == 3) { 
-				&printError("Please provide multiple 454 Roche FASTQ file containing each of the taxa reads");
+				DOMINO::printError("Please provide multiple 454 Roche FASTQ file containing each of the taxa reads");
 			} elsif ($file_type == 5) { 
-				&printError("Please provide multiple Illumina FASTQ files containing containing each of the taxa reads");
+				DOMINO::printError("Please provide multiple Illumina FASTQ files containing containing each of the taxa reads");
 			} elsif ($file_type == 7) {  ## Specify user to input left-right for each taxa: -input sp1_left.fastq -input sp1_right.fastq -input sp2_left.fastq -input sp2_right.fastq
-				&printError("Please provide multiple Illumina Paired-End FASTQ files for each taxa (type_file 7) (2 files for specie)");
+				DOMINO::printError("Please provide multiple Illumina Paired-End FASTQ files for each taxa (type_file 7) (2 files for specie)");
 			}
 			DOMINO::printInput_type(); DOMINO::dieNicely();	
 		} else {
@@ -628,7 +628,7 @@ if ($user_files) { ## If users provides files for the assembly either than the D
 	## Go to DOMINO_clean_data and get the files
 	DOMINO::printDetails("+ Type of file(s): Option $file_type : $input_options{$file_type} ...OK\n+ No user files provided: Default DOMINO cleaning files ...OK\n+ Get the clean FASTQ files generated in the cleaning step ...OK\n", $param_Detail_file);
 	my $clean_folder = DOMINO::get_earliest("clean_data", $path_abs_folder);
-	if ($clean_folder eq 'NO') { &printError("No Clean Data folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely(); }
+	if ($clean_folder eq 'NO') { DOMINO::printError("No Clean Data folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely(); }
 	my $files_ref = DOMINO::readDir($clean_folder);
 	my $flag=0;
 	if (grep /preRepeatScanner_DOMINO_clean_data/, @$files_ref) {
@@ -657,15 +657,18 @@ if ($file_type eq 7) {
 	foreach my $keys (keys %domino_files) {
 		my @species_files = @{$domino_files{$keys}{'original'}};
 		if (scalar @species_files != 2) {
-			&printError("Wrong pair of FASTQ files provided. Please check pair of files corresponding to $keys:\n"); DOMINO::dieNicely();
+			DOMINO::printError("Wrong pair of FASTQ files provided. Please check pair of files corresponding to $keys:\n"); DOMINO::dieNicely();
 		} else { &debugger_print("OK: $keys\n\n"); }
 }}
 
 foreach my $keys (keys %domino_files) {
 	my $dir = $assembly_directory."/".$keys."_assembly";
 	push (@{ $domino_files{$keys}{'DIR'} }, $dir);
+	push (@{ $domino_params{"assembly"}{'taxa'} }, 1);
 }
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
+push (@{ $domino_params{"assembly"}{'file_type'} }, $file_type);
+push (@{ $domino_params{"assembly"}{'file_type_option'} }, $input_options{$file_type});
 
 ###########################
 ## Printing user options ##
@@ -695,13 +698,25 @@ unless ($avoidDelTMPfiles) {
 DOMINO::printDetails("\n+ Parameters details would be print into file: $param_Detail_file...\n", $param_Detail_file);
 DOMINO::printDetails("+ Errors occurred during the process would be print into file: $error_log...\n\n", $param_Detail_file);
 
+#Print parameters
+my $dump_file = $dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
+my $dump_param = $dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
+
+# Lets go!
+
 ## Assembly
 if ($flagSpades) {
 
 	## If Spades flag, we will assume, in this version, it is using a Linux server with enough CPUs and RAM for assembly	
 	## We would use "cat /proc/meminfo " in order to check the available memory, if greater than 30GiB
 	## we would split in a reasonable amount of processes to proceed in parallel with the assembly 
+
+	## into file
 	
+	my $domino_Scripts_Spades = $domino_Scripts."/DM_runSPAdes.pl";
+	system("perl $domino_Scripts_Spades $path_abs_folder");
+
+=head	
 	# Get memory
 	&debugger_print("cat /proc/meminfo > memory_server.txt");
 	system("cat /proc/meminfo > memory_server.txt");	
@@ -742,7 +757,7 @@ if ($flagSpades) {
 		my $subProcesses;
 		my $amount_taxa = scalar keys %domino_files;
 		if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
-			unless ($noOfProcesses >= 8) { &printError("To make the most of your server and SPAdes please select more CPUs using -p option") and DOMINO::dieNicely();}
+			unless ($noOfProcesses >= 8) { DOMINO::printError("To make the most of your server and SPAdes please select more CPUs using -p option") and DOMINO::dieNicely();}
 			# Get number of taxa to assembly
 			if ($total_available > 500) {
 				$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
@@ -758,7 +773,7 @@ if ($flagSpades) {
 				$subProcesses = 1;
 			} 
 			print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa\ninto different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
-			if ($check_threads) { &debugger_print("Exiting as -check_Threads flag provided, only checking availability of server...\n"); 	exit(); }
+			#if ($check_threads) { &debugger_print("Exiting as -check_Threads flag provided, only checking availability of server...\n"); 	exit(); }
 				
 			DOMINO::printHeader(" SPAdes Assembly of each taxa ","#");
 			## Call spades for the assembly and send threads for each taxa
@@ -793,7 +808,7 @@ if ($flagSpades) {
 				print "Sending SPAdes command...\n";
 				my $system_call = system($spades_path);
 				if ($system_call != 0) {
-					&printError("Something happened when calling SPAdes for assembly reads..."); DOMINO::dieNicely();
+					DOMINO::printError("Something happened when calling SPAdes for assembly reads..."); DOMINO::dieNicely();
 				} print "\n"; &time_log();
 	
 				## Get contig file
@@ -803,7 +818,7 @@ if ($flagSpades) {
 				File::Copy::move($contigs_file, $new_contigs_file);
 	
 				## Finish assembly and generate statistics
-				my $stats = &Contig_Stats($new_contigs_file); 
+				my $stats = DOMINO::Contig_Stats($new_contigs_file); 
 				$files_threads{$keys}{'stats'} = $stats;
 
 				&debugger_print("DOMINO threads Assembly files"); &debugger_print("Ref", \%files_threads);
@@ -814,38 +829,60 @@ if ($flagSpades) {
 			}
 			$pm->wait_all_children; print "\n** All Assembly child processes have finished...\n\n";		
 	
-			## Check each taxa dump file conainting file info
-			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-			&debugger_print("Retrieve info from files");
-			foreach my $taxa (keys %domino_files) {
-				if ($domino_files{$taxa}{'DIR'}) {
-					my $dump_file = $domino_files{$taxa}{'DIR'}[0]."/dumper_files_threads.txt";
-					open (DUMP_IN, "$dump_file");
-					while (<DUMP_IN>) {
-						my $line = $_; chomp $line;
-						my @array = split("\t", $line);
-						&debugger_print($line);
-						push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
-					}
-					close (DUMP_IN);
-			}}
-			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+			## into file
 	
-			#######################################
-			### Cleaning or renaming some files	###
-			#######################################
-			print "\n\n";
-			unless ($avoidDelTMPfiles) {
-				DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
-				&clean_assembling_folders(); print "\n\n";
+		}}
+=cut
+	## when finished: check spades.success or spaces.failed in the folder assembly_directory
+
+	my $succesul_run = $path_abs_folder."/spades.success"; 
+	my $failed_run = $path_abs_folder."/spades.fail";
+	
+	if ($succesul_run) {
+		print "SPADes finished successfully...\n";
+	} elsif ($failed_run) {
+		DOMINO::printError("SPADes failed...\n");
+		DOMINO::dieNicely();
+	} else {
+		DOMINO::printError("SPADes failed...\n");
+		DOMINO::dieNicely();
+	}
+	
+	## Check each taxa dump file conainting file info
+	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+	&debugger_print("Retrieve info from files");
+	foreach my $taxa (keys %domino_files) {
+		if ($domino_files{$taxa}{'DIR'}) {
+			my $dump_file = $domino_files{$taxa}{'DIR'}[0]."/dumper_files_threads.txt";
+			open (DUMP_IN, "$dump_file");
+			while (<DUMP_IN>) {
+				my $line = $_; chomp $line;
+				my @array = split("\t", $line);
+				&debugger_print($line);
+				push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
 			}
+			close (DUMP_IN);
+	}}
+	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+
+	#######################################
+	### Cleaning or renaming some files	###
+	#######################################
+	print "\n\n";
+	unless ($avoidDelTMPfiles) {
+		DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
+		&clean_assembling_folders(); print "\n\n";
+	}
+
+	#######################
+	### Finish the job	###
+	#######################
+	DOMINO::finish_time_stamp($start_time); print "\n Job done succesfully, exiting the script\n"; exit();
+		
+
 	
-			#######################
-			### Finish the job	###
-			#######################
-			DOMINO::finish_time_stamp($start_time); print "\n Job done succesfully, exiting the script\n"; exit();
-		} else { &printError("Only $total_available GiB available of memory RAM, please bear in mind SPAdes would not complete the task...") and DOMINO::dieNicely();}	
-	} else { &printError("There was an error when retrieving Memory RAM information...\n\nAre you sure this is a linux sever?...") and DOMINO::dieNicely();}
+
+
 } else {
 	
 	#########################################################################
@@ -877,7 +914,7 @@ if ($flagSpades) {
 	
 		print "- Sending MIRA command for $keys...\n"; &debugger_print("MIRA command: $mira_exe\n\n"); 
 		my $system_call = system($mira_exe);
-		if ($system_call != 0) { &printError("Something happened when calling MIRA for assembly reads..."); DOMINO::dieNicely(); }
+		if ($system_call != 0) { DOMINO::printError("Something happened when calling MIRA for assembly reads..."); DOMINO::dieNicely(); }
 		print "\n"; &time_log();
 		push(@{ $domino_files{$keys}{'contigs_fasta'}}, $domino_files{$keys}{'DIR'}[0]."/".$keys."_d_results/".$keys."_out.unpadded.fasta");
 		push(@{ $domino_files{$keys}{'contigs_qual'}}, $domino_files{$keys}{'DIR'}[0]."/".$keys."_d_results/".$keys."_out.unpadded.fasta.qual");
@@ -896,7 +933,7 @@ if ($flagSpades) {
 		unless (-d $preclean_folder) { mkdir $preclean_folder, 0755; }
 		
 		my (@array_repetitive_reads, @array_repetitive_contigs);
-		open(IN, $domino_files{$keys}{'readTagList'}[0]) or &printError( "Couldn't open read tag list for $keys taxa for reading and discarding repeats");
+		open(IN, $domino_files{$keys}{'readTagList'}[0]) or DOMINO::printError( "Couldn't open read tag list for $keys taxa for reading and discarding repeats");
 		while(<IN>) {
 			# do whatever needs to be done
 			chomp;
@@ -960,7 +997,7 @@ if ($flagSpades) {
 		print "+ BLAST search now...\n"; 
 		my ($blastn, $blastn_message) = DOMINO::blastn($contigs2cluster, $db_generated, $blast_search, $BLAST);
 		&debugger_print($blastn);
-		if ($blastn != 0) { &printError("BLASTN failed...\n"); exit(); } 
+		if ($blastn != 0) { DOMINO::printError("BLASTN failed...\n"); exit(); } 
 		my $contig_length_Ref = DOMINO::readFASTA_hash($contigs2cluster);
 		my $perc_aln_desired = 0.85; my $iden_desired = 85;
 		
@@ -1061,7 +1098,7 @@ if ($flagSpades) {
 			my $fasta_name_contigsMIRA = $tmp_array[-1];
 			my $command_CAP3 = $CAP3_exec." ".$fasta_name_contigsMIRA." -o ".$overlap_CAP3." -p ".$similar_CAP3." 2> $error_log";
 			&debugger_print("CAP3 command: $command_CAP3\n"); my $system_CAP3 = system($command_CAP3);
-			if ($system_CAP3 != 0) { &printError("Some error happened when calling CAP3 for assembly reads..."); DOMINO::dieNicely(); }
+			if ($system_CAP3 != 0) { DOMINO::printError("Some error happened when calling CAP3 for assembly reads..."); DOMINO::dieNicely(); }
 			
 			###########################################
 			### Get contigs and singlets assembled 	###
@@ -1092,11 +1129,11 @@ foreach my $taxa (keys %domino_files) {
 	print "\n+ Generating some statistics for Assembly file: $domino_files{$taxa}{'FINAL'}[0]\n";
 	if ($cap3flag) {
 		print "+ Statistics for MIRA assembly:\n";
-		my $stats_file_MIRA = &Contig_Stats($domino_files{$taxa}{'contigsMIRA'}[0]);
+		my $stats_file_MIRA = DOMINO::Contig_Stats($domino_files{$taxa}{'contigsMIRA'}[0]);
 		push (@{ $domino_files{$taxa}{'MIRA_stats'} }, $stats_file_MIRA);
 		print "+ Statistics for CAP3 scaffolding:\n";
 	}
-	my $stats_file = &Contig_Stats($domino_files{$taxa}{'FINAL'}[0]);
+	my $stats_file = DOMINO::Contig_Stats($domino_files{$taxa}{'FINAL'}[0]);
 	print $stats_file."\n";
 	push (@{ $domino_files{$taxa}{'FINAL_stats'} }, $stats_file);	
 	print "\n\n";
@@ -1110,8 +1147,8 @@ unless ($avoidDelTMPfiles) {
 	DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
 	&clean_assembling_folders(); print "\n\n";
 }
-my $dump_file = $dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
-my $dump_param = $dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
+$dump_file = $dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
+$dump_param = $dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
 
 ###########################
 ### 	Finish the job	###
@@ -1145,9 +1182,7 @@ sub change_seq_names {
     	for (my $i = 0; $i < scalar @array_seq; $i++) { $string_seq .= $array_seq[$i]; }
 		print OUT $seq_id."\n".uc($string_seq)."\n";    	
 	}
-	close (FILE); 
-	close (OUT);	
-	$/ = "\n";
+	close (FILE); close (OUT);	$/ = "\n";
 }
 
 sub check_file {
@@ -1174,10 +1209,10 @@ sub check_file {
 				DOMINO::printDetails("\t\tPaired end file = ".$pair_int." ...OK\n", $param_Detail_file);	
 			}
 		} else { 
-			&printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); DOMINO::printFormat_message(); DOMINO::dieNicely();
+			DOMINO::printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); DOMINO::printFormat_message(); DOMINO::dieNicely();
 		}
 	} else { 
-		&printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); DOMINO::printFormat_message(); DOMINO::dieNicely();
+		DOMINO::printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); DOMINO::printFormat_message(); DOMINO::dieNicely();
 	}
 	DOMINO::printDetails("\n", $param_Detail_file);
 }
@@ -1206,16 +1241,6 @@ sub clean_assembling_folders {
 			remove_tree($dirname."/".$files[$i]);
 		}
 	}
-}
-
-sub Contig_Stats { 
-	
-	my $fasta_file = $_[0];
-	my @name = split("\.fasta", $fasta_file);
-	my $outFile = $name[0]."-statistics.csv";
-	my $domino_Scripts_contig = $domino_Scripts."/DM_contig_stats.pl";
-	system("perl $domino_Scripts_contig $fasta_file $outFile");
-	return $outFile;
 }
 
 sub debugger_print {
@@ -1274,14 +1299,6 @@ sub Generate_manifest_file {
 	close (OUT);
 	
 	return $manifest_file;	
-}
-
-sub printError {
-    my $msg = $_[0];
-	print "\n\n";DOMINO::printHeader(" ERROR ","!!"); print "\n";
-    print $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n";
-	print "\n\n"; DOMINO::printHeader("","!!"); DOMINO::printHeader("","!!"); 
-    DOMINO::printError_log($msg, $error_log);
 }
 
 sub time_log {	

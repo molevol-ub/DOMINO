@@ -837,10 +837,10 @@ doi:10.1093/bioinformatics/btw534
 =cut
 
 ## Check mandatory options
-if (!$folder) { &printError("No folder provided...\n"); DOMINO::dieNicely(); }
+if (!$folder) { DOMINO::printError("No folder provided...\n"); DOMINO::dieNicely(); }
 my %type_input = ("single_end" => 1, "pair_end" => 1,);
 if (!$type_input{$input_type}) {
-	&printError("Input type provided ($input_type) does not match single_end or pair_end\n");
+	DOMINO::printError("Input type provided ($input_type) does not match single_end or pair_end\n");
 	DOMINO::dieNicely();}
 
 #######################################
@@ -883,24 +883,24 @@ if (-e $mapping_markers_errors_details) { File::Copy::move($mapping_markers_erro
 if (-e $mapping_parameters) { File::Copy::move($mapping_parameters, $mapping_parameters."_old_".$random_number); }
 
 ## Behaviour DOMINO
-if (!$behaviour) { &printError("\nPlease choose a development module for DOMINO between selection/discovery...\n"); DOMINO::dieNicely(); }
-if (!$option) { &printError("\nPlease provide an option for DOMINO...\n"); DOMINO::dieNicely(); }
+if (!$behaviour) { DOMINO::printError("\nPlease choose a development module for DOMINO between selection/discovery...\n"); DOMINO::dieNicely(); }
+if (!$option) { DOMINO::printError("\nPlease provide an option for DOMINO...\n"); DOMINO::dieNicely(); }
 if ($behaviour eq 'selection') {
 	$select_markers=1;
 	if ($option eq "DOMINO_files" || $option eq "user_assembly_contigs" || $option eq "genome") {
-		&printError("\nThe DOMINO development module SELECTION is not yet available for the option $option...\n"); DOMINO::dieNicely();
+		DOMINO::printError("\nThe DOMINO development module SELECTION is not yet available for the option $option...\n"); DOMINO::dieNicely();
 }} elsif ($behaviour eq 'discovery') {
-	if ($option eq "RADseq") { &printError("\nThe DOMINO development module DISCOVERY is not suitable for the option $option...\n"); DOMINO::dieNicely(); }
+	if ($option eq "RADseq") { DOMINO::printError("\nThe DOMINO development module DISCOVERY is not suitable for the option $option...\n"); DOMINO::dieNicely(); }
 	if (!$window_size_CONS_range || !$window_size_VARS_range) {
-		unless ($option eq "msa_alignment") { &printError("\nMandatory options are missing...\n"); DOMINO::dieNicely(); }
+		unless ($option eq "msa_alignment") { DOMINO::printError("\nMandatory options are missing...\n"); DOMINO::dieNicely(); }
 	}
 	$identify_markers=1;
-} else { &printError("\nPlease choose between selection/discovery...\n"); DOMINO::dieNicely(); }
+} else { DOMINO::printError("\nPlease choose between selection/discovery...\n"); DOMINO::dieNicely(); }
 push (@{ $domino_params{'marker'}{'behaviour'} }, $behaviour);
 
 # Control if missing options
 if (!$variable_positions_user_range and !$variable_divergence) {
-	&printError("Exiting the script. A range for variable positions or a minimum divergence is missing.\n Use the option -VP|--variable_positions [min::max] or -VD|--variable_divergence [float number]..\n"); DOMINO::dieNicely();
+	DOMINO::printError("Exiting the script. A range for variable positions or a minimum divergence is missing.\n Use the option -VP|--variable_positions [min::max] or -VD|--variable_divergence [float number]..\n"); DOMINO::dieNicely();
 }
 unless (!$variable_divergence) { 
 	if ($variable_divergence =~ /.*\,.*/) { $variable_divergence =~ s/\,/\./; }
@@ -909,23 +909,23 @@ unless (!$variable_divergence) {
 push (@{ $domino_params{'marker'}{'variable_divergence'} }, $variable_divergence);
 
 if ($option eq "DOMINO_files") {
-	if (!$input_type) { &printError("-type_input option is missing...\nPlease provide it in order to proceed with the computation...."); DOMINO::dieNicely(); }
+	if (!$input_type) { DOMINO::printError("-type_input option is missing...\nPlease provide it in order to proceed with the computation...."); DOMINO::dieNicely(); }
 } elsif ($option eq "user_assembly_contigs") {
-	if (scalar @user_contig_files == 0) { &printError("Contig assembled files were not provided...\nPlease provide several valid contig FASTA files for each taxa...."); DOMINO::dieNicely(); }
-	if (scalar @user_cleanRead_files == 0) { &printError("Clean Read files were not provided...\nPlease provide several FASTQ files for each taxa...."); DOMINO::dieNicely(); }
-	if (!$input_type) { &printError("input_type option is missing...\nPlease provide it in order to proceed with the computation...."); DOMINO::dieNicely(); }
+	if (scalar @user_contig_files == 0) { DOMINO::printError("Contig assembled files were not provided...\nPlease provide several valid contig FASTA files for each taxa...."); DOMINO::dieNicely(); }
+	if (scalar @user_cleanRead_files == 0) { DOMINO::printError("Clean Read files were not provided...\nPlease provide several FASTQ files for each taxa...."); DOMINO::dieNicely(); }
+	if (!$input_type) { DOMINO::printError("input_type option is missing...\nPlease provide it in order to proceed with the computation...."); DOMINO::dieNicely(); }
 } elsif ($option eq "genome") {
-	if (!$genome_fasta) { &printError("\nNo genome fasta file was provided...\nPlease provide a valid contig FASTA file to use as a reference using the option -genome_fasta [file]...."); DOMINO::dieNicely(); }
-	if (!$input_type) { &printError("Option -type_input is missing...\nPlease provide it in order to proceed with the computation...."); DOMINO::dieNicely(); }
+	if (!$genome_fasta) { DOMINO::printError("\nNo genome fasta file was provided...\nPlease provide a valid contig FASTA file to use as a reference using the option -genome_fasta [file]...."); DOMINO::dieNicely(); }
+	if (!$input_type) { DOMINO::printError("Option -type_input is missing...\nPlease provide it in order to proceed with the computation...."); DOMINO::dieNicely(); }
 } elsif ($option eq "msa_alignment") {
-	if (!$msa_file and !$msa_fasta_folder) { &printError("\nNo file or folder provided...\n"); DOMINO::dieNicely(); }
+	if (!$msa_file and !$msa_fasta_folder) { DOMINO::printError("\nNo file or folder provided...\n"); DOMINO::dieNicely(); }
 } elsif ($option eq "RADseq") {
 	$option = "msa_alignment";
 	$radseq_like_data = 1;
-	if (!$msa_file) { &printError("Exiting the script. No file provided. \nUse the option -RADseq_file [file]..\n"); DOMINO::dieNicely(); }
+	if (!$msa_file) { DOMINO::printError("Exiting the script. No file provided. \nUse the option -RADseq_file [file]..\n"); DOMINO::dieNicely(); }
 	push (@{ $domino_params{'marker'}{'RADseq'} }, "YES");
 	
-} else { &printError("\nOption provided is not known...\n"); DOMINO::dieNicely();}
+} else { DOMINO::printError("\nOption provided is not known...\n"); DOMINO::dieNicely();}
 push (@{ $domino_params{'mapping'}{'option'} }, $option);
 push (@{ $domino_params{'marker'}{'option'} }, $option);
 
@@ -934,7 +934,7 @@ push (@{ $domino_params{'marker'}{'option'} }, $option);
 ##################################################
 if (!$MID_taxa_names) {
 unless ($option eq "msa_alignment" || $option eq "RADseq") {
-	&printError("\nThe option -taxa_names option is missing...\n\nPlease provide it or DOMINO would not continue the process...\n"); DOMINO::dieNicely();
+	DOMINO::printError("\nThe option -taxa_names option is missing...\n\nPlease provide it or DOMINO would not continue the process...\n"); DOMINO::dieNicely();
 }} else {
 	$MID_taxa_names =~ s/\s+/\,/g;
 	my @MID_name_array = split (",", $MID_taxa_names);
@@ -978,7 +978,7 @@ if ($variable_positions_user_range) {
 	if ($variable_positions_user_range =~ m/.*\:\:.*/) {
 		($variable_positions_user_min, $variable_positions_user_max) = split("::", $variable_positions_user_range);
 	} elsif ($variable_positions_user_range =~ m/.*\:(\d+)/) {
-		&printError("\nPlease provide the range using 2 pair of dots like 2::7\n\n"); DOMINO::dieNicely();
+		DOMINO::printError("\nPlease provide the range using 2 pair of dots like 2::7\n\n"); DOMINO::dieNicely();
 	} else { $variable_positions_user_min = $variable_positions_user_max = $variable_positions_user_range; }
 	push (@{ $domino_params{'marker'}{'variable_positions_user_max'} }, $variable_positions_user_max);
 	push (@{ $domino_params{'marker'}{'variable_positions_user_min'} }, $variable_positions_user_min);
@@ -990,7 +990,7 @@ if ($window_size_CONS_range) {
 	if ($window_size_CONS_range =~ m/.*\:\:.*/) {
 		($window_size_CONS_min, $window_size_CONS_max) = split("::", $window_size_CONS_range);
 	} elsif ($window_size_CONS_range =~ m/.*\:(\d+)/) {
-		&printError("\nPlease provide the range using 2 pair of dots like 200::700\n\n"); DOMINO::dieNicely();
+		DOMINO::printError("\nPlease provide the range using 2 pair of dots like 200::700\n\n"); DOMINO::dieNicely();
 	} else { $window_size_CONS_min = $window_size_CONS_max = $window_size_CONS_range;}
 	push (@{ $domino_params{'marker'}{'window_size_CONS_max'} }, $window_size_CONS_max);
 	push (@{ $domino_params{'marker'}{'window_size_CONS_min'} }, $window_size_CONS_min);
@@ -1002,7 +1002,7 @@ if ($window_size_VARS_range) {
 	if ($window_size_VARS_range =~ m/.*\:\:.*/) {
 		($window_size_VARS_min, $window_size_VARS_max) = split("::", $window_size_VARS_range);
 	} elsif ($window_size_VARS_range =~ m/.*\:(\d+)/) {
-		&printError("\nPlease provide the range using 2 pair of dots like 200::700\n\n"); DOMINO::dieNicely();
+		DOMINO::printError("\nPlease provide the range using 2 pair of dots like 200::700\n\n"); DOMINO::dieNicely();
 	} else { $window_size_VARS_min = $window_size_VARS_max = $window_size_VARS_range;}
 	push (@{ $domino_params{'marker'}{'window_size_VARS_max'} }, $window_size_VARS_max);
 	push (@{ $domino_params{'marker'}{'window_size_VARS_min'} }, $window_size_VARS_min);
@@ -1026,7 +1026,7 @@ if ($behaviour eq "discovery") {
 
 # MCT
 if (!$minimum_number_taxa_covered) { $minimum_number_taxa_covered = $number_sp;  ## Force to be all the taxa
-} else { if ($minimum_number_taxa_covered > $number_sp) { &printError("Minimum number of covered taxa (MCT) is bigger than the number of taxa provided...\n"); DOMINO::dieNicely(); }} 
+} else { if ($minimum_number_taxa_covered > $number_sp) { DOMINO::printError("Minimum number of covered taxa (MCT) is bigger than the number of taxa provided...\n"); DOMINO::dieNicely(); }} 
 
 ## push default parameters
 my $answer_dnaSP; 
@@ -1107,7 +1107,7 @@ if ($avoid_mapping) {
 			next if ($keys eq "date");
 			next if ($keys eq "folder");
 			unless ($prev eq $curr ) {
-				$undef_mapping++; &printError("There is difference: $keys $curr =/= $prev\n"); ## test
+				$undef_mapping++; DOMINO::printError("There is difference: $keys $curr =/= $prev\n"); ## test
 			}
 		}
 		&debugger_print("DOMINO params dump");&debugger_print("Ref", \%domino_files_dump);
@@ -1122,21 +1122,21 @@ if ($avoid_mapping) {
 						next if $ref_taxa eq $taxa; 
 						next if $taxa eq 'taxa';
 						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:genome'} ) {
-							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-		}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n");
+							$undef_mapping++; DOMINO::printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
+		}}} else {$undef_mapping++; DOMINO::printError("There is not a taxa name $ref_taxa in the previous run ...\n");
 		}}} else {
 			foreach my $ref_taxa ( keys %domino_files ) {
 				next if $ref_taxa eq 'taxa';
 				if ($domino_files_dump{$ref_taxa}{'taxa'}) {
 					## Check for file
 					unless ($domino_files_dump{$ref_taxa}{'contigs'}[0]){
-						&printError("There is not a contig file for $ref_taxa ...\n"); $undef_mapping++;
+						DOMINO::printError("There is not a contig file for $ref_taxa ...\n"); $undef_mapping++;
 					}
 					foreach my $taxa ( keys %domino_files ) {
 						next if $ref_taxa eq $taxa; next if $taxa eq 'taxa';
 						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:'.$taxa} ) {
-							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-		}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
+							$undef_mapping++; DOMINO::printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
+		}}} else {$undef_mapping++; DOMINO::printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
 		}}}}
 
 	if ($undef_mapping > 0) {
@@ -1209,14 +1209,14 @@ if ($option eq 'user_assembly_contigs') {
 			if ($domino_files{$1}{'taxa'}) {
 				&check_file($user_contig_files[$i], $1);
 				push (@{ $domino_files{$1}{'contigs'} }, $user_contig_files[$i]); ## push the whole file path			
-			} else { &printError("Please check the tag for the file $user_contig_files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
+			} else { DOMINO::printError("Please check the tag for the file $user_contig_files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
 	}}
 	if (!$map_contig_files) { &user_cleanRead_files(); }
 } elsif ($option eq 'DOMINO_files') {
 	unless ($avoid_mapping) {
 		my $assembling_dirname = DOMINO::get_earliest("assembly", $folder_abs_path);
 		if ($assembling_dirname eq 'assembly' || $assembling_dirname eq 'NO') {
-			&printError("No assembly folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely();
+			DOMINO::printError("No assembly folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely();
 		}
 		DOMINO::printDetails("+ DOMINO contigs would be retreived from: $assembling_dirname\n", $mapping_parameters, $param_Detail_file_markers);
 		my $files_dir_ref = DOMINO::readDir($assembling_dirname);
@@ -1247,7 +1247,7 @@ if ($option eq 'user_assembly_contigs') {
 		push (@{ $domino_files{'genome'}{'taxa'}}, "1"); &check_file($tmp);
 	}
 	if (scalar @user_cleanRead_files == 0) {
-		&printError("Clean Read files were not provided...\nDOMINO would check in the output folder provided if there is a DOMINO_clean_data containing the FASTQ files for each taxa...."); 
+		DOMINO::printError("Clean Read files were not provided...\nDOMINO would check in the output folder provided if there is a DOMINO_clean_data containing the FASTQ files for each taxa...."); 
 		&get_clean_files();
 	} else { &user_cleanRead_files(); }	
 	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
@@ -1261,7 +1261,7 @@ if ($option eq 'user_assembly_contigs') {
 		print "+ Checking file:\n";
 		if (-f -e -r -s $rad_file_abs_path) {
 			print "\tFile $rad_file_abs_path\n\t\tFile exists, is readable and non-zero character...OK\n";
-		} else { &printError("File provided is not valid...\nPlease provide a valid file as specified in the DOMINO manual...."); DOMINO::dieNicely();
+		} else { DOMINO::printError("File provided is not valid...\nPlease provide a valid file as specified in the DOMINO manual...."); DOMINO::dieNicely();
 	}} elsif ($msa_file) {
 		my $msa_file_abs_path = abs_path($msa_file);
 		push (@{$domino_files{'MSA'}{'file'}}, $msa_file_abs_path);
@@ -1271,7 +1271,7 @@ if ($option eq 'user_assembly_contigs') {
 			print "\t-File $msa_file_abs_path\n\t\tFile exists, is readable and non-zero character...OK\n";
  			chdir $align_dirname; system("ln -s $msa_file_abs_path");
  			push (@{ $domino_params{'marker'}{'MSA'} }, 1);
-		} else { &printError("MSA file provided is not valid...\nPlease provide a valid contig MSA file as specified in the DOMINO manual...."); DOMINO::dieNicely();
+		} else { DOMINO::printError("MSA file provided is not valid...\nPlease provide a valid contig MSA file as specified in the DOMINO manual...."); DOMINO::dieNicely();
 	}} elsif ($msa_fasta_folder) {
 		my $msa_folder_abs_path = abs_path($msa_fasta_folder);
 		my @name_msa_folder = split("/",$msa_fasta_folder);
@@ -1287,13 +1287,13 @@ if ($option eq 'user_assembly_contigs') {
 				if ($$array_files_fasta_msa_ref[$i] eq "." || $$array_files_fasta_msa_ref[$i] eq ".." || $$array_files_fasta_msa_ref[$i] eq ".DS_Store"  ) {next;}
 				my $file_path = $msa_folder_abs_path."/".$$array_files_fasta_msa_ref[$i];
 				unless (-f -e -r -s $file_path) {
-					&printError("File $file_path is not readable or empty. Please discarded from the folder...\n"); DOMINO::dieNicely();
+					DOMINO::printError("File $file_path is not readable or empty. Please discarded from the folder...\n"); DOMINO::dieNicely();
 				} else { push (@{$domino_files{'MSA_folder'}{'files'}}, $$array_files_fasta_msa_ref[$i]);
 			}} print "\t\t- Files checked and everything seems OK...\n\n";
  			push (@{ $domino_params{'marker'}{'MSA_folder'} }, 1);
 
-		} else { &printError("MSA folder provided is not valid...\n"); DOMINO::dieNicely(); }
-	} else { &printError("MSA folder or file is missing...\n"); DOMINO::dieNicely(); }
+		} else { DOMINO::printError("MSA folder provided is not valid...\n"); DOMINO::dieNicely(); }
+	} else { DOMINO::printError("MSA folder or file is missing...\n"); DOMINO::dieNicely(); }
 	
 	if (!$MID_taxa_names) {
 		DOMINO::printDetails("+ No option -taxa_names provided.\n", $mapping_parameters, $param_Detail_file_markers);
@@ -1421,7 +1421,7 @@ if (!$avoid_mapping) {
 			&debugger_print("BOWTIE2 command: ".$bowtie_index_call);
 			my $index_result = system ($bowtie_index_call);
 			if ($index_result != 0) {
-				&printError("Exiting the script. Some error happened when calling bowtie for indexing the file...\n"); 
+				DOMINO::printError("Exiting the script. Some error happened when calling bowtie for indexing the file...\n"); 
 				DOMINO::print_fail_Step("index_genome_$reference_tag");
 				DOMINO::dieNicely();
 			} else { DOMINO::print_success_Step("index_genome_$reference_tag"); $domino_success_steps{$reference_tag}{"index_genome"}++;}
@@ -1509,7 +1509,7 @@ if (!$avoid_mapping) {
 				$botwie_system .= " 2> ".$error_bowtie;
 				my $system_bowtie_call = system ($botwie_system);
 				if ($system_bowtie_call != 0) {
-					&printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); 
+					DOMINO::printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); 
 					DOMINO::print_fail_Step("mapping_$reads");
 					DOMINO::dieNicely(); 
 				} else { DOMINO::print_success_Step("mapping_$reads"); $domino_success_steps{$reference_tag}{"map_$reads"}++}
@@ -1659,7 +1659,7 @@ if (!$avoid_mapping) {
 					my $system_coverage_call = system ($coverage_samtools_command); 
 					&debugger_print("SAMTOOLS command: $coverage_samtools_command");
 					if ($system_coverage_call != 0) {
-						&printError("Exiting the script. Some error happened when calling SAMtools for obtaining coverage of file $sorted_bam[$i]...\n"); DOMINO::dieNicely();
+						DOMINO::printError("Exiting the script. Some error happened when calling SAMtools for obtaining coverage of file $sorted_bam[$i]...\n"); DOMINO::dieNicely();
 					}
 					
 					unless (-z $coverage_file) {
@@ -2172,7 +2172,7 @@ if ($option eq "msa_alignment") {
 		my %domino_files_msa;
 		my $file_path = $domino_files{'MSA_files'}{'folder'}[0]."/".$array_files_fasta_msa[$i];
 		unless (-f -e -r -s $file_path) {
-			&printError("File $file_path is not readable or empty. It would be skipped....\nPlease discarded from the folder...\n");
+			DOMINO::printError("File $file_path is not readable or empty. It would be skipped....\nPlease discarded from the folder...\n");
 		} else {
 			#print "\nChecking now: $array_files_fasta_msa[$i]\n";
 			my ($region_id, $string2print_ref, $hash_ref_msa);
@@ -2215,7 +2215,7 @@ if ($option eq "msa_alignment") {
 						$hash2return{$keys} = $tmp;
 						#print $array[1]."\n"; print $array2[1]."\n"; print $tmp."\n\n";
 					} elsif ($alleles > 2) {
-						&printError("ERROR: $region_id: [ $keys ] contains more than 2 alleles\nDOMINO would not die here but this locus would be skipped....\n");
+						DOMINO::printError("ERROR: $region_id: [ $keys ] contains more than 2 alleles\nDOMINO would not die here but this locus would be skipped....\n");
 						$pm_MARKER_MSA_files->finish;
 				}}
 				#print "\n\n"; print Dumper \%hash2return;
@@ -2970,7 +2970,7 @@ print "+ Generate a BLAST database...\n";
 my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($all_coordinates_file, $BLAST, $mapping_markers_errors_details);
 &debugger_print($blast_DB_message);
 if ($blast_DB eq "1") {
-	&printError("Early termination of the DOMINO Marker Scan...");
+	DOMINO::printError("Early termination of the DOMINO Marker Scan...");
 	my $msg= "\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"; 
 	print $msg; DOMINO::printError_log($msg); DOMINO::finish_time_stamp($start_time);  exit();
 } 
@@ -3160,14 +3160,14 @@ sub check_file {
 				print "\t$file_to_check\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format_returned." ...OK\n";		
 			} elsif ($format_returned eq "fastq") { ##fastq file is ok
 				print "\t$file_to_check\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format_returned." ...OK\n";		
-			} else { &printError("Wrong file provided $file_to_check..."); DOMINO::dieNicely(); }
+			} else { DOMINO::printError("Wrong file provided $file_to_check..."); DOMINO::dieNicely(); }
 		} else { ## File is not named fasta/fa or fastq/fq
 			my $format_returned = DOMINO::check_file_format($file_to_check);
 			if ($format_returned eq "fasta") { ## It is actually a fasta file
 				print "\t$file_to_check\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format_returned." ...OK\n";		
 			} elsif ($format_returned eq "fastq") { ##fastq file is ok
 				print "\t$file_to_check\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format_returned." ...OK\n";		
-			} else { &printError("Wrong file provided $file_to_check..."); DOMINO::dieNicely(); }
+			} else { DOMINO::printError("Wrong file provided $file_to_check..."); DOMINO::dieNicely(); }
 		}
 		
 		## Get file name
@@ -3177,9 +3177,9 @@ sub check_file {
 			print "\t\tIt also contains an identifier ($id) in the name for later analysis...OK\n";
 		} else { 
 			if ($genome_fasta) {
-				&printError("$file_to_check...\n File does not contain any name provided using taxa_names option.\nMaybe it is under controlled but just bear it in mind...\nDOMINO would not die here...\n"); 
+				DOMINO::printError("$file_to_check...\n File does not contain any name provided using taxa_names option.\nMaybe it is under controlled but just bear it in mind...\nDOMINO would not die here...\n"); 
 		}}
-	} else { &printError("Please provide several files for each taxa..."); DOMINO::printFormat_message(); DOMINO::dieNicely(); }
+	} else { DOMINO::printError("Please provide several files for each taxa..."); DOMINO::printFormat_message(); DOMINO::dieNicely(); }
 }
 
 sub check_given_marker {
@@ -3616,7 +3616,7 @@ sub check_marker_ALL {
 	my @tmp_length_uniq = do { my %seen; grep { !$seen{$_}++ } @length_seqs };
 	#my @tmp_length = sort @length_seqs; my @tmp_length_uniq = uniq(@tmp_length);	
 	if (scalar @tmp_length_uniq > 1) {
-		&printError("There is problem: length of the markers do not match for $file..."); return "";
+		DOMINO::printError("There is problem: length of the markers do not match for $file..."); return "";
 	} else { $length_seqs[0] = $length; }	
 	
 	my @profile;
@@ -3840,11 +3840,11 @@ sub fastq_files {
 		if ($files[$i] =~ /.*id-(.*)(\_R\d+)\.fastq/g) {
 			if ($domino_files{$1}{'taxa'}) { 
 				push (@{ $domino_files{$1}{'reads'} }, $files[$i]); ## push the whole file path			
-			} else { &printError("Please check the tag for the file $files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
+			} else { DOMINO::printError("Please check the tag for the file $files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
 		} elsif ($files[$i] =~ /.*id-(.*)\.fastq/g) {
 			if ($domino_files{$1}{'taxa'}) { 
 				push (@{ $domino_files{$1}{'reads'} }, $files[$i]); ## push the whole file path			
-			} else { &printError("Please check the tag for the file $files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
+			} else { DOMINO::printError("Please check the tag for the file $files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
 		}
 	}
 }
@@ -3904,7 +3904,7 @@ sub get_clean_files {
 	
 	my $clean_folder = DOMINO::get_earliest("clean_data", $folder_abs_path);
 	if ($clean_folder eq 'clean_data') {
-		&printError("No clean_data folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely();
+		DOMINO::printError("No clean_data folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely();
 	}
 	DOMINO::printDetails("+ DOMINO clean reads would be retreived from: $clean_folder\n", $mapping_parameters, $param_Detail_file_markers);
 	my $files_dir_ref = DOMINO::readDir($clean_folder);
@@ -3943,11 +3943,11 @@ sub get_coordinates_each_taxa {
 	my %hash_seq = %{$hash_ref_coordinates};
 
 	##### open output
-	open (OUT, ">>$$output_file") or &printError("Could not open output file $$output_file"); 
-	open (ERR, ">>$$error_file") or &printError("Could not open error file $$error_file");
+	open (OUT, ">>$$output_file") or DOMINO::printError("Could not open output file $$output_file"); 
+	open (ERR, ">>$$error_file") or DOMINO::printError("Could not open error file $$error_file");
 
 	### open coord and check coord of file 1
-	open (COORD,"<$merge_file_coord") or &printError("Could not open merge coordenates $$merge_file_coord");
+	open (COORD,"<$merge_file_coord") or DOMINO::printError("Could not open merge coordenates $$merge_file_coord");
 	while(<COORD>){
 		chomp;
 		my $line = $_;
@@ -4092,7 +4092,7 @@ sub generate_bam {
 	&debugger_print("SAMTOOLS command: $system_samtools_sam2bam");	
 	my $system_call = system ($system_samtools_sam2bam);
 	if ($system_call != 0) {
-		if (!$avoid) { &printError("Some error happened when calling SAMTOOLs for SAM -> BAM conversion $sam_file to $bam_file...."); DOMINO::dieNicely(); }
+		if (!$avoid) { DOMINO::printError("Some error happened when calling SAMTOOLs for SAM -> BAM conversion $sam_file to $bam_file...."); DOMINO::dieNicely(); }
 	}
 	my $sorted;
 	if ($avoid) { if ($avoid eq 'sam') { $sorted = &generate_sorted_bam($bam_file, "sam"); } }
@@ -4118,7 +4118,7 @@ sub generate_sorted_bam {
 	&debugger_print("SAMTOOLS command: ".$system_samtools_sort);
 	my $system_call_2 = system ($system_samtools_sort);
 	if ($system_call_2 != 0) {
-		&printError("Some error happened when calling SAMTOOLs for sorting BAM file...."); DOMINO::dieNicely();
+		DOMINO::printError("Some error happened when calling SAMTOOLs for sorting BAM file...."); DOMINO::dieNicely();
 	}
 	return $sorted;
 }
@@ -4132,7 +4132,7 @@ sub generate_sam {
 	&debugger_print("SAMTOOLS command: $system_samtools_bam2sam");
 	my $system_call = system ($system_samtools_bam2sam);
 	if ($system_call != 0) {
-		&printError("Some error happened when calling SAMTOOLs for BAM -> SAM conversion....");  DOMINO::dieNicely();
+		DOMINO::printError("Some error happened when calling SAMTOOLs for BAM -> SAM conversion....");  DOMINO::dieNicely();
 	}
 	return $name.".sam";
 }
@@ -4144,7 +4144,7 @@ sub generate_index_bam {
 	&debugger_print("SAMTOOLS command: ".$index_system);
 	my $index_call = system($index_system);
 	if ($index_call != 0) {
-		&printError("Some error happened when calling SAMTOOLs for indexing the BAM file [$bam_file]...."); DOMINO::dieNicely();
+		DOMINO::printError("Some error happened when calling SAMTOOLs for indexing the BAM file [$bam_file]...."); DOMINO::dieNicely();
 	}
 }
 
@@ -4168,7 +4168,7 @@ sub generate_filter_PILEUP {
 	&debugger_print("SAMTOOLS command: ".$pileup_command);
 	my $sytem_command_pileup = system ($pileup_command);
 	if ($sytem_command_pileup != 0) {
-		&printError("Exiting the script. Some error happened when calling SAMtools for generating the PILEUP for the file $contig_file...\n"); DOMINO::dieNicely();
+		DOMINO::printError("Exiting the script. Some error happened when calling SAMtools for generating the PILEUP for the file $contig_file...\n"); DOMINO::dieNicely();
 	}
 	my $tmp = $dir_path."/ARRAY_files_".$taxa."_PROFILE"; unless (-d $tmp) { mkdir $tmp, 0755; } 
 	&debugger_print("Changing dir to $tmp");
@@ -4511,14 +4511,6 @@ sub Poisson_distribution {
 	my ($x, $a) = @_;
 	return unless $a >= 0 && $x >= 0 && $x == int($x); 
 	return (($a ** $x) * exp(-$a))/&functional_factorial($x);	
-}
-
-sub printError {
-    my $msg = $_[0];
-	print "\n\n";DOMINO::printHeader(" ERROR ","!!"); print "\n";
-    print $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n";
-	print "\n\n"; DOMINO::printHeader("","!!"); DOMINO::printHeader("","!!"); 
-    DOMINO::printError_log($msg, $mapping_markers_errors_details);
 }
 
 sub print_Excel {

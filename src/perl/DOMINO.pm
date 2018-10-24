@@ -3,7 +3,7 @@
 ###	DOMINO: Development of molecular markers in non-model organisms 
 ####################################################################
 # This package provides multiple subroutines for the DOMINO package
-## date 7/11/16
+## date 24/10/18
 
 package DOMINO;
 
@@ -12,6 +12,9 @@ use lib $FindBin::Bin."/lib";
 require List::MoreUtils;
 use List::MoreUtils qw(firstidx);
 use Data::Dumper;
+
+my $domino_Scripts = $FindBin::Bin."/scripts";
+
 
 sub blastn {
 	my $file = $_[0]; my $db = $_[1]; my $results = $_[2]; my $BLAST = $_[3]; 
@@ -431,6 +434,14 @@ sub printDump {
 	}}} close (DUMP);
 }
 
+sub printError {
+    my $msg = $_[0];
+	print "\n\n";&printHeader(" ERROR ","!!"); print "\n";
+    print $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n";
+	print "\n\n"; &printHeader("","!!"); &printHeader("","!!"); 
+    &printError_log($msg, $error_log);
+}
+
 sub printError_log {
 	my $message = $_[0]; my $error_log = $_[1];
 	open (ERR, ">>$error_log");
@@ -788,6 +799,46 @@ sub debugger_print {
 	} else {
 		print "\n******\nDEBUG:\n".$string."\n******\n\n";
 	}
+}
+
+sub get_DOMINO_files {
+	my $path = $_[0];
+	my $step = $_[1];
+	
+	my %parameters;
+	my $array_files_ref=DOMINO::readDir($path);
+	my @array_files = @$array_files_ref;
+	my (%dirs, $earliest);
+	for (my $i=0; $i<scalar @array_files;$i++) {
+		if ($array_files[$i] eq "." || $array_files[$i] eq ".." || $array_files[$i] eq ".DS_Store") {next;}
+		next if ($array_files[$i] =~ /.*old.*/);
+		if ($array_files[$i] =~ /(\d+)\_DM\_(.*)/) {
+			unless (-d $path."/".$array_files[$i]) {next; };
+			my $time_stamp=$1; my $type = $2;
+			$dirs{$type}{$time_stamp} = $path.$array_files[$i];
+	}}
+	my @params; my @info; my %initial_files;
+	foreach my $dir (sort keys %dirs) {
+		my $last;
+		foreach my $times (sort {$a<=>$b} keys %{$dirs{$dir}}) {
+			$last = $times;	## Only used the last folder for each process			
+		}
+		if ($dir eq $step) {
+			my $files = $dirs{$dir}{$last}."/DOMINO_dump_information.txt";	push (@info, $files);
+	}}
+	my $hash_info = &retrieve_info(\@info, \%initial_files);
+	if (!%parameters) { return 0;	
+	} else { return \%parameters;}
+}
+
+sub Contig_Stats { 
+	
+	my $fasta_file = $_[0];
+	my @name = split("\.fasta", $fasta_file);
+	my $outFile = $name[0]."-statistics.csv";
+	my $domino_Scripts_contig = $domino_Scripts."/DM_contig_stats.pl";
+	system("perl $domino_Scripts_contig $fasta_file $outFile");
+	return $outFile;
 }
 
 ## TODO

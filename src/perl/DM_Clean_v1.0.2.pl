@@ -630,7 +630,7 @@ my $db_dirname = $dirname."/db";
 DOMINO::printHeader(" Input File and Parameter Preprocessing ","#");
 DOMINO::printDetails("\n+ Output Directory: ".$dirname." ...OK\n\n", $param_Detail_file); push (@{ $domino_params{'clean_data'}{'folder'} }, $dirname);
 if (scalar (@user_files) == 0 || !$user_option_file_type) {
-	&printError("No input files provided"); DOMINO::dieNicely();
+	DOMINO::printError("No input files provided"); DOMINO::dieNicely();
 } else {
 	## Check files absolute path and name
 	for (my $i = 0; $i < scalar @user_files; $i++) {
@@ -655,7 +655,7 @@ if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_f
 		my $user_barcodes_path_file = abs_path($user_barcodes_file);
 		push (@{$domino_files{"original"}{"barcodes_file"}}, $user_barcodes_path_file);
 		unless (-e $user_barcodes_path_file && -r $user_barcodes_path_file) {
-			&printError("File $user_barcodes_path_file does not exist or it is not readable\n Please provide a readable file");
+			DOMINO::printError("File $user_barcodes_path_file does not exist or it is not readable\n Please provide a readable file");
 			&FormatError_barcodes(); DOMINO::dieNicely();
 		}
 		my $ROCHE_oligos_file = $dirname."/ROCHE.oligos";
@@ -671,7 +671,7 @@ if ($user_option_file_type == 1 || $user_option_file_type == 2 || $user_option_f
 			print ROCHE "barcode\t\t$barcode_array[1]\t\t$barcode_array[3]\n";
 		} close(BARCODE);
 	} else {
-		&printError("\n\nERROR: No barcodes file provided...\n"); &FormatError_barcodes(); DOMINO::dieNicely();
+		DOMINO::printError("\n\nERROR: No barcodes file provided...\n"); &FormatError_barcodes(); DOMINO::dieNicely();
 }}
 
 ###################
@@ -682,7 +682,7 @@ if ($input_options{$user_option_file_type}) {
 	DOMINO::printDetails("+ Type of file(s): Option: $user_option_file_type -- $file_type ...OK\n", $param_Detail_file); 
 	push (@{ $domino_params{'clean_data'}{'option'} }, "$user_option_file_type"."--".$file_type);
 } else { 
-	&printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n");
+	DOMINO::printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n");
 	DOMINO::printInput_type(); DOMINO::dieNicely();
 }
 DOMINO::printDetails("+ Checking file(s):\n", $param_Detail_file);
@@ -690,9 +690,9 @@ DOMINO::printDetails("+ Checking file(s):\n", $param_Detail_file);
 #### Type file: 1 
 if ($file_type eq "454_sff") {
 	if (scalar (@file_abs_path) != 1) {
-		&printError("Please provide a unique SFF file"); DOMINO::dieNicely();
+		DOMINO::printError("Please provide a unique SFF file"); DOMINO::dieNicely();
 	} elsif ($file_abs_path[0] !~ /(.*)\.sff/) {
-		&printError("Wrong 454 file provided.\nPlease provide a binary SFF extension file or provide a different type of file"); DOMINO::dieNicely();
+		DOMINO::printError("Wrong 454 file provided.\nPlease provide a binary SFF extension file or provide a different type of file"); DOMINO::dieNicely();
 	} elsif (-e -r -s $file_abs_path[0]) {
 		my $id = $file_names[0];
 		DOMINO::printDetails("\t$file_abs_path[0]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = SFF ...OK\n\t\tIt also contains an identifier ($id) in the name for later analysis...OK\n\n", $param_Detail_file);	
@@ -701,7 +701,7 @@ if ($file_type eq "454_sff") {
 #### Type file: 2
 }} elsif ($file_type eq "454_fastq") {
 	if (scalar (@file_abs_path) != 1) {
-		&printError("Please provide a unique 454 Roche FASTQ file containing all the taxa read accordingly tagged with MID sequences"); DOMINO::dieNicely();
+		DOMINO::printError("Please provide a unique 454 Roche FASTQ file containing all the taxa read accordingly tagged with MID sequences"); DOMINO::dieNicely();
 	} elsif (scalar (@file_abs_path) == 1) {
 		my $format = DOMINO::check_file_format($file_abs_path[0]);
 		if ($file_abs_path[0] =~ /.*\.f.*q$/) {
@@ -710,12 +710,12 @@ if ($file_type eq "454_sff") {
 				push (@{$domino_files{"original"}{'454_fastq'}}, $file_abs_path[0]); 
 
 			} else { 
-				&printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[0]... Format: $format"); DOMINO::dieNicely();
+				DOMINO::printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[0]... Format: $format"); DOMINO::dieNicely();
 		
 #### Type file: 3
 }}}} elsif ($file_type eq "454_multiple_fastq") {
 	if (scalar (@file_abs_path) == 1) {
-		&printError("Please provide multiple 454 Roche FASTQ file containing each of the taxa reads"); DOMINO::printFormat_message; DOMINO::dieNicely();
+		DOMINO::printError("Please provide multiple 454 Roche FASTQ file containing each of the taxa reads"); DOMINO::printFormat_message; DOMINO::dieNicely();
 	} else {
 		for (my $i = 0; $i < scalar @file_abs_path; $i++) {
 			&check_file($file_abs_path[$i]);
@@ -723,7 +723,7 @@ if ($file_type eq "454_sff") {
 #### Type file: 4
 }}} elsif ($file_type eq "Illumina") {
 	if (scalar (@file_abs_path) != 1) {
-		&printError("Please provide a unique Illumina FASTQ file containing all the taxa read accordingly tagged with MID sequences"); DOMINO::dieNicely();
+		DOMINO::printError("Please provide a unique Illumina FASTQ file containing all the taxa read accordingly tagged with MID sequences"); DOMINO::dieNicely();
 	} elsif (scalar (@file_abs_path) == 1) {
 		my $format = DOMINO::check_file_format($file_abs_path[0]);
 		if ($file_abs_path[0] =~ /.*\.f.*q$/) {
@@ -731,12 +731,12 @@ if ($file_type eq "454_sff") {
 				DOMINO::printDetails("\t$file_abs_path[0]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format." ...OK\n", $param_Detail_file);		
 				push (@{$domino_files{"original"}{'illu_FASTQ'}}, $file_abs_path[0]); 
 			} else { 
-				&printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[0]... Format: $format"); DOMINO::dieNicely();
+				DOMINO::printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[0]... Format: $format"); DOMINO::dieNicely();
 
 #### Type file: 5
 }}}} elsif ($file_type eq "Illumina_multiple_fastq") {  
 	if (scalar (@file_abs_path) == 1) {
-		&printError("Please provide multiple Illumina FASTQ file containing containing each of the taxa reads"); DOMINO::printFormat_message; DOMINO::dieNicely();
+		DOMINO::printError("Please provide multiple Illumina FASTQ file containing containing each of the taxa reads"); DOMINO::printFormat_message; DOMINO::dieNicely();
 	} elsif (scalar (@file_abs_path) != 1) {
 		for (my $i = 0; $i < scalar @file_abs_path; $i++) {
 			&check_file($file_abs_path[$i]);
@@ -744,7 +744,7 @@ if ($file_type eq "454_sff") {
 #### Type file: 6
 }}} elsif ($file_type eq "Illumina_pair_end") {
 	if (scalar (@file_abs_path) != 2) {
-		&printError("Please provide Illumina Paired-End FASTQ files. Provide the left (_R1) and then the right (_R2) file containing all the taxa read accordingly tagged with MID sequences\nPlease tagged left read file with xxx_R1.fastq and right read file as xxx_R2.fastq\n"); DOMINO::dieNicely();
+		DOMINO::printError("Please provide Illumina Paired-End FASTQ files. Provide the left (_R1) and then the right (_R2) file containing all the taxa read accordingly tagged with MID sequences\nPlease tagged left read file with xxx_R1.fastq and right read file as xxx_R2.fastq\n"); DOMINO::dieNicely();
 	} elsif (scalar (@file_abs_path) == 2) {
 		for (my $i = 0; $i < scalar @file_abs_path; $i++) {
 			my $format = DOMINO::check_file_format($file_abs_path[$i]);
@@ -752,16 +752,16 @@ if ($file_type eq "454_sff") {
 				my $pair_int = $1; my $pair;
 				if ($pair_int == 1) { $pair = "Left reads file";	
 				} elsif ($pair_int == 2) { $pair = "Right reads file";	
-				} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[$i]...\nFormat: $format\nPair: $pair_int\n"); DOMINO::dieNicely(); }
+				} else { DOMINO::printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[$i]...\nFormat: $format\nPair: $pair_int\n"); DOMINO::dieNicely(); }
 				if ($format =~ /fastq/) {
 					DOMINO::printDetails("\t$file_abs_path[$i]\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format." ...OK\n\t\tPaired end file = ".$pair." ...OK\n", $param_Detail_file);
 					push (@{$domino_files{"original"}{'illu_PE'}}, $file_abs_path[$i]);
-				} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[$i]...\nFormat: $format\nPair: $pair_int\n"); DOMINO::dieNicely();
+				} else { DOMINO::printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_abs_path[$i]...\nFormat: $format\nPair: $pair_int\n"); DOMINO::dieNicely();
 
 #### Type file: 7
 }}}}} elsif ($file_type eq "Illumina_pair_end_multiple_fastq") {  
 	if (scalar (@file_abs_path) == 2 ) {
-		&printError("Please provide Illumina Paired-End FASTQ files for each taxa. Provide the left (_R1) and then the right (_R2) file containing each taxa reads"); DOMINO::printFormat_message; DOMINO::dieNicely();
+		DOMINO::printError("Please provide Illumina Paired-End FASTQ files for each taxa. Provide the left (_R1) and then the right (_R2) file containing each taxa reads"); DOMINO::printFormat_message; DOMINO::dieNicely();
 	} elsif (scalar (@file_abs_path) != 2) {
 		for (my $i = 0; $i < scalar @file_abs_path; $i++) {
 			&check_file($file_abs_path[$i]);
@@ -775,7 +775,7 @@ if ($file_type eq "Illumina_pair_end_multiple_fastq") {
 		##@{ $domino_files{"original"}{$name} }
 		my @array = @{ $species_names{$keys} };
 		if (scalar @array != 2) {
-			&printError("Wrong pair of FASTQ files provided. Please check pair of files corresponding to $keys:\n$files\n"); DOMINO::dieNicely();
+			DOMINO::printError("Wrong pair of FASTQ files provided. Please check pair of files corresponding to $keys:\n$files\n"); DOMINO::dieNicely();
 		} else { &debugger_print("OK: $keys\n\n"); }
 }}
 
@@ -837,7 +837,7 @@ if ($onlyTagging_files) {
 				my $tmp_abs_name = abs_path($user_blast_db_tmp[$i]);
 				my $format_returned = DOMINO::check_file_format($tmp_abs_name);
 				if ($format_returned !~ /fasta/) { 
-					&printError("Please, enter a valid FASTA file, $user_blast_db[$i] is not valid"); DOMINO::dieNicely();
+					DOMINO::printError("Please, enter a valid FASTA file, $user_blast_db[$i] is not valid"); DOMINO::dieNicely();
 				} else {
 					push (@user_blast_db, $tmp_abs_name);
 		}}}
@@ -1085,7 +1085,7 @@ foreach my $keys (sort keys %domino_files) {
 	## Sending command
 	&debugger_print("NGS QC Toolkit command: $NGS_QC_call\n");
 	my $NGSQC_result = system($NGS_QC_call);
-	if ($NGSQC_result != 0) { &printError("Cleaning step failed when calling NGSQC for file $dust_clean_reads..."); exit(); }	
+	if ($NGSQC_result != 0) { DOMINO::printError("Cleaning step failed when calling NGSQC for file $dust_clean_reads..."); exit(); }	
 	print "\n"; &time_log();
 	&debugger_print("domino_files_threads_QC"); &debugger_print("Ref", \%domino_files_threads_QC);
 
@@ -1152,7 +1152,7 @@ foreach my $keys (sort keys %domino_files) {
 		my $db; for (my $j=0; $j < scalar @reads_db; $j++) { $db .= $reads_db[$j]." "; } chop $db;
 		my ($blastn, $blastn_message) = DOMINO::blastn($merge_fasta_database, $db, $out_file, $BLAST);
 		&debugger_print($blastn_message);
-		if ($blastn != 0) { &printError("BLASTN failed...\n"); exit(); } 
+		if ($blastn != 0) { DOMINO::printError("BLASTN failed...\n"); exit(); } 
 		print "\n"; &time_log(); print "\n"; print "+ Parsing the BLAST results for $keys...\n"; 
 
 		## Check BLAST result
@@ -1368,15 +1368,15 @@ sub check_file {
 		if ($pair_int) {
 			if ($pair_int == 1) { $pair = "Left reads file";	
 			} elsif ($pair_int == 2) { $pair = "Right reads file";	
-			} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\nPair: $pair_int"); DOMINO::printFormat_message; DOMINO::dieNicely();
+			} else { DOMINO::printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\nPair: $pair_int"); DOMINO::printFormat_message; DOMINO::dieNicely();
 		}}
 		
 		if ($format_returned =~ /fastq/) {
 			DOMINO::printDetails("\t$file_to_check\n\t\tFile exists, is readable and non-zero character...OK\n\t\tFile format = ".$format_returned." ...OK\n\t\tIt also contains an identifier ($name) in the name for later analysis...OK\n", $param_Detail_file);
 			push (@{ $domino_files{"original"}{$name} }, $file_to_check); 
 			if ($pair) {  DOMINO::printDetails("\t\tPaired end file = ".$pair." ...OK\n", $param_Detail_file);	 }
-		} else { &printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); DOMINO::printFormat_message; DOMINO::dieNicely();
-	}} else { &printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); DOMINO::printFormat_message; DOMINO::dieNicely();} 
+		} else { DOMINO::printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); DOMINO::printFormat_message; DOMINO::dieNicely();
+	}} else { DOMINO::printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); DOMINO::printFormat_message; DOMINO::dieNicely();} 
 	DOMINO::printDetails("\n", $param_Detail_file);
 	&debugger_print("File: $file_to_check -- $format_returned -- OK;\n");
 }
@@ -1566,7 +1566,7 @@ sub extracting_fastq {
 	}
 	open (FASTA, ">$fasta_file");
 	open (QUAL, ">$qual_file");
-	open (F1, "$file") or &printError("Could not open file $file") and exit();
+	open (F1, "$file") or DOMINO::printError("Could not open file $file") and exit();
 	while(<F1>) {
 		my @Read = ();
 		chomp(my $id = $_);
@@ -1586,7 +1586,7 @@ sub extracting_fastq {
 	} close(F1); close (FASTA); close (QUAL);
 }
 
-sub FormatError_barcodes { &printError("The only format accepted for the Barcodes file is:\n\n##########\nbarcode, ACACGACGACT, MID1, Dmelanogaster\nbarcode, ACTACGTCTCT, MID2, Dsimulans\nbarcode, ACTACGTATCT, MID3, Dyakuba\n##########\nPlease note this is a comma-separated value file (.csv)"); }
+sub FormatError_barcodes { DOMINO::printError("The only format accepted for the Barcodes file is:\n\n##########\nbarcode, ACACGACGACT, MID1, Dmelanogaster\nbarcode, ACTACGTCTCT, MID2, Dsimulans\nbarcode, ACTACGTATCT, MID3, Dyakuba\n##########\nPlease note this is a comma-separated value file (.csv)"); }
 	
 sub looking4db {
 
@@ -1631,7 +1631,7 @@ sub mothur_sffinfo {
 	my $mothur_call = $mothur_path." '#set.dir(output=$directory); sffinfo(sff='".$file."'); trim.seqs(fasta="."$file_name".".fasta, qfile=".$file_name.".qual, oligos=ROCHE.oligos, bdiffs=$bdiffs, processors=$noOfProcesses)'";
 	&debugger_print("MOTHUR command (sff info): $mothur_call\n");
 	my $mothur_result = system($mothur_call);
-	if ($mothur_result != 0) { &printError("MOTHUR failed when trying to proccess the file..."); exit(); } else { print "Done...OK\n\n"; }	
+	if ($mothur_result != 0) { DOMINO::printError("MOTHUR failed when trying to proccess the file..."); exit(); } else { print "Done...OK\n\n"; }	
 }
 
 sub mothur_trim_fastq {
@@ -1645,7 +1645,7 @@ sub mothur_trim_fastq {
 	&debugger_print("MOTHUR command (trim fastq): $mothur_call\n");
 	print "+ Triming the reads according to MID tag\n";
 	my $mothur_result = system($mothur_call);
-	if ($mothur_result != 0) { 	&printError("MOTHUR failed when trying to proccess the file..."); exit(); } else { print "Done...OK\n\n"; }
+	if ($mothur_result != 0) { 	DOMINO::printError("MOTHUR failed when trying to proccess the file..."); exit(); } else { print "Done...OK\n\n"; }
 }
 
 sub prinseq_dust {
@@ -1677,7 +1677,7 @@ sub prinseq_dust {
 	$prinseq_dust_command .= " -ns_max_n 1 -noniupac 2> $error_log";
 	&debugger_print("PRINSEQ command:\n$prinseq_dust_command\n");
 	my $dust_result = system($prinseq_dust_command);	
-	if ($dust_result != 0) { &printError("DUST cleaning step failed when trying to proccess the file... DOMINO would not stop in this step...");  }
+	if ($dust_result != 0) { DOMINO::printError("DUST cleaning step failed when trying to proccess the file... DOMINO would not stop in this step...");  }
 	return ($out_good, $out_bad);	
 }
 
@@ -1715,7 +1715,7 @@ sub rename_seqs {
 	
 	} else {
 		&debugger_print("Rename file $file");		
-		open (F1, "$file") or &printError("Could not open file $file") and exit();
+		open (F1, "$file") or DOMINO::printError("Could not open file $file") and exit();
 		open (FASTQ_out, ">$file_path");
 		my $int = 0;
 		while(<F1>) {
@@ -1760,7 +1760,7 @@ sub splitting_fastq {
 	print "- Checking files generated and splitting into multiple threads...\n";
 	
 	$/ = "\n"; ## Telling Perl where a new line starts
-	open (GROUPS, $group_file) or &printError("Cannot open file groups: $group_file") and exit();
+	open (GROUPS, $group_file) or DOMINO::printError("Cannot open file groups: $group_file") and exit();
 	# Generate a hash with the identifier for each sequence
 	while (<GROUPS>) {
 		chomp; my $line = $_;
