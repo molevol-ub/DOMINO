@@ -14,7 +14,7 @@ my $path = $ARGV[1];
 my $markers_file = $ARGV[2];
 
 ## param
-if(!defined($markers_file)) { print "ERROR: No input files are provided: [$0]\n"; exit; } ## give error message for DOMINO debug
+if(!defined($markers_file)) { DOMINO::printError("No marker files are provided in DM_print_Excel module : [$0]\n"); exit; } ## give error message for DOMINO debug
 my $domino_version ="DOMINO v1.1 ## Revised 24-10-2018";
 my $hash_parameters = DOMINO::get_parameters($absolute_path);
 my $no_parameters; if ($hash_parameters == 0) { $no_parameters = 1; }
@@ -412,3 +412,4 @@ for (my $i=0; $i < scalar @array; $i++) {
 	$worksheet_parameters->write($row, $col, $j, $format_right); $counter++;	$row++;
 } 
 $workbook->close();
+DOMINO::print_Success_Step("excel");
