@@ -760,13 +760,19 @@ sub get_parameters {
 	my $hash_param = &retrieve_info(\@params, \%parameters);
 	my $hash_info = &retrieve_info(\@info, \%initial_files);
 	%parameters = %{$hash_param};
+	
+	#print Dumper $hash_info;
 	foreach my $keys (keys %{$hash_info}) {
 		if ($$hash_info{$keys}{"QC_stats"}) {
 			$parameters{"clean_data"}{"QC_analysis"}{$keys} = $$hash_info{$keys}{"QC_stats"}[0];
 		} 
 		if ($$hash_info{$keys}{"FINAL_stats"}) {
 			$parameters{"assembly"}{"stats"}{$keys} = $$hash_info{$keys}{"FINAL_stats"}[0];
-	}}
+		}
+		if ($$hash_info{$keys}{"db"}) {
+			push (@{ $parameters{"clean_data"}{"db"} }, @{ $$hash_info{$keys}{"db"} });
+		}		
+	}
 	if (!%parameters) { return 0;	
 	} else { return \%parameters;}
 }

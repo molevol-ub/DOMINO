@@ -77,7 +77,6 @@ use List::MoreUtils qw(firstidx);
 ##################################
 ##	Initializing some variables	##
 ##################################
-my $domino_version = "v1.0.3 ## Revised 17-10-2018";
 my (
 ## User options
 $folder, $helpAsked, $avoidDelete_tmp_files, $num_proc_user, $window_var_CONS, 
@@ -93,7 +92,7 @@ $debugger, $helpAsked1, $VAR_inc, $CONS_inc, $option_all, $totalContigs2use4mark
 @contigs_fasta_file_abs_path, @clean_fastq_file_abs_path, # toDiscard
 
 ## others
-%domino_files, %domino_params, $step_time, %discard_contigs, $pyRAD_file, $stacks_file, $radseq_like_data, 
+%domino_files, %domino_params, %domino_success_steps, $step_time, %discard_contigs, $pyRAD_file, $stacks_file, $radseq_like_data, 
 $number_sp, $genome_fasta, $scripts_path, $dnaSP_flag, $SLIDING_user, %mapping_contigs, $file2dump_param
 );
 
@@ -202,7 +201,7 @@ DM_MarkerScan_1.0.3.pl
 
 =over 2
 
-DOMINO v1.0.3
+DOMINO v1.1 ## Revised 23-10-2018
 
 =back
 	
@@ -839,10 +838,7 @@ doi:10.1093/bioinformatics/btw534
 
 ## Check mandatory options
 if (!$folder) { &printError("No folder provided...\n"); DOMINO::dieNicely(); }
-my %type_input = (
-	"single_end" => 1,
-	"pair_end" => 1,
-);
+my %type_input = ("single_end" => 1, "pair_end" => 1,);
 if (!$type_input{$input_type}) {
 	&printError("Input type provided ($input_type) does not match single_end or pair_end\n");
 	DOMINO::dieNicely();}
@@ -879,6 +875,7 @@ my $samtools_path = $scripts_path."samtools-1.3.1/samtools";
 my $bowtie_path = $scripts_path."bowtie2-2.2.9/";
 my $BLAST = $scripts_path."NCBI_BLAST/";
 my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
+my $domino_Scripts = $scripts_path."scripts";
 
 ## Check if a previous DOMINO parameters file exists
 if (-e $param_Detail_file_markers) { File::Copy::move($param_Detail_file_markers, $param_Detail_file_markers."_old_".$random_number); }
@@ -926,7 +923,7 @@ if ($option eq "DOMINO_files") {
 	$option = "msa_alignment";
 	$radseq_like_data = 1;
 	if (!$msa_file) { &printError("Exiting the script. No file provided. \nUse the option -RADseq_file [file]..\n"); DOMINO::dieNicely(); }
-	push (@{ $domino_params{'marker'}{'RADseq'} }, 1);
+	push (@{ $domino_params{'marker'}{'RADseq'} }, "YES");
 	
 } else { &printError("\nOption provided is not known...\n"); DOMINO::dieNicely();}
 push (@{ $domino_params{'mapping'}{'option'} }, $option);
@@ -941,6 +938,7 @@ unless ($option eq "msa_alignment" || $option eq "RADseq") {
 }} else {
 	$MID_taxa_names =~ s/\s+/\,/g;
 	my @MID_name_array = split (",", $MID_taxa_names);
+	push (@{$domino_params{"marker"}{'taxa_string'}}, $MID_taxa_names);
 	for (my $j = 0; $j < scalar @MID_name_array; $j++) {
 		push (@{$domino_files{'taxa'}{'user_Taxa'}}, $MID_name_array[$j]);
 		push (@{$domino_files{$MID_name_array[$j]}{'taxa'}}, 1);
@@ -1031,11 +1029,16 @@ if (!$minimum_number_taxa_covered) { $minimum_number_taxa_covered = $number_sp; 
 } else { if ($minimum_number_taxa_covered > $number_sp) { &printError("Minimum number of covered taxa (MCT) is bigger than the number of taxa provided...\n"); DOMINO::dieNicely(); }} 
 
 ## push default parameters
-my $answer_dnaSP; if ($dnaSP_flag) { $answer_dnaSP = 'YES'; $polymorphism_user=1; push (@{ $domino_params{'mapping'}{'dnaSP'} }, 1);} else { $answer_dnaSP = 'NO';}
-my $answer_PV; if ($polymorphism_user) { $answer_PV = 'YES'; push (@{ $domino_params{'mapping'}{'polymorphism_user'} }, 1);} else { $answer_PV = 'NO';}
-my $BowtieLocal; if ($bowtie_local) { $BowtieLocal = 'YES'; push (@{ $domino_params{'mapping'}{'bowtie_local'} }, 1);} else { $BowtieLocal = 'NO';} 
-my $mapContigFiles; if ($map_contig_files) { $mapContigFiles = 'YES'; } else { $mapContigFiles = 'NO';} 
-my $LowCoverageData; if ($DOMINO_simulations) { $LowCoverageData = 'YES'; } else { $LowCoverageData = 'NO';} 
+my $answer_dnaSP; 
+if ($dnaSP_flag) { $answer_dnaSP = 'YES'; $polymorphism_user=1; push (@{ $domino_params{'mapping'}{'dnaSP'} }, 1);} else { $answer_dnaSP = 'NO';}
+my $answer_PV; 
+if ($polymorphism_user) { $answer_PV = 'YES'; push (@{ $domino_params{'mapping'}{'polymorphism_user'} }, 1);} else { $answer_PV = 'NO';}
+my $BowtieLocal; 
+if ($bowtie_local) { $BowtieLocal = 'YES'; push (@{ $domino_params{'mapping'}{'bowtie_local'} }, 1);} else { $BowtieLocal = 'NO';} 
+my $mapContigFiles; 
+if ($map_contig_files) { $mapContigFiles = 'YES'; } else { $mapContigFiles = 'NO';} 
+my $LowCoverageData; 
+if ($DOMINO_simulations) { $LowCoverageData = 'YES'; } else { $LowCoverageData = 'NO';} 
 push (@{ $domino_params{'mapping'}{'cpu'} }, $num_proc_user);
 push (@{ $domino_params{'mapping'}{'type_input'} }, $input_type);
 push (@{ $domino_params{'mapping'}{'rdgopen'} }, $rdgopen);
@@ -1055,6 +1058,11 @@ push (@{ $domino_params{'marker'}{'V-SI_inc'} }, $VAR_inc);
 push (@{ $domino_params{'marker'}{'C-SI_inc'} }, $CONS_inc);
 push (@{ $domino_params{'marker'}{'subset_offset_user'} }, $subset_offset_user);
 push (@{ $domino_params{'marker'}{'totalContigs2use4markers'} }, $totalContigs2use4markers);
+push (@{ $domino_params{'marker'}{'missing_allowed'} }, $missing_allowed);
+push (@{ $domino_params{'marker'}{'window_var_CONS'} }, $window_var_CONS);
+push (@{ $domino_params{'marker'}{'totalContigs2use4markers'} }, $totalContigs2use4markers);
+push (@{ $domino_params{'marker'}{'subset_offset_user'} }, $subset_offset_user);
+
 &debugger_print("DOMINO Parameters");&debugger_print("Ref", \%domino_params);
 
 ## Check parameters previous run
@@ -1096,9 +1104,12 @@ if ($avoid_mapping) {
 		foreach my $keys (keys %{ $domino_params_dump{'mapping'} }) {
 			my $prev = $domino_params_dump{'mapping'}{$keys}[0];
 			my $curr = $domino_params{'mapping'}{$keys}[0];
+			next if ($keys eq "date");
+			next if ($keys eq "folder");
 			unless ($prev eq $curr ) {
 				$undef_mapping++; &printError("There is difference: $keys $curr =/= $prev\n"); ## test
-		}}
+			}
+		}
 		&debugger_print("DOMINO params dump");&debugger_print("Ref", \%domino_files_dump);
 
 		## Check files generated
@@ -1413,9 +1424,11 @@ if (!$avoid_mapping) {
 				&printError("Exiting the script. Some error happened when calling bowtie for indexing the file...\n"); 
 				DOMINO::print_fail_Step("index_genome_$reference_tag");
 				DOMINO::dieNicely();
-			} else { DOMINO::print_success_Step("index_genome_$reference_tag"); }
+			} else { DOMINO::print_success_Step("index_genome_$reference_tag"); $domino_success_steps{$reference_tag}{"index_genome"}++;}
 			print "\n"; &time_log();	print "\n";
-			
+			push (@{ $domino_files{$reference_identifier}{"index_genome"} }, $dir."/".$reference_tag); ## get symbolic link if it is already indexed
+			push (@{ $domino_params{"marker"}{"index_genome"} }, $reference_identifier); 
+
 			###########################
 			###	Align taxa Reads	### 
 			###########################
@@ -1499,7 +1512,7 @@ if (!$avoid_mapping) {
 					&printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); 
 					DOMINO::print_fail_Step("mapping_$reads");
 					DOMINO::dieNicely(); 
-				} else { DOMINO::print_success_Step("mapping_$reads"); }
+				} else { DOMINO::print_success_Step("mapping_$reads"); $domino_success_steps{$reference_tag}{"map_$reads"}++}
 							 			
 				push (@{$domino_files_split_mapping{$reads}{"SAM::Ref:".$reference_identifier}}, $sam_name);
 				open (IN, $error_bowtie); while (<IN>) {print LOG $_; } close(IN);
@@ -2094,11 +2107,10 @@ if (!$avoid_mapping) {
 			push (@{ $domino_params{'marker'}{'number_taxa'}}, $number_sp);
 			push (@{ $domino_params{'marker'}{'MCT'}}, $minimum_number_taxa_covered);
 			$MID_taxa_names = join(",", @taxa_sp);
-			push (@{ $domino_params{'marker'}{'taxa_string'}[0] }, $MID_taxa_names);
 		}
 		&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 	}
-	
+
 	## Dump info up to now to a file
 	my $file2dump = $align_dirname."/DOMINO_dump_information.txt";
 	DOMINO::printDump(\%domino_files, $file2dump);	
@@ -3095,6 +3107,7 @@ print "+ Generating an Excel file for DOMINO markers coordinates...\n";
 
 ## Dumping info to a file
 my $dump_info_DOMINO = $marker_dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_info_DOMINO);
+my $dump_info_success = $marker_dirname."/DOMINO_dump_success.txt"; DOMINO::printDump(\%domino_success_steps, $dump_info_success);
 unless ($avoidDelete_tmp_files) { 
 	###########################
 	## Delete temporary file ##
@@ -4510,133 +4523,18 @@ sub printError {
 
 sub print_Excel {
 
-	my $markers_file_ref = $_[0]; my $path = $_[1];
-	my @array_markers;
-	my $markers_file = $$markers_file_ref;
-	open (FILE, "$markers_file");
-	while (<FILE>) {
-		chomp; if ($_ =~ /.*Vari.*/) {next;}
-		push (@array_markers, $_);
-	} close (FILE);
-	my $hash_parameters = DOMINO::get_parameters();
-	my $no_parameters; if ($hash_parameters == 0) { $no_parameters = 1; }
+	my $markers_file_ref = $_[0]; 
+	my $path = $_[1];
 	
-	#################################################################################
-	##	Once the coordinates are found, print different files with the information ##
-	#################################################################################	
-	### open Output and Error file
+	my $domino_Scripts_excel = $domino_Scripts."/DM_print_Excel.pl";
+	system("perl $domino_Scripts_excel $folder_abs_path $$path $$markers_file_ref");
 	my $excel_woorkbook_name = $$path."/DM_markers-summary.xls";
-	print "+ Printing putative Molecular markers in the XLS format file $excel_woorkbook_name...\n";
+	my $markers_count;
+	open (MARKER, "<$$markers_file_ref"); while (<MARKER>) { if ($_ =~ /.*\_\#.*/) {$markers_count++} } close (MARKER);
 	
-	## Generate an Excel file to write results
-	my $workbook = Spreadsheet::WriteExcel->new($excel_woorkbook_name);
-	my $worksheet_parameters = $workbook->add_worksheet("Parameters - Input");
-    my $col = my $first_col = 0; 
-    my $row = my $second_col = 1;
-
-    my $format_main_heading = $workbook->add_format();
-    $format_main_heading->set_size(14);
-    $format_main_heading->set_font('Arial Black');
-
-	my $format = $workbook->add_format(); # Add a format
-	$format->set_size(12);
-	
-	my $format_left = $workbook->add_format(); # Add a format
-	$format_left->set_size(12);
-	$format_left->set_align('left');
-	
-	my $format_right = $workbook->add_format(); # Add a format
-	$format_right->set_size(12);
-	$format_right->set_align('right');
-	
-	my $format_bold = $workbook->add_format(); # Add a format
-	$format_bold->set_size(12);
-	$format_bold->set_font('Arial Black');
-	$format_bold->set_align('left');
-
-   	## Write Excel Heading and parameters
-    $worksheet_parameters->write($row, $col, "DOMINO version:", $format_main_heading); $col++;
-    $worksheet_parameters->write($row, $col, $domino_version, $format); $col++;
-    #$worksheet_parameters->write($row, $col, $date, $format_left); 
-    $row++; $row++;
-    $worksheet_parameters->write($row, $first_col, "PROJECT:", $format_main_heading); 
-    $col = $first_col; $row++; $row++;
-    $worksheet_parameters->write($row, $col, "FOLDER:", $format); $col++;
-    $worksheet_parameters->write($row, $col, $folder_abs_path, $format); $row++;
-    $col = $first_col;
-    $worksheet_parameters->write($row, $col, "OPTION:", $format); $col++;
-    if ($no_parameters) {
-    	if ($radseq_like_data) {
-			$worksheet_parameters->write($row, $col, "RADseq", $format); $row++;
-		} else { $worksheet_parameters->write($row, $col, $option, $format); $row++; }
-    } else {
-    	if ($$hash_parameters{'clean_data'}{'option'}) {
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'option'}, $format); $row++;
-    }} $row++; $row++;
-
-	### Writing markers coordinates
-	my $worksheet_markers = $workbook->add_worksheet("Output - Markers");
-    my $col_markers = $first_col = 0; my $row_markers = $second_col = 1;
-    $worksheet_markers->write($row_markers, $col_markers, "OUTPUT", $format_main_heading); $row_markers++; $col_markers++; $row_markers++;
-    
-    my $markers = 0;
-    if ($select_markers) {
-		$col_markers = $second_col;
-		$worksheet_markers->write($row_markers, $col_markers, "Region ID", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Taxa included", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Variable sites", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Effective length", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Variation", $format_bold); $row_markers++;
-    	
-    	for (my $i = 0; $i < scalar @array_markers; $i++) {
-			if ($array_markers[$i] eq "undef") { $row_markers++; next;}
-			my @split = split("\t", $array_markers[$i]);
-			$col_markers = $second_col;
-			$worksheet_markers->write($row_markers, $col_markers, $split[2], $format_left); $col_markers++;	# Contig name
-			$worksheet_markers->write($row_markers, $col_markers, $split[3], $format_left); $col_markers++; 	## taxa names
-			$worksheet_markers->write($row_markers, $col_markers, $split[4], $format_right); $col_markers++;	## Variable sites
-			$worksheet_markers->write($row_markers, $col_markers, $split[5], $format_right); $col_markers++;	## effective length
-			$worksheet_markers->write($row_markers, $col_markers, $split[6], $format_right); $row_markers++;	## Variation percentage
-			$markers++;
-		}
-    } else {
-		$worksheet_markers->write($row_markers, $col_markers, "Conserved region: Left", $format_bold); $col_markers++; 
-		$worksheet_markers->write($row_markers, $col_markers, "Variable region", $format_bold); $col_markers++; 
-		$worksheet_markers->write($row_markers, $col_markers, "Conserved region: Right", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Taxa included", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Marker length", $format_bold);  $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Variation", $format_bold);  $row_markers++;
-		$col_markers = $first_col;
-		if ($option eq "msa_alignment") { 
-			$worksheet_markers->write($row_markers, $col_markers, "Multiple alignment ID", $format_bold); $col_markers++;
-		} else {
-			$worksheet_markers->write($row_markers, $col_markers, "Reference contigs ID", $format_bold); $col_markers++;
-		}    
-		$worksheet_markers->write($row_markers, $col_markers, "Start - End", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Start - End", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Start - End", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "IDs", $format_bold); $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "Length (bp)", $format_bold);  $col_markers++;
-		$worksheet_markers->write($row_markers, $col_markers, "% Variable positions", $format_bold);  $row_markers++;
-	
-		for (my $i = 0; $i < scalar @array_markers; $i++) {
-			if ($array_markers[$i] eq "") { $row_markers++; next;}
-			
-			my @split = split("\t", $array_markers[$i]);
-			$worksheet_markers->write($row_markers, $first_col, $split[0], $format); # Contig name
-			my $position = $first_col + 1;
-			$worksheet_markers->write($row_markers, $position, $split[1], $format_right);	$position++; ## Conserved left
-			$worksheet_markers->write($row_markers, $position, $split[2], $format_right); $position++; ## Variable
-			$worksheet_markers->write($row_markers, $position, $split[3], $format_right); $position++; ## Conserved Right
-			$worksheet_markers->write($row_markers, $position, $split[6], $format_left); $position++; ## taxa names
-			$worksheet_markers->write($row_markers, $position, $split[4], $format_right); $position++; ## variable region length
-			$worksheet_markers->write($row_markers, $position, $split[5], $format_right); $row_markers++;	 	## Divergence
-			$markers++;
-	}} 
-
 	## Print results and instructions
 	print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" RESULTS ","#"); DOMINO::printHeader("", "#");
-	print "\n+ DOMINO has retrieved $markers markers\n";
+	print "\n+ DOMINO has retrieved $markers_count markers\n";
 	my $instructions_txt = $marker_dirname."/Instructions.txt";
 	my $MSA = $$path."/MSA_markers";
 	open (OUT, ">$instructions_txt");
@@ -4646,283 +4544,6 @@ sub print_Excel {
 \t+ $excel_woorkbook_name: contains information of the markers identified and parameters used by DOMINO.
 \t+ $MSA folder contains a single file for each marker identified.\n\n";	
 	print OUT $string; print $string."\n"; close(OUT);
-
-	unless ($no_parameters) {
-		if ($$hash_parameters{'clean_data'}) {
-			$worksheet_parameters->write($row, $first_col, "PRE-PROCESSING PHASE:", $format_main_heading); 
-			$col = $first_col; $row++; $row++;
-			$worksheet_parameters->write($row, $col, "DATE:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'start'}, $format_left); $row++; $row++;
-			$col = $first_col; 
-			$worksheet_parameters->write($row, $col, "FOLDER:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'folder'}, $format); $row++; $row++;
-			$col = $first_col;
-			$worksheet_parameters->write($row, $col, "INPUT DATA:", $format); $col++;
-			$worksheet_parameters->write($row, $col, "Original Files included", $format_bold); $col++;
-			$worksheet_parameters->write($row, $col, "DOMINO Label", $format_bold); $col++;
-			foreach my $keys (sort keys %{$$hash_parameters{'clean_data'}{'clean_files'}}) {
-				$col = $first_col; $col++; $row++;
-				$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'clean_files'}{$keys}, $format_left);
-				$col++; $worksheet_parameters->write($row, $col, $keys, $format_left);
-			}
-			$row++; $row++; $row++;
-			$col = $first_col;
-			$worksheet_parameters->write($row, $col, "PARAMETERS:", $format); $col++; 
-			$worksheet_parameters->write($row, $col, "Mismatches allowed in the barcode sequence:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'mismatches'}, $format_right); 
-			$col = $first_col + 1; $row++;
-			$worksheet_parameters->write($row, $col, "Minimum read length:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'read_length'}, $format_right); 
-			$col = $first_col + 1; $row++;
-			$worksheet_parameters->write($row, $col, "Minimum QUAL:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'QUAL'}, $format_right); 
-			$col = $first_col + 1; $row++;
-			$worksheet_parameters->write($row, $col, "Minimum length of a read satisfying QUAL cutoff:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'QUAL_cutoff'}, $format_right); 
-			$col = $first_col + 1; $row++;
-			$worksheet_parameters->write($row, $col, "Threshold for complexity/entropy of a read:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'entropy'}, $format_right); 
-			$col = $first_col + 1; $row++; $row++;
-			$worksheet_parameters->write($row, $col, "Database(s)", $format_bold); $row++;
-			my @array_db = @{$$hash_parameters{'clean_data'}{'dbs'}};
-			for (my $i=0; $i < scalar @array_db; $i++) {
-				$worksheet_parameters->write($row, $col, $array_db[$i], $format_left); $row++;
-			} $row++; $row++;
-		
-			if ($$hash_parameters{'clean_data'}{"QC_analysis"}) {
-				my %QC_hash = %{$$hash_parameters{'clean_data'}{'QC_analysis'}};
-				foreach my $taxa (sort keys %QC_hash) {
-					my $worksheet_name = "Quality Filtering Stats $taxa";
-					if (length($worksheet_name) >= 31) {
-						$worksheet_name = "QC Stats $taxa";
-						if (length($worksheet_name) >= 31) {
-							$worksheet_name = "QC $taxa";
-							if (length($worksheet_name) >= 31) {
-								$worksheet_name = "$taxa";
-					}}}
-					
-					my $worksheet_stats_QC = $workbook->add_worksheet($worksheet_name);
-					my $col_stats_QC = 1; my $row_stats_QC = 2;
-					my $file = $QC_hash{$taxa};
-					open (FILE, "<$file");
-					while (<FILE>) {
-						my $line = $_;
-						chomp $line;
-						$col_stats_QC = 1;
-						if ($line =~ /Input files/) {next;}
-						if ($line =~ /File name/) {next;}
-						my @array = split("\t", $line);
-						for (my $i=0; $i < scalar @array; $i++) {
-							if ($i > 1) { $array[$i] =~ s/\s//g;}
-							if ($array[$i] =~ /Detailed QC statistics/) {
-								$worksheet_stats_QC->write($row_stats_QC, $col_stats_QC, $array[$i], $format_left);
-								$row_stats_QC++; $col_stats_QC++; $col_stats_QC++;
-								$worksheet_stats_QC->write($row_stats_QC, $col_stats_QC, "Original", $format_left);
-								$col_stats_QC++; $worksheet_stats_QC->write($row_stats_QC, $col_stats_QC, "Clean", $format_left);
-							} else {
-								$worksheet_stats_QC->write($row_stats_QC, $col_stats_QC, $array[$i], $format_left);
-								$col_stats_QC++;
-						}} $row_stats_QC++;
-						} close (FILE); 
-		}}}
-	
-		if ($$hash_parameters{'assembly'}) {
-			$worksheet_parameters->write($row, $first_col, "ASSEMBLY PHASE:", $format_main_heading); 
-			$row++; $row++;	$col = $first_col; 
-			$worksheet_parameters->write($row, $col, "DATE:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'start'}, $format_left); 
-			$row++; $row++; $col = $first_col; 
-			$worksheet_parameters->write($row, $col, "FOLDER:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'folder'}, $format_left); 
-			$row++; $row++; $col = $first_col;
-			if ($$hash_parameters{'assembly'}{'files'} eq "Default DOMINO cleaning files") {
-				$worksheet_parameters->write($row, $col, "INPUT DATA", $format); $col++;
-				$worksheet_parameters->write($row, $col, "Default DOMINO cleaned files", $format_left); $row++; $col++;
-			} else { 
-				## Control if user provides different files
-			}			
-			$row++; $row++; $col = $first_col;
-			$worksheet_parameters->write($row, $col, "PARAMETERS:", $format); $col = $first_col + 1; 
-			$worksheet_parameters->write($row, $col, "Minimum read score (MIRA):", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'mrs'}, $format_left); $col++;
-			
-			if ($$hash_parameters{'assembly'}{'CAP3'}) {
-				$col = $second_col; $row++;
-				$worksheet_parameters->write($row, $col, "CAP3:", $format); $col++;
-				$worksheet_parameters->write($row, $col, "Enabled", $format_left); $col++;			
-				$col = $second_col; $row++;
-				$worksheet_parameters->write($row, $col, "Similarity:", $format); $col++;
-				$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'simCAP3'}, $format_left); $col++;
-				$col = $second_col; $row++;
-				$worksheet_parameters->write($row, $col, "Overlapping:", $format); $col++;
-				$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'overCAP3'}, $format_left); $col++;
-			} else {
-				$col = $second_col; $row++;
-				$worksheet_parameters->write($row, $col, "CAP3: Disabled", $format);
-			} $row++; $row++; $row++; 
-			
-			if ($$hash_parameters{'assembly'}{'stats'}) {
-				my %hash = %{$$hash_parameters{'assembly'}{'stats'}};
-				foreach my $taxa (sort keys %hash) {
-					my $worksheet_name = "Assembly Stats $taxa";
-					if (length($worksheet_name) >= 31) {
-						$worksheet_name = "Ass. Stats $taxa";
-						if (length($worksheet_name) >= 31) {
-							$worksheet_name = "Stats $taxa";
-							if (length($worksheet_name) >= 31) {
-								$worksheet_name = "$taxa";
-					}}}
-					
-					my $worksheet_stats = $workbook->add_worksheet($worksheet_name);
-					my $col_stats = 1; my $row_stats = 2;
-					open (STATS, $hash{$taxa});
-					while (<STATS>) {
-						my $line = $_;
-						chomp $line;
-						if ($line =~ /.*-.*/) { $row_stats++; next; }
-						my @array = split("\:", $line);
-						$col_stats = 1;
-						for (my $h=0; $h < scalar @array; $h++) {
-							if ($h > 0) { $array[$h] =~ s/\s//g; }
-							if ($array[$h] =~ /\#\# Assembly Statistics \#\#/ ) { 
-								$worksheet_stats->write($row_stats, $col_stats, $array[$h], $format_left); $col_stats++;
-								$worksheet_stats->write($row_stats, $col_stats, $taxa, $format_left);
-							} else {
-								$worksheet_stats->write($row_stats, $col_stats, $array[$h], $format_left);
-							} $col_stats++;
-						} $row_stats++;
-					} close (STATS);
-	}}}}
-
-	$worksheet_parameters->write($row, $first_col, "ALIGNMENT/MAPPING PHASE:", $format_main_heading);
-    $col = $first_col; $row++; $row++;
-    $worksheet_parameters->write($row, $col, "DATE:", $format); $col++;
-   	$worksheet_parameters->write($row, $col, $date, $format_left); 
-   	$col = $first_col; $row++; $row++;
-  	$worksheet_parameters->write($row, $col, "FOLDER:", $format); $col++;
-   	$worksheet_parameters->write($row, $col, $align_dirname, $format);
-   	$col = $first_col; $row++; $row++;
-   	$worksheet_parameters->write($row, $col, "DATA:", $format); $col++;
-	$worksheet_parameters->write($row, $col, "Option:", $format); 
-   	my @option_position = ($row, ($col+1)); $row++;
-   	
-   	if ($option eq "msa_alignment") {
-		my @row_typefile = ($row, $col+1);
-   		$worksheet_parameters->write($row, $col, "Type of file:", $format); $row++;
-		if ($radseq_like_data) {
-   		   	$worksheet_parameters->write($option_position[0], $option_position[1], "RADseq", $format_left); 
-			if ($pyRAD_file) {
-			   	$worksheet_parameters->write($row_typefile[0], $row_typefile[1], "pyRAD file provided", $format_left); 
-			} elsif ($stacks_file) {
-			   	$worksheet_parameters->write($row_typefile[0], $row_typefile[1], "STACKS file provided", $format_left); 
-		}} elsif ($msa_file) {
-		   	$worksheet_parameters->write($option_position[0], $option_position[1], "Multiple Sequence Alignment", $format_left); 
-		   	$worksheet_parameters->write($row_typefile[0], $row_typefile[1], "Alignment file provided", $format_left); 
-		} elsif ($msa_fasta_folder) {
-		   	$worksheet_parameters->write($option_position[0], $option_position[1], "Multiple Sequence Alignment", $format_left); 
-		   	$worksheet_parameters->write($row_typefile[0], $row_typefile[1], "Alignment folder provided", $format_left); 
-	}} else {
-	   	if ($option eq 'user_assembly_contigs') {
-		   	$worksheet_parameters->write($option_position[0], $option_position[1], "Multiple references provided", $format_left); 
-		} elsif ($option eq 'DOMINO_files') {
-		   	$worksheet_parameters->write($option_position[0], $option_position[1], "DOMINO files ", $format_left); 
-		} elsif ($option eq 'genome') {
-		   	$worksheet_parameters->write($option_position[0], $option_position[1], "Single reference provided", $format_left); 
-		} $row++;
-		my $col_tag = $option_position[1] - 1;
-	   	$worksheet_parameters->write($row, $col_tag, "Files used as reference(s):", $format_bold); $row++;
-		for (my $i=0; $i < scalar @contigs_fasta_file_abs_path; $i++) {
-		   	$worksheet_parameters->write($row, $col_tag, $contigs_fasta_file_abs_path[$i], $format_left); $row++;
-		} $row++; 
-	   	$worksheet_parameters->write($row, $col_tag, "Files used for mapping:", $format_bold); $row++;
-		for (my $i=0; $i < scalar @clean_fastq_file_abs_path; $i++) {
-		   	$worksheet_parameters->write($row, $col_tag, $clean_fastq_file_abs_path[$i], $format_left); $row++;
-		} 
-	   	$row++; $col = $first_col; 
-		$worksheet_parameters->write($row, $col, "PARAMETERS:", $format); $col++; 
-   		my $tmp_col = $col;
-		$worksheet_parameters->write($row, $tmp_col, "Read Gap Open penalty ", $format);
-    	$worksheet_parameters->write($row, ($tmp_col + 1), $rdgopen, $format_right); $row++;
-		$worksheet_parameters->write($row, $tmp_col, "Read Gap Extension penalty ", $format);
-    	$worksheet_parameters->write($row, ($tmp_col + 1), $rdgexten, $format_right); $row++;
-		$worksheet_parameters->write($row, $tmp_col, "Reference Gap Open penalty ", $format);
-    	$worksheet_parameters->write($row, ($tmp_col + 1), $rfgopen, $format_right); $row++;
-		$worksheet_parameters->write($row, $tmp_col, "Reference Gap Extension penalty ", $format);
-    	$worksheet_parameters->write($row, ($tmp_col + 1), $rfgexten, $format_right); $row++;
-		$worksheet_parameters->write($row, $tmp_col, "Mismath penalty ", $format);
-    	$worksheet_parameters->write($row, ($tmp_col + 1), $mis_penalty, $format_right); $row++;
-   	}
-
-   	$row++; $row++;
-	$worksheet_parameters->write($row, $first_col, "MARKER DISCOVERY PHASE:", $format_main_heading);  
-    $col = $first_col; 
-    $worksheet_parameters->write($row, $col, "STARTED:", $format); $col++;
-   	$worksheet_parameters->write($row, $col, $date, $format_left); $row++; $row++;
-   	$col = $first_col;
-  	$worksheet_parameters->write($row, $col, "FOLDER:", $format); $col++;
-   	$worksheet_parameters->write($row, $col, $marker_dirname, $format); $row++; $row++;
-   	$col = $first_col;
-  	$worksheet_parameters->write($row, $col, "DEVELOPMENT MODULE:", $format); $col++;
-   	if ($behaviour eq 'selection') {
-	   	$worksheet_parameters->write($row, $col, "Selection", $format); 
-	} elsif ($behaviour eq 'discovery') {
-   		$worksheet_parameters->write($row, $col, "Discovery", $format);
-	} 
-	$row++; $row++;	$col = $first_col;
-   	$worksheet_parameters->write($row, $col, "PARAMETERS", $format); $col++;
-	if ($polymorphism_user) {
-		$worksheet_parameters->write($row, $col, "Polymorphic variants were used ", $format); $col++;
-	} else {
-		$worksheet_parameters->write($row, $col, "Polymorphic variants were not used ", $format); $col++;
-	} $row++; $row++;
-
-	unless ($select_markers) {
-		$col = $first_col + 1; 
-		$worksheet_parameters->write($row, $col, "Parameters that can be modified only via the command-line version", $format_bold); $row++;
-		$worksheet_parameters->write($row, $col, "Maximum percentage missing allowed (%) (MPA)", $format); $col++;
-		my $x = $missing_allowed * 100; $worksheet_parameters->write($row, $col, $x, $format_right); $row++;
-		$col = $first_col + 1; 
-		$worksheet_parameters->write($row, $col, "Significance Level Coverage Distribution (SLCD)", $format); $col++;
-    	$worksheet_parameters->write($row, $col, $level_significance_coverage_distribution, $format_right); $row++; 
-    	
-    	$row++; $row++; $col = $first_col + 1; 
-		$worksheet_parameters->write($row, $col, "Markers Features",$format_bold); $row++;
-		$col = $first_col + 1; 
-    	$worksheet_parameters->write($row, $col, "Conserved Length (CL):", $format); $col++;
-    	$worksheet_parameters->write($row, $col, $window_size_CONS_range, $format_right); $row++;
-		$col = $first_col + 1; 
-		$worksheet_parameters->write($row, $col, "Differences in the conserved region (CD):", $format); $col++;
-   		$worksheet_parameters->write($row, $col, $window_var_CONS, $format_right); $row++;    
-		$col = $first_col + 1; 
-    	$worksheet_parameters->write($row, $col, "Variable Length (VL):", $format); $col++;
-		$worksheet_parameters->write($row, $col, $window_size_VARS_range, $format_right); $row++;        
-		$col = $first_col + 1; 
-	}
-
-	if ($variable_divergence) {
-		$col = $first_col + 1; 
-    	$worksheet_parameters->write($row, $col, "Variable Divergence (%) (VD):", $format); $col++;
-		$worksheet_parameters->write($row, $col, $variable_divergence, $format_right); $row++;	
-	} else {
-		$col = $first_col + 1; 
-    	$worksheet_parameters->write($row, $col, "Variable Positions (VP):", $format); $col++;
-    	$worksheet_parameters->write($row, $col, "$variable_positions_user_min -- $variable_positions_user_max", $format_right); $row++;    
-	}
-
-	$col = $first_col + 1; 
-	$worksheet_parameters->write($row, $col, "Minimum number of taxa covered (MCT) ", $format); $col++;
-	$worksheet_parameters->write($row, $col, $minimum_number_taxa_covered, $format_right); $row++; $row++;
-	$col = $first_col + 1;
-	$worksheet_parameters->write($row, $col, "Taxa used for marker discovery:", $format_bold); $col++;
-	$worksheet_parameters->write($row, $col, "ID", $format_bold); $row++;
-	my $counter = 1;
-	foreach my $taxa (sort keys %domino_files) {
-		if ($domino_files{$taxa}{'taxa'}) {
-			$col = $first_col + 1; 
-			$worksheet_parameters->write($row, $col, $taxa, $format_left); $col++;	
-			$worksheet_parameters->write($row, $col, $counter, $format_right); $counter++;	$row++;
-	}} $workbook->close();
-	
 	return $excel_woorkbook_name;
 }
 

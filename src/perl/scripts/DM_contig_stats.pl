@@ -133,7 +133,7 @@ print CSV "Capture Gaps,".$gaps."\n";
 print CSV "Capture Gaps Length,".$gap_length."\n";
 print CSV "Capture Gaps Length/Total Length (%),".$total_gaps_length."\n";
 
-print CSV "Set,Number Seqs,% Seqs,Total Length (bp),% Bases,MinLen,MaxLen,Average Len,Median Len,n50,N_set,N_total,Length (no Ns)\n";
+print CSV "Set,Number Seqs,% Seqs,Total Length (bp),% Bases,MinLen,MaxLen,Average Length,Median Length,N50,L50,N_set,N_total,Length (no Ns)\n";
 DOMINO::printHeader("","#"); 
 
 foreach my $keys (sort {$a<=>$b} keys %parts_array) {
