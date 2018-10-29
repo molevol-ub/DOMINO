@@ -1113,7 +1113,10 @@ if ($avoid_mapping) {
 		&debugger_print("DOMINO params dump");&debugger_print("Ref", \%domino_files_dump);
 
 		## Check files generated
-		if ($genome_fasta) {
+		if ($genome_fasta) {		
+			my $ref_genome_id;
+			if ($genome_fasta =~/.*id-(.*)\.fasta/) {$ref_genome_id=$1;} else {$ref_genome_id="genome";}		
+			my $profile = "PROFILE::Ref:$ref_genome_id";		
 			foreach my $ref_taxa ( keys %domino_files ) {
 				next if $ref_taxa eq 'taxa';
 				next if $ref_taxa eq 'genome';	
@@ -1121,9 +1124,10 @@ if ($avoid_mapping) {
 					foreach my $taxa ( keys %domino_files ) {
 						next if $ref_taxa eq $taxa; 
 						next if $taxa eq 'taxa';
-						unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:genome'} ) {
-							$undef_mapping++; DOMINO::printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-		}}} else {$undef_mapping++; DOMINO::printError("There is not a taxa name $ref_taxa in the previous run ...\n");
+						unless ( $domino_files_dump{$ref_taxa}{$profile} ) {
+							$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
+						}		
+		}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n");
 		}}} else {
 			foreach my $ref_taxa ( keys %domino_files ) {
 				next if $ref_taxa eq 'taxa';
@@ -1240,16 +1244,18 @@ if ($option eq 'user_assembly_contigs') {
 
 	#push (@{ $domino_files{'genome'}{'contigs'}}, $tmp); 
 	if ($genome_fasta =~/.*id-(.*)\.fasta/) {
-	        push (@{ $domino_files{$1}{'contigs'}}, $tmp);
+	    push (@{ $domino_files{$1}{'contigs'}}, $tmp);
 		push (@{ $domino_files{$1}{'taxa'}}, "genome"); &check_file($tmp, $1);
 	} else {
-                push (@{ $domino_files{'genome'}{'contigs'}}, $tmp);
+        push (@{ $domino_files{'genome'}{'contigs'}}, $tmp);
 		push (@{ $domino_files{'genome'}{'taxa'}}, "1"); &check_file($tmp);
 	}
 	if (scalar @user_cleanRead_files == 0) {
 		DOMINO::printError("Clean Read files were not provided...\nDOMINO would check in the output folder provided if there is a DOMINO_clean_data containing the FASTQ files for each taxa...."); 
 		&get_clean_files();
-	} else { &user_cleanRead_files(); }	
+	} else { 
+		&user_cleanRead_files(); 
+	}	
 	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
 	
 } elsif ($option eq "msa_alignment") {	
@@ -2233,7 +2239,7 @@ if ($option eq "msa_alignment") {
 				$region_id = $path_file[0];
 				$hash_ref_msa = DOMINO::readFASTA_hash($file_path);				
 				my $taxa4marker = scalar keys %{ $hash_ref_msa };
-				if ($taxa4marker < $minimum_number_taxa_covered) { $pm_MARKER_MSA_files->finish; }
+				if ($taxa4marker <= $minimum_number_taxa_covered) { $pm_MARKER_MSA_files->finish; }
 				unless ($dnaSP_flag) {
 					my $valueReturned = &check_marker_pairwise($hash_ref_msa);
 					if ($valueReturned != 1) { $pm_MARKER_MSA_files->finish; }
@@ -2703,7 +2709,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 						$missing_count++;
 					}}	
 				my $tmp = $number_sp - $missing_count;
-				if ($tmp < $missing_allowed_species) {
+				if ($tmp <= $missing_allowed_species) {
 					$tmp_string .= $missing_flag; 
 				} else { $tmp_string .= $flag; }
 				undef @tmp;
@@ -2780,7 +2786,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			foreach my $marker (keys %{ $coord_contig{$scaffold} }) {
 				my @taxa = @{ $coord_contig{$scaffold}{$marker} };
 				## Check we find markers for all the taxa desired
-				if (scalar @taxa < $minimum_number_taxa_covered) { next; }   		
+				if (scalar @taxa <= $minimum_number_taxa_covered) { next; }   		
 				## Write DOMINO Markers Coordinates in tmp txt file
 				my @string = split(";", $marker);
 				my $string = join("\t", @string);
@@ -3558,7 +3564,7 @@ sub check_marker_pairwise {
 			#print "NO!\n";
 			return '0'; 
 	}} else {
-		if ($flag_fitting < $minimum_number_taxa_covered) {
+		if ($flag_fitting <= $minimum_number_taxa_covered) {
 			#print "NO!\n";
 			return '0'; 
 		} else {
@@ -3837,7 +3843,15 @@ sub fastq_files {
 	my @files = @$files_ref;
 	for (my $i = 0; $i < scalar @files; $i++) {
 		if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-		if ($files[$i] =~ /.*id-(.*)(\_R\d+)\.fastq/g) {
+		
+		my @file_path_name = split("/",$files[$i]);
+		my $file_name = $file_path_name[-1];
+		
+		if ($file_name =~ /.*id-(.*)(\_R\d+)\.fastq/g) {
+			if ($domino_files{$1}{'taxa'}) { 
+				push (@{ $domino_files{$1}{'reads'} }, $files[$i]); ## push the whole file path			
+			} else { &printError("Please check the tag for the file $files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
+		} elsif ($file_name =~ /.*id-(.*)\.fastq/g) {
 			if ($domino_files{$1}{'taxa'}) { 
 				push (@{ $domino_files{$1}{'reads'} }, $files[$i]); ## push the whole file path			
 			} else { DOMINO::printError("Please check the tag for the file $files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
@@ -4729,7 +4743,13 @@ sub time_log {
 
 
 sub user_cleanRead_files {
-	my $user_cleanRead_files_ref = \@user_cleanRead_files;
+	
+	my @array;
+	for (my $i=0; $i < scalar @user_cleanRead_files; $i++){
+		push (@array, abs_path($user_cleanRead_files[$i]));
+	}
+	
+	my $user_cleanRead_files_ref = \@array;
 	&fastq_files($user_cleanRead_files_ref);
 }
 
