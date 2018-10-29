@@ -1226,16 +1226,18 @@ if ($option eq 'user_assembly_contigs') {
 
 	#push (@{ $domino_files{'genome'}{'contigs'}}, $tmp); 
 	if ($genome_fasta =~/.*id-(.*)\.fasta/) {
-	        push (@{ $domino_files{$1}{'contigs'}}, $tmp);
+	    push (@{ $domino_files{$1}{'contigs'}}, $tmp);
 		push (@{ $domino_files{$1}{'taxa'}}, "genome"); &check_file($tmp, $1);
 	} else {
-                push (@{ $domino_files{'genome'}{'contigs'}}, $tmp);
+        push (@{ $domino_files{'genome'}{'contigs'}}, $tmp);
 		push (@{ $domino_files{'genome'}{'taxa'}}, "1"); &check_file($tmp);
 	}
 	if (scalar @user_cleanRead_files == 0) {
 		&printError("Clean Read files were not provided...\nDOMINO would check in the output folder provided if there is a DOMINO_clean_data containing the FASTQ files for each taxa...."); 
 		&get_clean_files();
-	} else { &user_cleanRead_files(); }	
+	} else { 
+		&user_cleanRead_files(); 
+	}	
 	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
 	
 } elsif ($option eq "msa_alignment") {	
@@ -3809,11 +3811,19 @@ sub fastq_files {
 	my @files = @$files_ref;
 	for (my $i = 0; $i < scalar @files; $i++) {
 		if ($files[$i] eq ".DS_Store" || $files[$i] eq "." || $files[$i] eq ".." ) { next; }
-		if ($files[$i] =~ /.*id-(.*)(\_R\d+)\.fastq/g) {
+		
+		my @file_path_name = split("/",$files[$i]);
+		my $file_name = $file_path_name[-1];
+		
+		if ($file_name =~ /.*id-(.*)(\_R\d+)\.fastq/g) {
 			if ($domino_files{$1}{'taxa'}) { 
 				push (@{ $domino_files{$1}{'reads'} }, $files[$i]); ## push the whole file path			
 			} else { &printError("Please check the tag for the file $files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
-		} elsif ($files[$i] =~ /.*id-(.*)\.fastq/g) {
+		} elsif ($file_name =~ /.*id-(.*)\.fastq/g) {
+			if ($domino_files{$1}{'taxa'}) { 
+				push (@{ $domino_files{$1}{'reads'} }, $files[$i]); ## push the whole file path			
+			} else { &printError("Please check the tag for the file $files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
+		} elsif ($file_name =~ /(.*)\.fastq/g) {
 			if ($domino_files{$1}{'taxa'}) { 
 				push (@{ $domino_files{$1}{'reads'} }, $files[$i]); ## push the whole file path			
 			} else { &printError("Please check the tag for the file $files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
@@ -5252,7 +5262,13 @@ sub time_log {
 }
 
 sub user_cleanRead_files {
-	my $user_cleanRead_files_ref = \@user_cleanRead_files;
+	
+	my @array;
+	for (my $i=0; $i < scalar @user_cleanRead_files; $i++){
+		push (@array, abs_path($user_cleanRead_files[$i]));
+	}
+	
+	my $user_cleanRead_files_ref = \@array;
 	&fastq_files($user_cleanRead_files_ref);
 }
 
