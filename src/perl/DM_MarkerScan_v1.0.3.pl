@@ -2207,7 +2207,7 @@ if ($option eq "msa_alignment") {
 				$region_id = $path_file[0];
 				$hash_ref_msa = DOMINO::readFASTA_hash($file_path);				
 				my $taxa4marker = scalar keys %{ $hash_ref_msa };
-				if ($taxa4marker < $minimum_number_taxa_covered) { $pm_MARKER_MSA_files->finish; }
+				if ($taxa4marker <= $minimum_number_taxa_covered) { $pm_MARKER_MSA_files->finish; }
 				unless ($dnaSP_flag) {
 					my $valueReturned = &check_marker_pairwise($hash_ref_msa);
 					if ($valueReturned != 1) { $pm_MARKER_MSA_files->finish; }
@@ -2677,7 +2677,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 						$missing_count++;
 					}}	
 				my $tmp = $number_sp - $missing_count;
-				if ($tmp < $missing_allowed_species) {
+				if ($tmp <= $missing_allowed_species) {
 					$tmp_string .= $missing_flag; 
 				} else { $tmp_string .= $flag; }
 				undef @tmp;
@@ -2754,7 +2754,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 			foreach my $marker (keys %{ $coord_contig{$scaffold} }) {
 				my @taxa = @{ $coord_contig{$scaffold}{$marker} };
 				## Check we find markers for all the taxa desired
-				if (scalar @taxa < $minimum_number_taxa_covered) { next; }   		
+				if (scalar @taxa <= $minimum_number_taxa_covered) { next; }   		
 				## Write DOMINO Markers Coordinates in tmp txt file
 				my @string = split(";", $marker);
 				my $string = join("\t", @string);
@@ -3532,7 +3532,7 @@ sub check_marker_pairwise {
 			#print "NO!\n";
 			return '0'; 
 	}} else {
-		if ($flag_fitting < $minimum_number_taxa_covered) {
+		if ($flag_fitting <= $minimum_number_taxa_covered) {
 			#print "NO!\n";
 			return '0'; 
 		} else {
