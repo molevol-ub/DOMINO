@@ -721,25 +721,20 @@ if ($flagSpades) {
 	if ($succesul_run) {
 		print "SPADes finished successfully...\n";
 	} elsif ($failed_run) {
-		DOMINO::printError("SPADes failed...\n");
-		DOMINO::dieNicely();
-	} else {
-		DOMINO::printError("SPADes failed...\n");
-		DOMINO::dieNicely();
-	}
-	
+		DOMINO::printError("SPADes failed...\n"); DOMINO::dieNicely();
+	} else { DOMINO::printError("SPADes failed...\n"); DOMINO::dieNicely(); }
 } else {
-	
-	#########################################################################
+	#############################################################
 	# 	MIRA ASSEMBLY STEP OF THE READS OF EACH TAXA			#
-	#########################################################################
+	#############################################################
 	print "\n"; DOMINO::printHeader("","#"); DOMINO::printHeader(" MIRA Assembly Step for each taxa ","#"); DOMINO::printHeader("","#"); print "\n";
 	print "\n"; DOMINO::printHeader(" Generating an assembly for each taxa ", "%"); print "\n";
 	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
 
 	my $domino_Scripts_MIRA = $domino_Scripts."/DM_runMIRA.pl";
 	my $command = "perl $domino_Scripts_MIRA $path_abs_folder"."/"." $step_time"; 
-	print $command."\n"; system($command);
+	#print $command."\n"; 
+	system($command);
 	
 	my $succesul_run = $dirname."/MIRA.success"; 
 	my $failed_run = $dirname."/MIRA.fail";
@@ -747,31 +742,25 @@ if ($flagSpades) {
 	if (-e -r -s $succesul_run) {
 		print "MIRA finished successfully...\n";
 	} elsif (-e -r -s $failed_run) {
-		DOMINO::printError("MIRA failed...\n");
-		DOMINO::dieNicely();
+		DOMINO::printError("MIRA failed...\n"); DOMINO::dieNicely();
 	} else {
-		DOMINO::printError("MIRA was interrupted...\n");
-		DOMINO::dieNicely();
+		DOMINO::printError("MIRA was interrupted...\n"); DOMINO::dieNicely();
 	}
 } print "\n"; &time_log();
-&debugger_print("DOMINO files"); &debugger_print("Ref", \%domino_files);
 
 ## Check each taxa dump file conainting file info
-&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n"; 
 &debugger_print("Retrieve info from files");
+my @array_files;
 foreach my $taxa (keys %domino_files) {
 	if ($domino_files{$taxa}{'DIR'}) {
 		my $dump_file = $domino_files{$taxa}{'DIR'}[0]."/dumper_files_threads.txt";
-		open (DUMP_IN, "$dump_file");
-		while (<DUMP_IN>) {
-			my $line = $_; chomp $line;
-			my @array = split("\t", $line);
-			&debugger_print($line);
-			push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
-		}
-		close (DUMP_IN);
-}}
-&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+		push (@array_files, $dump_file);
+	}	
+}
+my $dump_file_hash = DOMINO::retrieve_info(\@array_files, %domino_files);
+my $hash_ref = DOMINO::get_uniq_hash($dump_file_hash);
+&debugger_print("DOMINO Files"); &debugger_print("Ref", $hash_ref); print "\n";
 
 ###########################################
 ### Cleaning or renaming some files	###
@@ -781,8 +770,8 @@ unless ($avoidDelTMPfiles) {
 	DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
 	&clean_assembling_folders(); print "\n\n";
 }
-$dump_file = $dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
-$dump_param = $dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
+if (-r -e -s $dump_param) { remove_tree($dump_param); $dump_param = $dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param); }
+if (-r -e -s $dump_file) { remove_tree($dump_file);   $dump_file = $dirname."/DOMINO_dump_information.txt"; DOMINO::printDump($hash_ref, $dump_file);}
 
 ###########################
 ### 	Finish the job	###

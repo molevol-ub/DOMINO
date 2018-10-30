@@ -859,6 +859,7 @@ my $date = localtime;
 my $align_dirname = $folder_abs_path."/".$datestring."_DM_mapping"; 
 my $mapping_parameters = $folder_abs_path."/".$datestring."_Mapping-Parameters.txt";
 my $mapping_markers_errors_details = $folder_abs_path."/".$datestring."_Mapping_ERROR.txt";
+push (@{ $domino_params{'mapping'}{'mapping_markers_errors_details'} }, $mapping_markers_errors_details);
 my $msa_dirname = $align_dirname."/MSA_files";
 
 ## Markers dirname
@@ -1029,16 +1030,11 @@ if (!$minimum_number_taxa_covered) { $minimum_number_taxa_covered = $number_sp; 
 } else { if ($minimum_number_taxa_covered > $number_sp) { DOMINO::printError("Minimum number of covered taxa (MCT) is bigger than the number of taxa provided...\n"); DOMINO::dieNicely(); }} 
 
 ## push default parameters
-my $answer_dnaSP; 
-if ($dnaSP_flag) { $answer_dnaSP = 'YES'; $polymorphism_user=1; push (@{ $domino_params{'mapping'}{'dnaSP'} }, 1);} else { $answer_dnaSP = 'NO';}
-my $answer_PV; 
-if ($polymorphism_user) { $answer_PV = 'YES'; push (@{ $domino_params{'mapping'}{'polymorphism_user'} }, 1);} else { $answer_PV = 'NO';}
-my $BowtieLocal; 
-if ($bowtie_local) { $BowtieLocal = 'YES'; push (@{ $domino_params{'mapping'}{'bowtie_local'} }, 1);} else { $BowtieLocal = 'NO';} 
-my $mapContigFiles; 
-if ($map_contig_files) { $mapContigFiles = 'YES'; } else { $mapContigFiles = 'NO';} 
-my $LowCoverageData; 
-if ($DOMINO_simulations) { $LowCoverageData = 'YES'; } else { $LowCoverageData = 'NO';} 
+my $answer_dnaSP; if ($dnaSP_flag) { $answer_dnaSP = 'YES'; $polymorphism_user=1; push (@{ $domino_params{'mapping'}{'dnaSP'} }, 1);} else { $answer_dnaSP = 'NO';}
+my $answer_PV; if ($polymorphism_user) { $answer_PV = 'YES'; push (@{ $domino_params{'mapping'}{'polymorphism_user'} }, 1);} else { $answer_PV = 'NO';}
+my $BowtieLocal; if ($bowtie_local) { $BowtieLocal = 'YES'; push (@{ $domino_params{'mapping'}{'bowtie_local'} }, 1);} else { $BowtieLocal = 'NO';} 
+my $mapContigFiles; if ($map_contig_files) { $mapContigFiles = 'YES'; push (@{ $domino_params{'mapping'}{'mapContigFiles'} }, 1); } else { $mapContigFiles = 'NO';} 
+my $LowCoverageData; if ($DOMINO_simulations) { $LowCoverageData = 'YES'; push (@{ $domino_params{'mapping'}{'LowCoverageData'} }, 1);} else { $LowCoverageData = 'NO';} 
 push (@{ $domino_params{'mapping'}{'cpu'} }, $num_proc_user);
 push (@{ $domino_params{'mapping'}{'type_input'} }, $input_type);
 push (@{ $domino_params{'mapping'}{'rdgopen'} }, $rdgopen);
@@ -1378,6 +1374,9 @@ DOMINO::printDetails("\t- DM markers parameters details would be print into file
 DOMINO::printDetails("\t- DM markers errors occurred during the process would be print into file:\n\t\t$mapping_markers_errors_details...\n\n", $param_Detail_file_markers);
 print "\n"; &time_log(); print "\n";
 
+my $dump_file = $align_dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
+my $dump_param = $align_dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
+
 ################################################################################################
 ##########	Mapping/Alignment of the contigs 		################################
 ################################################################################################
@@ -1423,7 +1422,7 @@ if (!$avoid_mapping) {
 			# Index contig reference file using Bowtie
 			my $reference_tag = "reference_".$reference_identifier;
 			print "- Reference: $ref_Fasta...\n";
-			my $bowtie_index_call = $bowtie_path."bowtie2-build --threads $num_proc_user -f ".$ref_Fasta." ".$reference_tag;   
+			my $bowtie_index_call = $bowtie_path."bowtie2-build --threads $num_proc_user -f ".$domino_files{$reference_identifier}{'contigs'}[0]." ".$reference_tag;   
 			&debugger_print("BOWTIE2 command: ".$bowtie_index_call);
 			my $index_result = system ($bowtie_index_call);
 			if ($index_result != 0) {
@@ -1446,7 +1445,7 @@ if (!$avoid_mapping) {
 			} else { 								print "+ Clean reads files would be mapped\n"; ## Map DOMINO clean reads
 			}
 			print "+ Obtain information of the reference sequences\n";
-			my ($reference_hash_fasta_ref, $message) = DOMINO::readFASTA_hashLength($ref_Fasta); ## Obtain reference of a hash
+			my ($reference_hash_fasta_ref, $message) = DOMINO::readFASTA_hashLength($domino_files{$reference_identifier}{'contigs'}[0]); ## Obtain reference of a hash
 			my $file2dump_seqs = $dir."/contigs_".$reference_identifier."_length.txt";
 			push (@{ $domino_files{$reference_identifier}{"hash_reference_file"} }, $file2dump_seqs);
 			DOMINO::printDump($reference_hash_fasta_ref,$file2dump_seqs,1);
@@ -1538,10 +1537,12 @@ if (!$avoid_mapping) {
 				my @number_contigs = sort (keys %$reference_hash_fasta_ref);
 				my $scalar = scalar @number_contigs;
 				print LOG "+ This SAM file contains $scalar referense sequences...\n";
-				system("ln -s $sam_name"); my @temp_name = split ("/", $sam_name);
+				system("ln -s $sam_name"); 
+				my @temp_name = split ("/", $sam_name);
 				my $sam_base_name = $temp_name[-1];
-				my $sorted_bam_file = &generate_bam($sam_base_name);
-				&generate_index_bam($sorted_bam_file);
+				
+				my $sorted_bam_file = DOMINO::generate_bam($sam_name, $split_CPU);
+				DOMINO::generate_index_bam($sorted_bam_file);
 	
 				if ($scalar == 1) {
 					push (@{ $domino_files_split_mapping{$reads}{"SAM_Parts::Ref:".$reference_identifier} }, $temp_name[-1]);
@@ -1650,7 +1651,7 @@ if (!$avoid_mapping) {
 					###################################################################
 					## Generate sorted bam files in order to be able to get coverage ##
 					###################################################################
-					my $clean_sorted_bam = &generate_bam($array_files_split[$i]);
+					my $clean_sorted_bam = DOMINO::generate_bam($array_files_split[$i], $split_CPU);
 					push (@{ $domino_files_SAM_parts{$reads}{"clean_BAM_Parts::Ref:".$reference_identifier} }, $clean_sorted_bam);
 	
 					%discard_contigs = (); ## Initialize some hashes
@@ -1753,7 +1754,7 @@ if (!$avoid_mapping) {
 						my $prob_poisson;
 						if ($array[1] > 169) { ## Factorial would be out of range!
 							$prob_poisson = 0;	
-						} else { $prob_poisson = &Poisson_distribution($array[1], $mean_coverage); }		
+						} else { $prob_poisson = DOMINO::Poisson_distribution($array[1], $mean_coverage); }		
 						if ($prob_poisson < $level_significance_coverage_distribution) { # Discard
 							$contigs_discarded++; $discard_contigs{$array[0]}++;
 						} elsif ($prob_poisson eq 'nan') { # Discard
@@ -1800,11 +1801,11 @@ if (!$avoid_mapping) {
 					close(SAM_OUT); close(SAM); undef %discard_contigs;
 					#print LOG "- File checked: Contigs and Reads discarded...\n";
 					push (@{ $domino_files_SAM_PILEUP{$reads}{"FILTERED_SAM_Parts::Ref:".$reference_identifier} }, $sam_filter);
-					my $bam_filtered_returned = &generate_bam($sam_filter);
+					my $bam_filtered_returned = DOMINO::generate_bam($sam_filter, 1);
 					push (@{ $domino_files_SAM_PILEUP{$reads}{"FILTERED_BAM_Parts::Ref:".$reference_identifier} }, $bam_filtered_returned);
 					unless ($reads eq $reference_identifier) { ## DO NOT GENERATE FILTER PROFILE FOR REFERENCE
 						print LOG "- Generate a PILEUP file for $sam_filter...\n";
-						my $dir_returned = &generate_filter_PILEUP($bam_filtered_returned, $domino_files{$reference_identifier}{'contigs'}[0], $reference_hash_fasta_ref, $reference_identifier, $reads);
+						my $dir_returned = &generate_filter_PILEUP($bam_filtered_returned, $domino_files{$reference_identifier}{'contigs'}[0], $reference_identifier, $reads);
 						print LOG "Finish PILEUP for $bam_filtered_returned\n";
 						push (@{ $domino_files_SAM_PILEUP{$reads}{"PROFILE::Ref:".$reference_identifier} }, $dir_returned);
 					}
@@ -2206,7 +2207,6 @@ if ($option eq "msa_alignment") {
 						my @string;
 						for (my $i=0; $i < scalar @allele1; $i++) {
 							my @tmp; push(@tmp, $allele1[$i]); push(@tmp, $allele2[$i]);
-							#my @tmp_uniq_sort = uniq(sort @tmp);
 							my @tmp_uniq_sort = do { my %seen; grep { !$seen{$_}++ } @tmp };
 							if (scalar @tmp_uniq_sort == 1) {
 								if ($tmp_uniq_sort[0] eq 'N') {  		push (@string, 'N');
@@ -2239,7 +2239,7 @@ if ($option eq "msa_alignment") {
 				$region_id = $path_file[0];
 				$hash_ref_msa = DOMINO::readFASTA_hash($file_path);				
 				my $taxa4marker = scalar keys %{ $hash_ref_msa };
-				if ($taxa4marker <= $minimum_number_taxa_covered) { $pm_MARKER_MSA_files->finish; }
+				if ($taxa4marker < $minimum_number_taxa_covered) { $pm_MARKER_MSA_files->finish; }
 				unless ($dnaSP_flag) {
 					my $valueReturned = &check_marker_pairwise($hash_ref_msa);
 					if ($valueReturned != 1) { $pm_MARKER_MSA_files->finish; }
@@ -2439,7 +2439,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	if ($option eq "msa_alignment") { 
 		push ( @{ $domino_files{$ref_taxa}{'array_all_taxa'} }, $marker_dir."/merged.profile_ARRAY.txt");
 	} else {
-		#my @taxa = sort @{ $domino_files{'taxa'}{'user_Taxa'} }; my @uniq_sort_taxa = uniq(@taxa);
 		my @uniq_sort_taxa = do { my %seen; grep { !$seen{$_}++ } @{ $domino_files{'taxa'}{'user_Taxa'} } };
 		my $name = join("_", @uniq_sort_taxa);
 		push ( @{ $domino_files{$ref_taxa}{'array_all_taxa'} }, $marker_dir."/$name.profile_ARRAY.txt");
@@ -2886,8 +2885,7 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 		
 		# sort uniq
 		my @uniq_contigs = do { my %seen; grep { !$seen{$_}++ } @ALL_contigs };
-		#my @sort_ALL_contigs = sort @ALL_contigs; my @uniq_contigs = uniq(@sort_ALL_contigs);
-				
+			
 		## Printing contigs
 		my %hash_contigs;
 		for (my $c = 0; $c < scalar @uniq_contigs; $c++) {
@@ -2910,9 +2908,6 @@ foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obt
 	
 	} close(OUT); close(OUT_markers); close (OUT_coord);
  	print "+ Marker development for $ref_taxa is finished here...\n\n"; &time_log(); print "\n";
-
-
-	exit();
 
 } #each reference taxa
 
@@ -3146,16 +3141,6 @@ exit();
 ##																					##
 ######################################################################################
 
-sub binomial {
-	## Returns the probability of an event ocurring $k times in $n attempts where the probability
-	## of it occurring in a sample attempt is $p
-    my $k = shift(@_); ## Occurrences
-    my $n = shift(@_); ## Attempts
-    my $p = shift(@_); ## Probability
-    my $prob = ($p**$k) * ((1 - $p)**($n - $k)) * &functional_factorial($n) / (&functional_factorial($k) * &functional_factorial($n - $k));
-    return $prob;
-}
-
 sub check_file {
 	
 	my $file_to_check = $_[0];
@@ -3198,8 +3183,8 @@ sub check_overlapping_markers {
 	my $file2return = $array[0]."_overlapped_Markers.txt";
 
 	my $domino_Scripts_MarkerOverlap = $domino_Scripts."/DM_MarkerOverlap.pl";
-	my $command = "perl $domino_Scripts_MarkerOverlap $file $mergeArray_file $file2return $folder_abs_path";
-	print $command."\n"; system($command);
+	my $command = "perl $domino_Scripts_MarkerOverlap $file $mergeArray_file $file2return $folder_abs_path"; #print $command."\n"; 
+	system($command);
 	
 	return $file2return;	
 }
@@ -3409,7 +3394,7 @@ sub check_marker_pairwise {
 			#print "NO!\n";
 			return '0'; 
 	}} else {
-		if ($flag_fitting <= $minimum_number_taxa_covered) {
+		if ($flag_fitting < $minimum_number_taxa_covered) {
 			#print "NO!\n";
 			return '0'; 
 		} else {
@@ -3465,19 +3450,16 @@ sub check_marker_ALL {
 
 	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
 	my @tmp_length_uniq = do { my %seen; grep { !$seen{$_}++ } @length_seqs };
-	#my @tmp_length = sort @length_seqs; my @tmp_length_uniq = uniq(@tmp_length);	
 	if (scalar @tmp_length_uniq > 1) {
 		DOMINO::printError("There is problem: length of the markers do not match for $file..."); return "";
 	} else { $length_seqs[0] = $length; }	
 	
 	my @profile;
 	for (my $i=0; $i < $length; $i++) {
-
 		my $flag_position = 0;
 		my @tmp;
 		foreach my $seqs (sort keys %hash) { push (@tmp, $hash{$seqs}[$i]); }
 		my @tmp_uniq_sort = do { my %seen; grep { !$seen{$_}++ } @tmp };
-		#my @tmp_uniq = sort @tmp; my @tmp_uniq_sort = uniq(@tmp_uniq);
 
 		if (scalar @tmp_uniq_sort == 1) {
 			if ($tmp_uniq_sort[0] eq 'N') { 						push (@profile, 'N');
@@ -3740,15 +3722,6 @@ sub fetching_range_seqs_array_Pileup {
 			return $sub_array;
 }}}
 
-sub functional_factorial {
-
-    my $n = shift(@_);
-    my $fact = 1;
-    if (($n < 0) or (170 < $n)) { die "Factorial out of range [DM_MarkerScan: functional_factorial]"; }
-    for (my $i = 1; $i <= $n; $i++) { $fact *= $i; }
-    return $fact;
-}
-
 sub get_amb_code {
 	my $ref_hash = $_[0];
 	my @array = keys %{$ref_hash};
@@ -3919,15 +3892,11 @@ sub get_coordinates_each_taxa {
 
 sub get_headers_sam {
 	##########################################################################################
-	##	 																					##
 	##  This function checks the SAM files generated and discards bad reads mapping,		##
 	##	unmapping reads or multimapping reads.												##
-	## 		        																		##
 	##	Jose Fco. Sanchez Herrero, 08/05/2014 jfsanchezherrero@ub.edu						##
 	##	Cristina Frias Lopez 				  cristinafriaslopez@ub.edu 					##
-	## 		        																		##
 	##########################################################################################
-
 	my $file_sam = $_[0];
 	my @array;
 	open (SAM, "<$file_sam");
@@ -3941,435 +3910,18 @@ sub get_headers_sam {
 	return \@array;
 }
 
-sub generate_bam {
-	my $sam_file = $_[0];
-	my $avoid = $_[1];
-	my @temp = split ("\.sam", $sam_file);
-	my $name = $temp[0]; my $bam_file = $name.".bam";
-	&debugger_print("- Generating a BAM file for $sam_file\n"); 	
-	my $system_samtools_sam2bam = $samtools_path." view -@ $num_proc_user -bS -o $bam_file $sam_file";
-	&debugger_print("SAMTOOLS command: $system_samtools_sam2bam");	
-	my $system_call = system ($system_samtools_sam2bam);
-	if ($system_call != 0) {
-		if (!$avoid) { DOMINO::printError("Some error happened when calling SAMTOOLs for SAM -> BAM conversion $sam_file to $bam_file...."); DOMINO::dieNicely(); }
-	}
-	my $sorted;
-	if ($avoid) { if ($avoid eq 'sam') { $sorted = &generate_sorted_bam($bam_file, "sam"); } }
-	if (!$avoid) {$sorted = &generate_sorted_bam($bam_file);}
-	return $sorted;
-}
-
-sub generate_sorted_bam {
-	my $bam_file = $_[0];
-	my $sam = $_[1];
-	my @temp = split ("\.bam", $bam_file);
-	my $name = $temp[0];
-	&debugger_print("- Sorting the BAM file: $bam_file\n"); 	
-	my $sorted;	
-	my $system_samtools_sort;
-	if ($sam) {
-		$sorted = $name.".sorted.sam";	
-		$system_samtools_sort = $samtools_path." sort -@ $num_proc_user --output-fmt SAM -o $sorted $bam_file";
-	} else {
-		$sorted = $name.".sorted.bam";	
-		$system_samtools_sort = $samtools_path." sort -@ $num_proc_user -o $sorted $bam_file";
-	}	 
-	&debugger_print("SAMTOOLS command: ".$system_samtools_sort);
-	my $system_call_2 = system ($system_samtools_sort);
-	if ($system_call_2 != 0) {
-		DOMINO::printError("Some error happened when calling SAMTOOLs for sorting BAM file...."); DOMINO::dieNicely();
-	}
-	return $sorted;
-}
-
-sub generate_sam {
-	my $bam_file = $_[0];
-	my @temp = split ("\.bam", $bam_file);
-	my $name = $temp[0];
-	&debugger_print("- Generating a SAM file for $bam_file\n"); 	
-	my $system_samtools_bam2sam = $samtools_path." view -@ $num_proc_user -h ".$bam_file." -o ".$name.".sam";
-	&debugger_print("SAMTOOLS command: $system_samtools_bam2sam");
-	my $system_call = system ($system_samtools_bam2sam);
-	if ($system_call != 0) {
-		DOMINO::printError("Some error happened when calling SAMTOOLs for BAM -> SAM conversion....");  DOMINO::dieNicely();
-	}
-	return $name.".sam";
-}
-
-sub generate_index_bam {
-	my $bam_file = $_[0];
-	#print "\t- Generating an index bam file for $bam_file\n"; 	
-	my $index_system = $samtools_path." index ".$bam_file;
-	&debugger_print("SAMTOOLS command: ".$index_system);
-	my $index_call = system($index_system);
-	if ($index_call != 0) {
-		DOMINO::printError("Some error happened when calling SAMTOOLs for indexing the BAM file [$bam_file]...."); DOMINO::dieNicely();
-	}
-}
-
 sub generate_filter_PILEUP {
-
-	##########################################################################################
-	##  This function generates a PILEUP and filters it										##
-	##	Jose Fco. Sanchez Herrero, 08/06/2015 jfsanchezherrero@ub.edu						##
-	##########################################################################################
-	
 	my $sorted_bam = $_[0]; my $contig_file = $_[1]; 
-	my $reference_hash_fasta = $_[2]; my $reference_id = $_[3]; my $taxa = $_[4];
-
+	my $reference_id = $_[2]; my $taxa = $_[3];
+	
 	my $dir_path = $domino_files{$reference_id}{'dir'}[0];
-	my @temp_name = split ("\.sorted.bam", $sorted_bam);
-	my ($ID, @sam);
-	my $input_pileup = $temp_name[0].".profile";
-	#push (@{ $domino_files{$reference_id}{'PILEUP_'.$taxa} }, $input_pileup);
-	
-	my $pileup_command = $samtools_path." mpileup -f ".$contig_file." -o ".$input_pileup." ".$sorted_bam." 2> ".$mapping_markers_errors_details;
-	&debugger_print("SAMTOOLS command: ".$pileup_command);
-	my $sytem_command_pileup = system ($pileup_command);
-	if ($sytem_command_pileup != 0) {
-		DOMINO::printError("Exiting the script. Some error happened when calling SAMtools for generating the PILEUP for the file $contig_file...\n"); DOMINO::dieNicely();
-	}
-	my $tmp = $dir_path."/ARRAY_files_".$taxa."_PROFILE"; unless (-d $tmp) { mkdir $tmp, 0755; } 
-	&debugger_print("Changing dir to $tmp");
+	my $tmp = $dir_path."/ARRAY_files_".$taxa."_PROFILE"; 
 
-  	#print "\t- Filtering the PILEUP generated\n";
-	my ($previous_contig, $previous_fasta_contig, @array_positions, @fasta_positions);
-	open (PILEUP,"<$input_pileup"); while (<PILEUP>){
-		my $line = $_; chomp $line;
-		next if $line=~ m/^\s*$/o;
-		next if $line=~ /^\#/o;
-		next if $line=~ m/\[REDUCE RESULT\]/;
-		$line =~ s/\s/\t/g;
-		my @pileup = split(/\t/,$line); ##	HKU61D301.clean.MID4_Nem_098_c8679	161	t	3	,,.	FA=
-		my $contig = $pileup[0];
-		my $pos_base; my $num_pos_base = $pileup[1]; my $num_pos_array = $num_pos_base -1;
-
-		if (!$previous_contig) {
-			my $array_positions_ref;
-			($previous_contig, $array_positions_ref) = &initilize_contig($contig, $reference_hash_fasta);
-			@array_positions = @$array_positions_ref;
-			@fasta_positions = @array_positions;			
-		} else {			
-			if ($previous_contig ne $contig) {
-				# Debug print Dumper \@array_positions;
-				&print_coordinates(\@array_positions, \$previous_contig, $reference_id, $tmp); ## Print array into file $previous_contig
-				# Debug	print Dumper \@fasta_positions;
-				&print_fasta_coordinates(\@fasta_positions, \$previous_contig, $reference_id, $tmp); ## Print array into file $previous_contig
-				my $array_positions_ref;
-				($previous_contig, $array_positions_ref) = &initilize_contig($contig, $reference_hash_fasta);
-				@array_positions = @$array_positions_ref;
-				@fasta_positions = @array_positions;
-		}}
-		
-		## Get array for each position
-		if ($pileup[3] != 0) {
-			my $read_base = $pileup[4]; my $ref_base = $pileup[2];
-			my @base_record = split(//, $read_base);
-			my (%posibilities, %polymorphism);
-			my @base_parse;
-			my $base_counter=0;
-			for (my $i = 0; $i < scalar @base_record; $i++) {  
-				if ($base_record[$i] =~ m/\^/) { $i++; next; } ## Starting to map a new read
-				$base_record[$i]= uc($base_record[$i]);
-
-				if ($base_record[$i] =~ m/A|G|C|T|a|g|c|t/) {
-					$polymorphism{$base_record[$i]}++;
-					$base_counter++;
-					push (@base_parse, $base_record[$i]);
-				} elsif ($base_record[$i] eq "." || $base_record[$i] eq ",") {
-					$polymorphism{$ref_base}++;
-					$base_counter++;
-					push (@base_parse, $ref_base);
-				} elsif ($base_record[$i] =~ m/(\+|\-)/) {# INDEL
-					##	Example of INDEL: 
-					##	HKU61D301.clean.MID4_Nem_098_c8679	280	g	2	,.+1T	I? 
-					##  Contig_47_MID1	4	T	1	a+47cggatcgatcaaagtaagatatcatacttggaaggcaacatgcacgt	1	1	Position: 1
-					my $length_base_record = length($read_base);
-					my $indel;
-					my $out_of_range = 0;
-					my $indel_2 = $i+2;
-					my $indel_3 = $i+3;
-					if ($indel_2 >= $length_base_record) { $out_of_range = 1; }
-					if ($indel_3 >= $length_base_record) { $out_of_range = 1; }
-					if ($out_of_range == 0) {
-						if ($base_record[$i+2] =~ /\d+/) { ## +/-12ATGAGACGATCC
-							$indel = $base_record[$i+1].$base_record[$i+2];
-							$i++; $i++;
-						} elsif ($base_record[$i+3] =~ /\d+/) { ## +/-121ATGAGACGATCC...ATGAGACGATCC
-							$indel = $base_record[$i+1].$base_record[$i+2].$base_record[$i+2];
-							$i++; $i++;	$i++;
-						} else { ## +/-1A
-							$indel = $base_record[$i+1];
-							$i++;
-					}} else { ## +/-1A
-						$indel = $base_record[$i+1];
-						$i++;
-					}
-					$i = $i+$indel;
-					next;
-				} else { next; }
-			}
-			# Debug			
-			#print Dumper @base_record; #print Dumper @base_parse; print Dumper %polymorphism;
-			
-			if ($ref_base eq "N") {
-				$array_positions[$num_pos_array] = 'N'; ## Not informative enough  
-				my @array_keys = keys %polymorphism;
-				my $position;
-				if (scalar @array_keys == 1) { ## a unique base is mapping
-					$position = $array_keys[0];
-				} else { ## get ambiguous code
-					$position = &get_amb_code(\%polymorphism);
-				}
-				$fasta_positions[$num_pos_array] = $position; 
-				# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
-				next;	
-			}
-			
-			if ($base_counter == 1) { ## There is only base mapping...
-				unless ($map_contig_files || $DOMINO_simulations) {
-					$array_positions[$num_pos_array] = 'N'; ## Not informative enough
-					$fasta_positions[$num_pos_array] = 'N'; ## Not informative enough
-					# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
-					next;
-			}} ## Let it be informative if DOMINO simulations or mapping contig files				
-			
-			my @array_keys = keys %polymorphism;
-			if (scalar @array_keys == 1) { ## a unique base is mapping
-				if ($ambiguity_DNA_codes{$ref_base}) {
-					my $flag = 0; my @bases;
-					for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$ref_base}}; $j++) {
-						foreach my $keys (sort keys %polymorphism) {
-							if ($keys eq $ambiguity_DNA_codes{$ref_base}[$j]) { $flag = 1; }
-					}}
-					if ($flag == 1) { 
-						## Contig1	4	M	10	cccccccccc	## type 4
-						$array_positions[$num_pos_array] = '0'; 
-						$fasta_positions[$num_pos_array] = $ref_base;
-					} else { 
-						## Contig1	5	R	10	cccccccccc	## type 5
-						$array_positions[$num_pos_array] = '1';
-						$fasta_positions[$num_pos_array] = $array_keys[0];											
-				}} else {
-					if ($base_parse[0] eq $ref_base) {  
-						##Contig1	2	T	10	..........	## type 2
-						$array_positions[$num_pos_array] = '0';
-						$fasta_positions[$num_pos_array] = $ref_base;						
-					} else {  
-						## Contig1	3	T	10	cccccccccc	## type 3
-						$array_positions[$num_pos_array] = '1';
-					    $fasta_positions[$num_pos_array] = $base_parse[0];
-			}}} elsif (scalar @array_keys == 2) { ## Maybe true polymorphism or NGS error
-				my ($value_return, $base_return) = &check_array($ref_base, \%polymorphism);
-				$array_positions[$num_pos_array] = $value_return; 
-			    $fasta_positions[$num_pos_array] = $base_return;
-			} elsif (scalar @array_keys == 3) { ## Something odd...
-				my ($last_key, $small_key, $highest_value, $smallest_value);
-				my $flag=0;				
-				my @array = sort values %polymorphism;
-				for (my $i=1; $i < scalar @array; $i++) {
-					if ($array[0] == $array[$i]) { $flag++; }
-				}
-				if ($flag != 0) { ## There are two with the same frequence! DISCARD!
-					$array_positions[$num_pos_array] = 'N';
-					$fasta_positions[$num_pos_array] = 'N';
-				} else {
-					## Get lowest value, discard it and check the rest.
-					foreach my $keys (sort keys %polymorphism) {
-						if ($polymorphism{$keys} eq $array[0]) {
-							delete $polymorphism{$keys}; last;
-					}}
-					my ($value_return, $base_return) = &check_array($ref_base, \%polymorphism);
-					$array_positions[$num_pos_array] = $value_return; 
-			    	$fasta_positions[$num_pos_array] = $base_return;
-			}} elsif (scalar @array_keys > 3) { 
-				$array_positions[$num_pos_array] = 'N';
-				$fasta_positions[$num_pos_array] = 'N';
-		}} else { ## No base is mapping this reference
-			##Contig1	1	A	0	## type 1
-			$array_positions[$num_pos_array] = 'N';
-			$fasta_positions[$num_pos_array] = 'N';
-		}
-		# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
-	}
-	close(PILEUP);
-	&print_coordinates(\@array_positions, \$previous_contig, $reference_id, $tmp);
-	&print_fasta_coordinates(\@fasta_positions, \$previous_contig, $reference_id, $tmp); ## Print array into file $previous_contig
+	my $domino_Scripts_GeneratePileup = $domino_Scripts."/DM_GeneratePileup.pl";
+	my $command = "perl $domino_Scripts_GeneratePileup $sorted_bam $contig_file $reference_id $taxa $tmp $folder_abs_path";  #print $command."\n"; 
+	system($command);	
 	chdir $dir_path; &debugger_print("Changing dir to $dir_path");
-	return ($tmp);
-}
-
-sub check_array {
-	my $ref_base = $_[0];
-	my $ref_poly_hash = $_[1];
-	my %polymorphism = %$ref_poly_hash;
-	my $total=0;
-	my ($last_key, $highest_value, $smallest_value);
-	foreach my $keys (sort keys %polymorphism) {
-		$total += $polymorphism{$keys};
-		if (!$highest_value) {
-			$highest_value = $polymorphism{$keys};
-			$smallest_value = $polymorphism{$keys};
-			$last_key = $keys;							
-		} elsif ($polymorphism{$keys} > $highest_value) {
-			$highest_value = $polymorphism{$keys};
-			$last_key = $keys;							
-		} elsif ($polymorphism{$keys} < $smallest_value) {
-			$smallest_value = $polymorphism{$keys};
-	}}		
-	
-	if ($highest_value >= 170) { return ("N","N");}
-	## Check wether there are more than 8 positions mapping
-	## and if not if there at least for the smallest two
-	## bases.
-	
-	my $prob = &binomial($highest_value, $total, 0.5);
-	my $significance_level = 1 - 0.95;
-	if ($ambiguity_DNA_codes{$ref_base}) {
-		## There is an ambiguous code in the reference
-		my %ref_base_match;
-		my $flag = 0;
-		for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$ref_base}}; $j++) {
-			foreach my $keys (sort keys %polymorphism) {
-				if ($keys eq $ambiguity_DNA_codes{$ref_base}[$j]) {
-					$flag++; $ref_base_match{$ambiguity_DNA_codes{$ref_base}[$j]}++;
-		}}}
-		if ($flag == 2) { 
-			## Only if both possibilities are the same as the ambiguous code
-			if ($prob < $significance_level) { 
-				return ('0', $last_key); ##Contig1	10	R	10	AAAAAAAAAG
-			} else { 
-				## Contig1	9	R	10	AAAAAAGGGG
-				## Contig1	9	R	10	AAGG
-				## Contig1	9	R	10	AG
-				if ($polymorphism_user) {
-					return ('1', $ref_base);
-				} else {
-					return ('0', $ref_base);
-		}}} else {
-			if ($flag == 1) { ## Only one type of read is within the ambiguous code
-				if ($prob < $significance_level) { 
-					if ($ref_base_match{$last_key}) { 
-						return ('0', $last_key); ## Contig1	11	R	10	AAAAAAAAAC
-					} else { 
-						return ('1', $last_key); ## Contig1	13	R	10	TTTTTTTTTTA
-				}} else { 
-					## Contig1	12	R	10	AAAAACCCCC
-					## Contig1	12	R	10	AACC
-					## Contig1	12	R	10	AC
-					my $pos = &get_amb_code(\%polymorphism);
-					if ($polymorphism_user) {							
-						return ('1', $pos);
-					} else {
-						return ('0', $pos);
-			}}} else { ## None of the reads mapping are similar to the ambiguous reference
-				if ($prob < $significance_level) { 	
-					return ('1', $last_key); ## Contig1	13	R	10	TTTTTTTTTTC
-				} else { 
-					## Contig1	13	R	10	TTTTTTCCCCC
-					## Contig1	13	R	10	TTCC
-					## Contig1	13	R	10	TC
-					my $pos = &get_amb_code(\%polymorphism);
-					return ('1', $pos);
-	}}}} else { 
-		## There is no ambiguity code in the reference base
-		my $flag = 0;
-		if ($polymorphism{$ref_base}) { ## if any mapping reads are the same as reference
-			if ($total >= 8) {
-				if ($prob < $significance_level) {
-					if ($last_key eq $ref_base) { 
-						return ('0', $last_key); ## Contig1	6	T	10	.........a
-					} else { 
-						return ('1', $last_key); ## Contig1	7	T	10	ccccccccc.
-				}} else { 
-					## Contig1	8	T	10	....cc..cc
-					my $pos = &get_amb_code(\%polymorphism);
-					if ($polymorphism_user) {
-						return ('1', $pos);
-					} else {
-						return ('0', $pos);
-			}}} else { ## less than 8 reads mapping here
-				if ($smallest_value >= 2) {
-					## Contig1	8	T	5	...cc
-					my $pos = &get_amb_code(\%polymorphism);
-					if ($polymorphism_user) {
-						return ('1', $pos);
-					} else {
-						return ('0', $pos);
-				}} else {
-					if ($highest_value == $smallest_value) {
-						return ('N', 'N'); ## Contig1	8	T	2	.c
-					} elsif ($last_key eq $ref_base) { 
-						return ('0', $ref_base); ## Contig1	8	T	4	...c
-					} else {
-						return ('1', $last_key); ## Contig1	8	T	4	.c
-		}}}} else {
-			## None of the reads are similar to reference
-			if ($total >= 8) { 
-				if ($prob < $significance_level) { 	
-					return ('1', $last_key); ## Contig1	15	T	10	ccccccccccca
-				} else { 
-					my $pos = &get_amb_code(\%polymorphism);
-					return ('1', $pos); ## Contig1	15	T	10	ccccccgggggg
-			}} else {
-				if ($smallest_value >= 2) {
-					my $pos = &get_amb_code(\%polymorphism);
-					return ('1', $pos); ## Contig1	8	T	5	GGGcc
-				} else {
-					if ($highest_value == $smallest_value) {
-						return ('1', 'N'); ## Contig1	8	T	2	Gc
-					} else {
-						return ('1', $last_key); ## Contig1	8	T	3	GGc
-}}}}}}
-
-sub initilize_contig {		
-	my $current_contig = $_[0];
-	my $reference_hash_fasta = $_[1];
-	
-	## Initialize new contig
-	my @array_positions_sub;
-	if (${$reference_hash_fasta}{$current_contig}) {
-		my $tmp_size = ${$reference_hash_fasta}{$current_contig};
-		@array_positions_sub = ("-") x $tmp_size;
-	}
-	my $ref = \@array_positions_sub;		
-	return ($current_contig, $ref);
-}
-
-sub print_coordinates {
-	## Print array into file $previous_contig
-	my $coord_array_ref = $_[0];
-	my $contig_name = $_[1];
-	my $ref_id = $_[2];
-	my $dir_tmp = $_[3];
-
-	my @coord_array = @$coord_array_ref;
-	my $seq_contig = join "", @coord_array;
-	my $var_sites = $seq_contig =~ tr/1/1/;
-
-	if ($var_sites != 0) {
-		my $array_file = $dir_tmp."/".$$contig_name."_ARRAY.txt";
-		open (FH, ">$array_file"); print FH ">$$contig_name\n$seq_contig\n"; close(FH);	
-	}
-}
-
-sub print_fasta_coordinates {
-	## Print array into file $previous_contig
-	my $coord_array_ref = $_[0];
-	my $contig_name = $_[1];
-	my $ref_id = $_[2];
-	my $dir_tmp = $_[3];
-	
-	my @coord_array_sub = @$coord_array_ref;
-	my $seq_contig = join "", @coord_array_sub;
-	my $array_file = $dir_tmp."/".$$contig_name."_sequence.fasta";
-	open (FH, ">$array_file"); print FH ">$$contig_name\n$seq_contig\n"; close(FH);	
-}
-
-sub Poisson_distribution {
-	my ($x, $a) = @_;
-	return unless $a >= 0 && $x >= 0 && $x == int($x); 
-	return (($a ** $x) * exp(-$a))/&functional_factorial($x);	
+	return($tmp);	
 }
 
 sub print_Excel {
@@ -4477,7 +4029,6 @@ sub read_phylip_aln {
 
 sub sliding_window_conserve_variable {
 
-=head
 	my $id = $_[0]; my $seq = $_[1]; 
 	my @output_file_info;
 	my $dna_seq = $$seq; my $seqlen = length($$seq);
@@ -4576,11 +4127,9 @@ sub sliding_window_conserve_variable {
 						#print "Missing allowed: $percent_total_length %\tMissing:$missing_count_percent %\n";
 						#print "***********************************************\n";
 					#}
-
-
 	} else { next;	}}}}
 	return \@output_file_info;	
-=cut
+
 }
 
 sub time_log {	
@@ -4588,96 +4137,11 @@ sub time_log {
 	$step_time = $$step_time_tmp;
 }
 
-
-sub user_cleanRead_files {
-	
+sub user_cleanRead_files {	
 	my @array;
 	for (my $i=0; $i < scalar @user_cleanRead_files; $i++){
 		push (@array, abs_path($user_cleanRead_files[$i]));
-	}
-	
+	}	
 	my $user_cleanRead_files_ref = \@array;
 	&fastq_files($user_cleanRead_files_ref);
 }
-
-
-__END__
-
-################################################################################################################################################
-PILEUP Explanation
-
-	Each line consists of chromosome, 1-based coordinate, reference base, the number of reads covering the site, read bases and base qualities. 
-	At the read base column, 
-	+ a dot stands for a match to the reference base on the forward strand, 
-	+ a comma for a match on the reverse strand, 
-	+ `ACGTN' for a mismatch on the forward strand and `acgtn' for a mismatch on the reverse strand. 
-	+ A pattern `\+[0-9]+[ACGTNacgtn]+' indicates there is an insertion between this reference position and the next reference position. 
-		The length of the insertion is given by the integer in the pattern, followed by the inserted sequence. Here is an example of 2bp insertions on three reads:
-		seq2 156 A 11  .$......+2AG.+2AG.+2AGGG    <975;:<<<<<
-
-		Similarly, a pattern `-[0-9]+[ACGTNacgtn]+' represents a deletion from the reference. Here is an exmaple of a 4bp deletions from the reference, supported by two reads:
-		seq3 200 A 20 ,,,,,..,.-4CACC.-4CACC....,.,,.^~. ==<<<<<<<<<<<::<;2<<
-	
-	+ A symbol `^' marks the start of a read segment which is a contiguous subsequence on the read separated by `N/S/H' CIGAR operations. 
-	+ The ASCII of the character following `^' minus 33 gives the mapping quality. 
-	+ A symbol `$' marks the end of a read segment. 
-	
-	Start and end markers of a read are largely inspired by Phil Green's CALF format. These markers make it possible to reconstruct the read sequences from pileup.
-	SAMtools can optionally append mapping qualities to each line of the output. This makes the output much larger, but is necessary when a subset of sites are selected.
-	
-	Contig_25_MID3  489     C       19      ,.,.,.,...t,.,.,,..     AC9F9F;FIH86I;351II
-	Contig_25_MID3  490     A       18      ,.,.,.,...,,.,,,..      AC7F9F:FIH76I851II
-	Contig_25_MID3  491     G       18      cCcCcCc.CCccCccc.C      <C;F;F<FIF1:I5<6II
-	Contig_25_MID3  492     G       18      ,.,.,.,...,,.,,,..      4E5E7F:FIF.9I3:9II
-	Contig_25_MID3  493     A       19      ,.,.,.,...,.,,,..^$.^$. 4B5E7F9FIF9H3:6II55
-	Contig_25_MID3  494     A       20      ,.,.,.,...,,.,,,....    4B6E7F9FIF.9H371II55
-	Contig_25_MID3  495     C       20      tTtTtTtTGTttTtttTTTT    9B9F;F;FIF19H771II55
-	Contig_25_MID3  496     A       20      ,.,.,.,...,,.,,,....    9A;F9B=FIF16F540II88
-	
-	Contig1	1	A	0	## type 1
-
-	Contig1	2	T	10	..........	## type 2
-
-	Contig1	3	T	10	cccccccccc	## type 3
-
-	Contig1	4	M	10	cccccccccc	## type 4
-
-	Contig1	5	R	10	cccccccccc	## type 5
-
-	Contig1	6	T	10	.........a	## type 6
-
-	Contig1	7	T	10	ccccccccc.	## type 7
-
-	Contig1	8	T	10	....cc..cc	## type 8
-
-	Contig1	9	T	10	ccccccccccca ## type 9
-
-	Contig1	10	T	10	ccccccgggggg ## type 10
-
-	Contig1	11	R	10	AAAAAAGGGG	## type 11
-
-	Contig1	12	R	10	AAAAAAAAAG	## type 12
-
-	Contig1	13	R	10	AAAAAAAAAC	## type 13
-
-	Contig1	14	R	10	AAAAACCCCC	## type 14
-
-	Contig1	15	R	10	TTTTTTTTTTA	## type 15
-
-	Contig1	16	R	10	TTTTTTTTTTC	## type 16
-
-	Contig1	17	R	10	TTTTTTCCCCC	## type 17
-
-	Contig1	18	T	10	ACAAGGGGGG	## type 18
-
-	Contig1	19	T	10	ACCCAAGGGGGG	## type 19
-
-	Contig1	20	R	10	ACAAAAGGGGGG	## type 20
-
-	Contig1	21	R	10	ACCCAAGGGGGG	## type 21
-
-	Contig1	22	R	10	ACCCAAGGGGGGTTTTTT	## type 22
-
-	Contig1	23	R	10	GCCCCCCCCCCCTTTTTT	## type 23
-
-#####################################################################################################################
