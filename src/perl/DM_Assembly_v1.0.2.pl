@@ -525,11 +525,7 @@ my $path_abs_folder = abs_path($abs_folder);
 my @script_path_array = split ("/", $pipeline_path);
 my $scripts_path;
 for (my $j = 0; $j < $#script_path_array; $j++) { $scripts_path .= $script_path_array[$j]."/"; }
-my $MIRA_exec = $scripts_path."mira_v4.0/bin/mira";
-my $CAP3_exec = $scripts_path."cap3/bin/cap3";
-my $BLAST = $scripts_path."NCBI_BLAST/";
-my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
-my $domino_Scripts = $scripts_path."/scripts";
+my $domino_Scripts = $scripts_path."scripts";
 
 ## Checking if the Directory already exists because a previous analysis
 unless (-d $path_abs_folder) { mkdir $path_abs_folder; } 
@@ -537,8 +533,10 @@ my $random_number = int(rand(1000));
 my $datestring = strftime "%Y%m%d%H%M", localtime;
 
 my $dirname = $path_abs_folder."/".$datestring."_DM_assembly";
+push (@{ $domino_params{'assembly'}{'folder'} }, $dirname);
+
 my $dirname_tmp = $dirname."/".$datestring."_DM_intermediate_assembly";
-my $error_log = $dirname."/".$datestring."_DM_Assembly_ERROR.txt";
+my $error_log = $dirname."/".$datestring."_DM_Assembly_ERROR.txt"; push (@{ $domino_params{'assembly'}{'errorLog'} }, $error_log);
 my $param_Detail_file = $dirname."/".$datestring."_DM_Assembly_Parameters.txt";
 if (-e $param_Detail_file) {
 	File::Copy::move($param_Detail_file, $param_Detail_file."_old_".$random_number);
@@ -567,7 +565,6 @@ my $localtime = localtime; push (@{ $domino_params{'assembly'}{'start'} }, $loca
 # Checking user options
 DOMINO::printHeader(" Input File and Parameter Preprocessing ","#");
 DOMINO::printDetails("\n+ Output Directory: ".$dirname." ....OK\n", $param_Detail_file);
-push (@{ $domino_params{'assembly'}{'folder'} }, $dirname);
 
 ## If using SPADES for assembly instead of MIRA
 my ($assembly_directory, $CAP3_directory);
@@ -580,6 +577,7 @@ if ($flagSpades) {
 	if ($cap3flag) {
 		$CAP3_directory = $dirname."/CAP3_assemblies"; 
 		push (@{ $domino_params{'assembly'}{'CAP3'} }, "YES");
+		push (@{ $domino_params{'assembly'}{'CAP3_directory'} }, $CAP3_directory);
 	}
 }
 mkdir $assembly_directory, 0755; chdir $assembly_directory;
@@ -664,7 +662,7 @@ if ($file_type eq 7) {
 foreach my $keys (keys %domino_files) {
 	my $dir = $assembly_directory."/".$keys."_assembly";
 	push (@{ $domino_files{$keys}{'DIR'} }, $dir);
-	push (@{ $domino_params{"assembly"}{'taxa'} }, 1);
+	push (@{ $domino_params{"assembly"}{'taxa'} }, $keys);
 }
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
 push (@{ $domino_params{"assembly"}{'file_type'} }, $file_type);
@@ -703,140 +701,22 @@ my $dump_file = $dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%dom
 my $dump_param = $dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
 
 # Lets go!
-
-## Assembly
+##############
+## Assembly ##
+##############
 if ($flagSpades) {
 
 	## If Spades flag, we will assume, in this version, it is using a Linux server with enough CPUs and RAM for assembly	
 	## We would use "cat /proc/meminfo " in order to check the available memory, if greater than 30GiB
 	## we would split in a reasonable amount of processes to proceed in parallel with the assembly 
 
-	## into file
-	
 	my $domino_Scripts_Spades = $domino_Scripts."/DM_runSPAdes.pl";
-	system("perl $domino_Scripts_Spades $path_abs_folder");
-
-=head	
-	# Get memory
-	&debugger_print("cat /proc/meminfo > memory_server.txt");
-	system("cat /proc/meminfo > memory_server.txt");	
-	my $memory_server_file = $assembly_directory."/memory_server.txt";
-	my $total_available;
-	if (-e -r -s $memory_server_file) {
-		DOMINO::printHeader(" Memory RAM Usage retrieval ","#");
-		my %memory_hash;
-		open (MEM, $memory_server_file);
-		while (<MEM>) {
-			my $line = $_;
-			chomp $line;
-			$line =~ s/\s*//g;			
-			&debugger_print($line);			
-			my @array = split("\:", $line);
-			if ($array[1] =~ /(\d+)(.*)/) {
-				push (@{ $memory_hash{$array[0]} }, $1);
-				push (@{ $memory_hash{$array[0]} }, $2);
-			}
-			if ($array[0] eq "Cached") { last; }
-		} close (MEM);
-		&debugger_print("Ref", \%memory_hash);
-		foreach my $keys (keys %memory_hash) {
-			if ($memory_hash{$keys}[1] eq 'kB') {
-				$memory_hash{$keys}[0] = $memory_hash{$keys}[0]/1000000;
-		}}
-		print "+ Total Memory: ".$memory_hash{"MemTotal"}[0]." GiB\n";
-		print "+ Free Memory: ".$memory_hash{"MemFree"}[0]." GiB\n";
-		print "+ Cached Memory: ".$memory_hash{"Cached"}[0]." GiB\n";
-		print "+ Buffers Memory: ".$memory_hash{"Buffers"}[0]." GiB\n";
-		$total_available = $memory_hash{"MemFree"}[0]+$memory_hash{"Cached"}[0]; ## Cache Memory would be release once we send a command
-		my $p = ($total_available/$memory_hash{"MemTotal"}[0])*100;
-		print "Total Available Memory (Cached +  Free): ".$total_available."GiB\n";
-		print "+ Percentage of Available Memory: $p %\n";
-		
-		## Optimize CPUs/taxa
-		my $noOfProcesses_SPAdes;
-		my $subProcesses;
-		my $amount_taxa = scalar keys %domino_files;
-		if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
-			unless ($noOfProcesses >= 8) { DOMINO::printError("To make the most of your server and SPAdes please select more CPUs using -p option") and DOMINO::dieNicely();}
-			# Get number of taxa to assembly
-			if ($total_available > 500) {
-				$noOfProcesses_SPAdes = int($noOfProcesses/$amount_taxa);
-				$subProcesses = $amount_taxa;
-			} elsif ($total_available > 200) {
-				$noOfProcesses_SPAdes = int($noOfProcesses/4);
-				$subProcesses = 4;
-			} elsif ($total_available > 100) {
-				$noOfProcesses_SPAdes = int($noOfProcesses/3);
-				$subProcesses = 3;
-			} else {
-				$noOfProcesses_SPAdes = $noOfProcesses;
-				$subProcesses = 1;
-			} 
-			print "\n\n+ Given the characteristics of the server and memory RAM available, DOMINO has decided to split the $amount_taxa taxa\ninto different subprocesses and assign to each one, a total amount of $noOfProcesses_SPAdes CPUs out of $noOfProcesses CPUs\n\n";
-			#if ($check_threads) { &debugger_print("Exiting as -check_Threads flag provided, only checking availability of server...\n"); 	exit(); }
-				
-			DOMINO::printHeader(" SPAdes Assembly of each taxa ","#");
-			## Call spades for the assembly and send threads for each taxa
-	
-			my $int_taxa = 0;
-			my $pm =  new Parallel::ForkManager($subProcesses); ## Number of subprocesses not equal to CPUs. Each subprocesses will have multiple CPUs if available
-			$pm->run_on_finish( 
-			sub { my ($pid, $exit_code, $ident) = @_; 
-				print "\n\n** Child process finished with PID $pid and exit code: $exit_code\n\n"; 
-			} );
-			$pm->run_on_start( sub { my ($pid,$ident)=@_; print "\n\n** SPAdes assembly started with PID $pid\n\n"; } );
-
-			foreach my $keys (sort keys %domino_files) {
-				next if ($keys eq 'original'); 
-				my %files_threads;
-				my $pid = $pm->start($int_taxa) and next; print "\nSending child process for SPAdes assembling $keys\n\n";
-				$int_taxa++;
-		
-				## Send SPAdes command				
-				my $assembly_dir = $domino_files{$keys}{'DIR'}[0];
-				my $spades_path = "python ".$scripts_path."SPAdes-3.8.1-Linux/bin/spades.py -o ".$assembly_dir." ";
-				if ($file_type == 7) { ## illumina_PE
-					$spades_path .= "-1 ".$domino_files{$keys}{'original'}[0]." -2 ".$domino_files{$keys}{'original'}[1];				
-				} else { 
-					$spades_path .= "-s ".$domino_files{$keys}{'original'}[0];
-				}
-				$spades_path .= " -t $noOfProcesses_SPAdes";
-				unless ($debugger) {
-					$spades_path .= " > /dev/null"; ## discarding SPAdes output		
-				}
-				&debugger_print("Sending command: $spades_path\n");
-				print "Sending SPAdes command...\n";
-				my $system_call = system($spades_path);
-				if ($system_call != 0) {
-					DOMINO::printError("Something happened when calling SPAdes for assembly reads..."); DOMINO::dieNicely();
-				} print "\n"; &time_log();
-	
-				## Get contig file
-				my $contigs_file = $assembly_dir."/contigs.fasta";
-				my $new_contigs_file = $dirname."/assembly_id-".$keys.".contigs.fasta";
-				$files_threads{$keys}{'FINAL'} = $new_contigs_file;
-				File::Copy::move($contigs_file, $new_contigs_file);
-	
-				## Finish assembly and generate statistics
-				my $stats = DOMINO::Contig_Stats($new_contigs_file); 
-				$files_threads{$keys}{'stats'} = $stats;
-
-				&debugger_print("DOMINO threads Assembly files"); &debugger_print("Ref", \%files_threads);
-				my $spades_dump_hash = $assembly_dir."/dumper_files_threads.txt";
-				DOMINO::printDump(\%files_threads, $spades_dump_hash);
-				
-				$pm->finish($int_taxa); # pass an exit code to finish
-			}
-			$pm->wait_all_children; print "\n** All Assembly child processes have finished...\n\n";		
-	
-			## into file
-	
-		}}
-=cut
+	my $command = "perl $domino_Scripts_Spades $path_abs_folder"."/"." $step_time"; print $command."\n"; 
+	system($command);
 	## when finished: check spades.success or spaces.failed in the folder assembly_directory
 
-	my $succesul_run = $path_abs_folder."/spades.success"; 
-	my $failed_run = $path_abs_folder."/spades.fail";
+	my $succesul_run = $dirname."/spades.success"; 
+	my $failed_run = $dirname."/spades.fail";
 	
 	if ($succesul_run) {
 		print "SPADes finished successfully...\n";
@@ -848,41 +728,6 @@ if ($flagSpades) {
 		DOMINO::dieNicely();
 	}
 	
-	## Check each taxa dump file conainting file info
-	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-	&debugger_print("Retrieve info from files");
-	foreach my $taxa (keys %domino_files) {
-		if ($domino_files{$taxa}{'DIR'}) {
-			my $dump_file = $domino_files{$taxa}{'DIR'}[0]."/dumper_files_threads.txt";
-			open (DUMP_IN, "$dump_file");
-			while (<DUMP_IN>) {
-				my $line = $_; chomp $line;
-				my @array = split("\t", $line);
-				&debugger_print($line);
-				push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
-			}
-			close (DUMP_IN);
-	}}
-	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-
-	#######################################
-	### Cleaning or renaming some files	###
-	#######################################
-	print "\n\n";
-	unless ($avoidDelTMPfiles) {
-		DOMINO::printHeader(" Cleaning all the intermediary files generated ","#"); 
-		&clean_assembling_folders(); print "\n\n";
-	}
-
-	#######################
-	### Finish the job	###
-	#######################
-	DOMINO::finish_time_stamp($start_time); print "\n Job done succesfully, exiting the script\n"; exit();
-		
-
-	
-
-
 } else {
 	
 	#########################################################################
@@ -891,253 +736,42 @@ if ($flagSpades) {
 	print "\n"; DOMINO::printHeader("","#"); DOMINO::printHeader(" MIRA Assembly Step for each taxa ","#"); DOMINO::printHeader("","#"); print "\n";
 	print "\n"; DOMINO::printHeader(" Generating an assembly for each taxa ", "%"); print "\n";
 	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-	foreach my $keys (sort keys %domino_files) {
-		my $MIRA_manifest_file;
-		my @species_files = @{$domino_files{$keys}{'original'}};
-		
-		if (scalar @species_files == 2) {
-			$MIRA_manifest_file = &Generate_manifest_file($keys, 'Illumina', $species_files[0], $species_files[1]);	
-		} elsif ($file_type == 5) {		
-			$MIRA_manifest_file = &Generate_manifest_file($keys, 'Illumina', $species_files[0]);	
-		} elsif ($file_type == 3) {
-			$MIRA_manifest_file = &Generate_manifest_file($keys, '454', $species_files[0]);	
-		}
-		
-		my $abs_path_manifest_file = $assembly_directory."/".$MIRA_manifest_file;
-		push (@{ $domino_files{$keys}{'manifest'}}, $abs_path_manifest_file);
-		&debugger_print("MIRA manifest: $abs_path_manifest_file\n");
-		print "- Calling MIRA now for $keys assembly...\n- It might take a while...\n";
-		my $mira_exe = $MIRA_exec." -t $noOfProcesses ".$abs_path_manifest_file;
-		if ($debugger) { $mira_exe .= " 2> $error_log"; ## show on screen or maybe print to a file
-		} else { $mira_exe .= " > /dev/null 2> $error_log"; ## discarding MIRA output
-		}
-	
-		print "- Sending MIRA command for $keys...\n"; &debugger_print("MIRA command: $mira_exe\n\n"); 
-		my $system_call = system($mira_exe);
-		if ($system_call != 0) { DOMINO::printError("Something happened when calling MIRA for assembly reads..."); DOMINO::dieNicely(); }
-		print "\n"; &time_log();
-		push(@{ $domino_files{$keys}{'contigs_fasta'}}, $domino_files{$keys}{'DIR'}[0]."/".$keys."_d_results/".$keys."_out.unpadded.fasta");
-		push(@{ $domino_files{$keys}{'contigs_qual'}}, $domino_files{$keys}{'DIR'}[0]."/".$keys."_d_results/".$keys."_out.unpadded.fasta.qual");
-		push(@{ $domino_files{$keys}{'readTagList'}}, $domino_files{$keys}{'DIR'}[0]."/".$keys."_d_info/".$keys."_info_readtaglist.txt");
-		push(@{ $domino_files{$keys}{'contigsMIRA'}}, $domino_files{$keys}{'DIR'}[0]."/assembly_id-".$keys.".contigs-MIRA.fasta");
 
-		&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-
-		## Obtain reads/contigs identified as repeats
-		## Extract read repeats
-		
-		chdir $domino_files{$keys}{'DIR'}[0];
-		my $clean_folder_path = DOMINO::get_earliest("clean_data", $path_abs_folder);
-		unless (-d $clean_folder_path) {mkdir $clean_folder_path, 0755;}
-		my $preclean_folder = $clean_folder_path."/preRepeatScanner_DOMINO_clean_data";
-		unless (-d $preclean_folder) { mkdir $preclean_folder, 0755; }
-		
-		my (@array_repetitive_reads, @array_repetitive_contigs);
-		open(IN, $domino_files{$keys}{'readTagList'}[0]) or DOMINO::printError( "Couldn't open read tag list for $keys taxa for reading and discarding repeats");
-		while(<IN>) {
-			# do whatever needs to be done
-			chomp;
-			my $line=$_;
-			next if ($line=~/^#/); next if ($line=~/^\s$/);
-	#file ...readtaglist.txt
-	##
-	# conName       cFromPadded     cToPadded       cFromUnpadded   cToUnpadded     type    rName   rFromPadded     rToPadded       rFromUnpadded   rToUnpadded     comment
-	#
-	##clean_reads.id-sp3_c1   546     453     546     453     HAF3    Seq652_sp3      52      145     52      145     
-	##clean_reads.id-sp3_c1   452     452     452     452     HAF2    Seq652_sp3      146     146     146     146     
-	##clean_reads.id-sp3_c1   451     396     451     396     HAF6    Seq653_sp3      147     202     147     202     
-
-			my @fields = split(/\s+/, $line);
-			my ($contig, $flag, $read, @array_reads);
-			$contig = $fields[0]; $flag = $fields[5]; $read = $fields[6];
-			if (($flag eq 'HAF6') || ($flag eq 'HAF7') || ($flag eq 'MNRr')){ ## Discard reads identified as highly repetitive
-				push (@array_repetitive_reads, $read);
-				push (@array_repetitive_contigs, $contig);
-		}}
-		close(IN);
+	my $domino_Scripts_MIRA = $domino_Scripts."/DM_runMIRA.pl";
+	my $command = "perl $domino_Scripts_MIRA $path_abs_folder"."/"." $step_time"; 
+	print $command."\n"; system($command);
 	
-		## Print contigs to discard
-		my $accns_file_contigs =  "ids2remove_contigs_".$keys."tab"; open(ACCNS_C, ">$accns_file_contigs");
-		my @array_repetitive_contigs_sort = sort(@array_repetitive_contigs); my @array_repetitive_contigs_sort_uniq = uniq(@array_repetitive_contigs_sort);
-		for (my $i=0; $i < scalar @array_repetitive_contigs_sort_uniq; $i++) { print ACCNS_C $array_repetitive_contigs_sort_uniq[$i]."\n"; } close(ACCNS_C);
-		
-		## Print reads to discard
-		my $accns_file_reads = "ids2remove_reads_".$keys.".tab"; open(ACCNS_R, ">$accns_file_reads"); 
-		my @array_repetitive_reads_sort = sort(@array_repetitive_reads); my @array_repetitive_reads_sort_uniq = uniq(@array_repetitive_reads_sort);
-		for (my $j=0; $j < scalar @array_repetitive_reads_sort_uniq; $j++) { print ACCNS_R $array_repetitive_reads_sort_uniq[$j]."\n"; } close(ACCNS_R);
+	my $succesul_run = $dirname."/MIRA.success"; 
+	my $failed_run = $dirname."/MIRA.fail";
 	
-		## Discard reads and contigs using mothur
-		if (-z $accns_file_reads) { print "\n+ No reads discarded as there were no repeats identified during MIRA assembly...\n";		
-		} else {
-			for (my $j=0; $j < scalar @species_files; $j++) {
-				print "\n+ Calling mothur executable for discarding reads in file $species_files[$j]...\n\n";
-				DOMINO::mothur_remove_seqs($domino_files{$keys}{'original'}[$j], 'YES', $domino_files{$keys}{'DIR'}[0], $accns_file_reads, $mothur_path);
-				my $folder_files = DOMINO::readDir($domino_files{$keys}{'DIR'}[0]);
-				my @file = grep /.*pick\.fastq/, @{$folder_files};
-				File::Copy::move($domino_files{$keys}{'original'}[$j], $preclean_folder);
-				File::Copy::move($file[0], $domino_files{$keys}{'original'}[$j]);
-		}}
-		my $contigs2cluster;
-		if (-z $accns_file_contigs) {
-			print "+ No contigs discarded as there were no repeats identified during MIRA assembly...\n";
-			$contigs2cluster = $domino_files{$keys}{'contigs_fasta'}[0];		
-		} else {
-			print "\n+ Calling mothur executable for discarding contigs in file ".$domino_files{$keys}{'contigs_fasta'}[0]."...\n";
-			DOMINO::mothur_remove_seqs($domino_files{$keys}{'contigs_fasta'}[0], 'NO', $domino_files{$keys}{'DIR'}[0], $accns_file_contigs, $mothur_path);
-			my $folder_files = DOMINO::readDir($domino_files{$keys}{'DIR'}[0]);
-			my @file = grep /.*pick\.fasta/, @{$folder_files};
-			$contigs2cluster = $file[0];
-		}	
-		
-		## Use BLAST for clustering sequences
-		print "\n\n+ Generate a BLAST database for $contigs2cluster...\n"; 
-		my ($db_generated, $db_generated_message) = DOMINO::makeblastdb($contigs2cluster, $BLAST, $error_log);
-		&debugger_print($db_generated_message);
-		my $blast_search = "blast_search.txt";
-		print "+ BLAST search now...\n"; 
-		my ($blastn, $blastn_message) = DOMINO::blastn($contigs2cluster, $db_generated, $blast_search, $BLAST);
-		&debugger_print($blastn);
-		if ($blastn != 0) { DOMINO::printError("BLASTN failed...\n"); exit(); } 
-		my $contig_length_Ref = DOMINO::readFASTA_hash($contigs2cluster);
-		my $perc_aln_desired = 0.85; my $iden_desired = 85;
-		
-		## Filter BLAST results
-		print "+ Filtering BLAST search now...\n";
-		my (%contigs_keep, @contigs_seen);
-		my $first_hit = 0;
-		open (BLAST, $blast_search); while (<BLAST>) {
-			my $line = $_;
-			chomp $line;
-			my ($query, $subject, $perc_iden, $aln, $mismatch, $gap_open, $query_start, $query_end, $subject_start, $subject_end, $eval, $score ) = split("\t", $line);
-			my $length_sub = length($$contig_length_Ref{$subject});
-			my $perc_aln = $length_sub*$perc_aln_desired;	
-			if ($query eq $subject) { next;  }
-			if ($eval < 1e-50 && $aln >= $perc_aln && $perc_iden >= $iden_desired) { 
-				if ($first_hit == 0) {
-					$first_hit++;
-					push(@{$contigs_keep{$query}}, $subject); push (@contigs_seen, $subject);
-				} else {
-					my $flag = 0;
-					foreach my $keys (keys %contigs_keep) {
-						if (grep /.*$subject.*/, @{$contigs_keep{$keys}}) { $flag = 1; last; }
-						if (grep /.*$query.*/, @{$contigs_keep{$keys}}) { $flag = 1; last; }
-					}
-					if ($flag == 0) { 
-						push(@{$contigs_keep{$query}}, $subject); push (@contigs_seen, $subject);	
-		}}}}
-		close (BLAST);
-		
-		foreach my $keys (sort keys %$contig_length_Ref) { unless (grep /$keys/, @contigs_seen) { push (@{ $contigs_keep{$keys}}, $keys); } }
-		my $clean_contigs = $domino_files{$keys}{'contigsMIRA'}[0];
-		open (CLN, ">$clean_contigs");
-		foreach my $keys (sort keys %contigs_keep) {
-			my $largest = length($$contig_length_Ref{$keys});
-			my $largest_id = $keys;	
-			for (my $i=0; $i < scalar @{$contigs_keep{$keys}}; $i++) {
-				my $seq = $contigs_keep{$keys}[$i];
-				my $len = length( $$contig_length_Ref{$seq} );
-				if ($len > $largest) { $largest = $len; $largest_id = $seq; }
-			} 
-			print CLN ">$largest_id\n$$contig_length_Ref{$largest_id}"; 
-		}
-		close(CLN);	
-		print "+ Done...\n\n";
-		chdir $assembly_directory;
-		DOMINO::printHeader(" Assembly finished for $keys ","#"); &time_log(); print "\n\n";
+	if (-e -r -s $succesul_run) {
+		print "MIRA finished successfully...\n";
+	} elsif (-e -r -s $failed_run) {
+		DOMINO::printError("MIRA failed...\n");
+		DOMINO::dieNicely();
+	} else {
+		DOMINO::printError("MIRA was interrupted...\n");
+		DOMINO::dieNicely();
 	}
-	print "\n\n"; DOMINO::printHeader("","#"); DOMINO::printHeader(" MIRA Assembly Step finished ","#");  DOMINO::printHeader("","#"); print "\n\n";
-	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-	
-	if ($cap3flag) { print "\n\nGetting ready for scaffolding step using CAP3...\n"; mkdir $CAP3_directory, 0755; }
-	## Generates folders and generates link for files of each taxa into them
-	foreach my $taxa (keys %domino_files) {
-		
-		my $contigsMIRA_Fasta_file = $domino_files{$taxa}{'contigsMIRA'}[0];
-		my $FINAL_fasta_file = $dirname."/assembly_id-".$taxa.".contigs.fasta";			
-		push( @{ $domino_files{$taxa}{'FINAL'}}, $FINAL_fasta_file);
-					
-		if ($cap3flag) { # If cap3 is used for scaffolding move files and generate folders
-			&debugger_print("DOMINO files"); &debugger_print("Ref", \%domino_files);
-			chdir $CAP3_directory;
-			my $qual_tmp_file = $domino_files{$taxa}{'contigs_qual'}[0];
-			my $contigsMIRA_qual_file = $domino_files{$taxa}{'contigsMIRA'}[0].".qual";
-			push (@{$domino_files{$taxa}{'contigsMIRA_qual'}}, $contigsMIRA_qual_file);
-			print "Fetching qual values for $contigsMIRA_Fasta_file\n";
-			my $hash_identifiers_ref = DOMINO::readFASTA_IDSfile($contigsMIRA_Fasta_file);
-			my %hash_identifiers = %{$hash_identifiers_ref};
-			$/ = ">"; ## Telling perl where a new line starts
-			open (QUAL, $qual_tmp_file);
-			open (OUT, ">$contigsMIRA_qual_file");
-			while (<QUAL>) {
-				next if /^#/ || /^\s*$/;
-				chomp;
-				my ($seq_id, $sequence) = split(/\n/,$_,2);
-				next unless ($sequence && $seq_id);
-				if ($hash_identifiers{$seq_id}) { 
-					print OUT ">".$seq_id."\n".$sequence;
-					#print ">".$seq_id."\n";
-					}
-			} $/ = "\n";
-			close (QUAL); close (OUT);
-																	
-			## Generate directories
-			my $MID_directory = $CAP3_directory."/".$taxa;
-			unless (-d $MID_directory) { mkdir $MID_directory, 0755; }                                               
-			&debugger_print("ln -s $contigsMIRA_Fasta_file $MID_directory/"); system("ln -s $contigsMIRA_Fasta_file $MID_directory/"); 
-			&debugger_print("ln -s $contigsMIRA_qual_file $MID_directory/"); system("ln -s $contigsMIRA_qual_file $MID_directory/"); 
-			push(@{$domino_files{$taxa}{'CAP3_dir'}}, $MID_directory);
-			chdir $MID_directory;
-				
-			###########################################################################
-			###	cap3 Scaffolding of the contigs MIRA generated for each taxa	###
-			###########################################################################
-			&debugger_print("DOMINO files"); &debugger_print("Ref", \%domino_files);
-			print "\n\n"; DOMINO::printHeader("","#"); 
-			DOMINO::printHeader(" CAP3 Assembly Step Started ","#"); DOMINO::printHeader("","#"); print "\n\n";
-			my @tmp_array = split("/", $contigsMIRA_Fasta_file);
-			my $fasta_name_contigsMIRA = $tmp_array[-1];
-			my $command_CAP3 = $CAP3_exec." ".$fasta_name_contigsMIRA." -o ".$overlap_CAP3." -p ".$similar_CAP3." 2> $error_log";
-			&debugger_print("CAP3 command: $command_CAP3\n"); my $system_CAP3 = system($command_CAP3);
-			if ($system_CAP3 != 0) { DOMINO::printError("Some error happened when calling CAP3 for assembly reads..."); DOMINO::dieNicely(); }
-			
-			###########################################
-			### Get contigs and singlets assembled 	###
-			###########################################
-			my $singlets_file_CAP3 = $fasta_name_contigsMIRA.".cap.singlets"; push (@{$domino_files{$taxa}{'singletsCAP3'}}, $singlets_file_CAP3);
-			my $contigs_file_CAP3 = $fasta_name_contigsMIRA.".cap.contigs"; push (@{$domino_files{$taxa}{'contigsCAP3'}}, $contigs_file_CAP3);
-
-			my $tmp_fasta = "tmp.fasta"; open (OUT_fasta, ">$tmp_fasta"); 
-			open (CONTIGS, $contigs_file_CAP3); while (<CONTIGS>) { print OUT_fasta $_; } close (CONTIGS);
-			open (SINGLETS, $singlets_file_CAP3); while (<SINGLETS>) { print OUT_fasta $_; } close (SINGLETS);close (OUT_fasta);
-
-			&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
-			&change_seq_names($tmp_fasta, $FINAL_fasta_file, $taxa);
-			File::Copy::move($FINAL_fasta_file, $dirname);
-			print "\n"; &time_log();			
-		} else { 
-			&change_seq_names($contigsMIRA_Fasta_file, $FINAL_fasta_file, $taxa);
-}}} print "\n"; &time_log();
+} print "\n"; &time_log();
 &debugger_print("DOMINO files"); &debugger_print("Ref", \%domino_files);
 
-###############################
-## Generating some statistics #
-###############################
-chdir $dirname;
-my $array_Ref = DOMINO::readDir($dirname);
-my @dirname_files = @$array_Ref;
+## Check each taxa dump file conainting file info
+&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
+&debugger_print("Retrieve info from files");
 foreach my $taxa (keys %domino_files) {
-	print "\n+ Generating some statistics for Assembly file: $domino_files{$taxa}{'FINAL'}[0]\n";
-	if ($cap3flag) {
-		print "+ Statistics for MIRA assembly:\n";
-		my $stats_file_MIRA = DOMINO::Contig_Stats($domino_files{$taxa}{'contigsMIRA'}[0]);
-		push (@{ $domino_files{$taxa}{'MIRA_stats'} }, $stats_file_MIRA);
-		print "+ Statistics for CAP3 scaffolding:\n";
-	}
-	my $stats_file = DOMINO::Contig_Stats($domino_files{$taxa}{'FINAL'}[0]);
-	print $stats_file."\n";
-	push (@{ $domino_files{$taxa}{'FINAL_stats'} }, $stats_file);	
-	print "\n\n";
-}
+	if ($domino_files{$taxa}{'DIR'}) {
+		my $dump_file = $domino_files{$taxa}{'DIR'}[0]."/dumper_files_threads.txt";
+		open (DUMP_IN, "$dump_file");
+		while (<DUMP_IN>) {
+			my $line = $_; chomp $line;
+			my @array = split("\t", $line);
+			&debugger_print($line);
+			push (@{ $domino_files{$array[0]}{$array[1]}}, $array[2]);
+		}
+		close (DUMP_IN);
+}}
+&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); print "\n";
 
 ###########################################
 ### Cleaning or renaming some files	###
@@ -1158,32 +792,6 @@ DOMINO::finish_time_stamp($start_time); print "\n Job done succesfully, exiting 
 ##########################
 ##	SUBROUTINES	##
 ##########################
-
-sub change_seq_names {
-	
-	my $file = $_[0];
-	my $name_file = $_[1];
-	my $identifier = $_[2];
-	
-	$/ = ">"; ## Telling perl where a new line starts
-	open (FILE, $file) or die "Can not open file $file\n";
-	open (OUT, ">", "$name_file");
-	my $count;
-	while (<FILE>) {
-		next if /^#/ || /^\s*$/;
-		chomp;
-    	my ($seq_id, $sequence) = split(/\n/,$_,2);
-    	next unless ($sequence && $seq_id);
-    	$count++;
-    	$seq_id = ">Contig_".$count."_".$identifier;
-    	
-    	my @array_seq = split ("\n", $sequence);
-    	my $string_seq;
-    	for (my $i = 0; $i < scalar @array_seq; $i++) { $string_seq .= $array_seq[$i]; }
-		print OUT $seq_id."\n".uc($string_seq)."\n";    	
-	}
-	close (FILE); close (OUT);	$/ = "\n";
-}
 
 sub check_file {
 	## Populate %domino_files with the ids of each file
@@ -1255,51 +863,6 @@ sub debugger_print {
 		} else {
 			print "DEBUG:\t".$string."\n";
 }}}
-
-sub Generate_manifest_file {
-	
-	##########################################################################################
-	##  This function generates a manifest file for Illumina or 454 for MIRA assembler		##
-	##	Jose Fco. Sanchez Herrero, 10/06/2014 jfsanchezherrero@ub.edu						##
-	##########################################################################################
-
-	my $name_of_project = $_[0]; my $technology = $_[1];
-	my $fastq_file = $_[2];	my $fastq_file2 = $_[3];
-	
-	DOMINO::printHeader(" Generate MIRA manifest file for $name_of_project ","%"); 
-	my $manifest_file = "manifest_$name_of_project.txt";
-	print "- Generating the manifest file $manifest_file...\n";
-	
-	open (OUT, ">$manifest_file");
-	print OUT "# Manifest file for $technology Project $name_of_project to use MIRA\n";
-	print OUT "# First part: defining some basic things\n";
-	print OUT "project = $name_of_project\n";
-	print OUT "job = genome, denovo, accurate\n";
-	
-	my $parameter = "parameters = --hirep_something -NW:cnfs=warn\\\n";  
-	$parameter .= "\tCOMMON_SETTINGS -GE:not=$noOfProcesses:amm=on:kpmf=20 -OUT:ors=no:orc=no:otc=no:orw=no:rtd=yes -CL:ascdc=no\\\n";
-
-	if ($technology eq "454") { 
-		$parameter .= "\t454_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
-	} else { 
-		$parameter .= "\tSOLEXA_SETTINGS -AS:mrpc=1 -AL:mrs=$mrs -OUT:sssip=yes";
-	}
-
-	if ($fastq_file2) { ## PE reads
-		print OUT "readgroup = ".$name_of_project."_reads\nautopairing\n";
-		print OUT "data = $fastq_file $fastq_file2\n";
-	} else {
-		print OUT $parameter."\nreadgroup = ".$name_of_project."_reads\ndata = $fastq_file\n";
-	}
-
-	if ($technology eq "454") { 
-		print OUT "technology = 454\n";
-	} else { 
-		print OUT "technology = solexa\n"; }
-	close (OUT);
-	
-	return $manifest_file;	
-}
 
 sub time_log {	
 	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
