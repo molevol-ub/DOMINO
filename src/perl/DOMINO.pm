@@ -162,7 +162,7 @@ sub Contig_Stats {
 	my $fasta_file = $_[0];
 	my @name = split("\.fasta", $fasta_file);
 	my $outFile = $name[0]."-statistics.csv";
-	my $domino_Scripts_contig = $domino_Scripts."/DM_contig_stats.pl";
+	my $domino_Scripts_contig = $domino_Scripts."/DM_ContigStats.pl";
 	system("perl $domino_Scripts_contig $fasta_file $outFile");
 	return $outFile;
 }
