@@ -8,12 +8,12 @@
 package DOMINO;
 
 use FindBin;
-use lib $FindBin::Bin."/lib";
+use lib $FindBin::Bin."../lib";
 require List::MoreUtils;
 use List::MoreUtils qw(firstidx);
 use Data::Dumper;
 
-my $domino_Scripts = $FindBin::Bin."/scripts";
+my $domino_Scripts = $FindBin::Bin;
 
 
 sub blastn {
@@ -803,8 +803,6 @@ sub debugger_print {
 
 sub get_DOMINO_files {
 	my $path = $_[0];
-	my $step = $_[1];
-	
 	my %parameters;
 	my $array_files_ref=DOMINO::readDir($path);
 	my @array_files = @$array_files_ref;
@@ -813,7 +811,7 @@ sub get_DOMINO_files {
 		if ($array_files[$i] eq "." || $array_files[$i] eq ".." || $array_files[$i] eq ".DS_Store") {next;}
 		next if ($array_files[$i] =~ /.*old.*/);
 		if ($array_files[$i] =~ /(\d+)\_DM\_(.*)/) {
-			unless (-d $path."/".$array_files[$i]) {next; };
+			unless (-d $path.$array_files[$i]) {next;};
 			my $time_stamp=$1; my $type = $2;
 			$dirs{$type}{$time_stamp} = $path.$array_files[$i];
 	}}
@@ -823,12 +821,15 @@ sub get_DOMINO_files {
 		foreach my $times (sort {$a<=>$b} keys %{$dirs{$dir}}) {
 			$last = $times;	## Only used the last folder for each process			
 		}
-		if ($dir eq $step) {
+		
+		if ($dir eq "assembly" || $dir eq "clean_data" || $dir eq "mapping" || $dir eq "markers" ) {
 			my $files = $dirs{$dir}{$last}."/DOMINO_dump_information.txt";	push (@info, $files);
 	}}
 	my $hash_info = &retrieve_info(\@info, \%initial_files);
-	if (!%parameters) { return 0;	
-	} else { return \%parameters;}
+	%files = %{$hash_info};
+
+	if (!%files) { return 0;	
+	} else { return \%files;}
 }
 
 sub Contig_Stats { 

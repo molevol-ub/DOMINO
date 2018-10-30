@@ -9,6 +9,7 @@ BEGIN {
 }
 
 my $path = $ARGV[0];
+my $step_time = $ARGV[1];
 
 # Get memory
 if(!defined($path)) { print "ERROR: No input files are provided: [$0]\n"; exit; } ## give error message for DOMINO debug
@@ -16,18 +17,12 @@ my $domino_version ="DOMINO v1.1 ## Revised 24-10-2018";
 
 my $hash_parameters = DOMINO::get_parameters($path);
 my $domino_files_ref = DOMINO::get_DOMINO_files($path);
-
-## debug print Dumper $hash_parameters; exit();
-
-DOMINO::print_success_Step("spades");
-exit();
-
 my $assembly_directory = $$hash_parameters{"assembly"}{"dir"}[0];
 my $noOfProcesses=$$hash_parameters{"assembly"}{"CPU"}[0];
 my $memory_server_file = $assembly_directory."/memory_server.txt";
 my $scripts_path = $FindBin::Bin."/../";
 
-&debugger_print("cat /proc/meminfo > memory_server.txt");
+#&debugger_print("cat /proc/meminfo > memory_server.txt");
 system("cat /proc/meminfo > memory_server.txt");	
 my $total_available;
 unless (-e -r -s $memory_server_file) {
@@ -41,7 +36,7 @@ while (<MEM>) {
 	my $line = $_;
 	chomp $line;
 	$line =~ s/\s*//g;			
-	&debugger_print($line);			
+	#&debugger_print($line);			
 	my @array = split("\:", $line);
 	if ($array[1] =~ /(\d+)(.*)/) {
 		push (@{ $memory_hash{$array[0]} }, $1);
@@ -49,7 +44,7 @@ while (<MEM>) {
 	}
 	if ($array[0] eq "Cached") { last; }
 } close (MEM);
-&debugger_print("Ref", \%memory_hash);
+#&debugger_print("Ref", \%memory_hash);
 foreach my $keys (keys %memory_hash) {
 	if ($memory_hash{$keys}[1] eq 'kB') {
 		$memory_hash{$keys}[0] = $memory_hash{$keys}[0]/1000000;
@@ -111,7 +106,7 @@ if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
 		}
 		$spades_path .= " -t $noOfProcesses_SPAdes";
 		$spades_path .= " > spades.log"; ## discarding SPAdes output		
-		&debugger_print("Sending command: $spades_path\n");
+		#&debugger_print("Sending command: $spades_path\n");
 		print "Sending SPAdes command...\n";
 		my $system_call = system($spades_path);
 		if ($system_call != 0) {
@@ -128,7 +123,7 @@ if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
 		my $stats = DOMINO::Contig_Stats($new_contigs_file); 
 		$files_threads{$keys}{'stats'} = $stats;
 
-		&debugger_print("DOMINO threads Assembly files"); &debugger_print("Ref", \%files_threads);
+		#&debugger_print("DOMINO threads Assembly files"); &debugger_print("Ref", \%files_threads);
 		my $spades_dump_hash = $assembly_dir."/dumper_files_threads.txt";
 		DOMINO::printDump(\%files_threads, $spades_dump_hash);
 		
@@ -142,3 +137,8 @@ if ($total_available > 30) { ## We expect at least 30 GiB of RAM free
 }
 
 DOMINO::print_success_Step("spades");
+
+sub time_log {	
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
+	$step_time = $$step_time_tmp;
+}
