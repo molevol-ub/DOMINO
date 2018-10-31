@@ -73,35 +73,41 @@ $further_information, $onlyTagging_files, $debugger, @user_blast_db_tmp, @user_f
 $step_time, %domino_files, @file_abs_path, @file_names, %domino_params
 );	
 
-my %input_options = (
-	1 =>'454_sff', 2 =>'454_fastq', 3=>'454_multiple_fastq', 4 => 'Illumina', 
-	5 => 'Illumina_multiple_fastq', 6 => 'Illumina_pair_end', 
-	7 => 'Illumina_pair_end_multiple_fastq');
+## Get input options
+my %input_options = %{ DOMINO::input_option_hash() }; 
 
 ######################
 ## Get user options ##
 ######################
 GetOptions(
+	"h" => \$helpAsked1,
+	"help" => \$helpAsked,
+	"man" => \$manual,
+	"v|version" => \$version,
+	"MoreInfo" => \$further_information,	
+	######################
+
 	"type_file=i" => \$user_option_file_type,
 	"input_file=s" => \@user_files,  
-	"bdiffs=i" => \$bdiffs,
 	"l|cut_Off_ReadLen=i" => \$read_length_GUI,
 	"s|cut_Off_Quality=i" => \$minimum_qual_GUI,
 	"m|minLen=i" => \$minimum_length_GUI,
 	"thr|threshold_DUST=i" => \$threshold,
 	"o|outputFolder=s" => \$outFolder, 
 	"p|number_cpu=i" => \$noOfProcesses,
-	"b|barcode_file=s" => \$user_barcodes_file,			
 	"db|blast_database=s" => \@user_blast_db_tmp,			
+	######################
+
+	"bdiffs=i" => \$bdiffs,
+	"b|barcode_file=s" => \$user_barcodes_file,			
 	"TempFiles" => \$avoidDelTMPfiles,
 	"no_db_search" => \$skipping_BLAST,
+	######################
+
 	"only_user_db" => \$only_user_db,
 	"only_tag_files|OTG" => \$onlyTagging_files,			
-	"h" => \$helpAsked1,
-	"help" => \$helpAsked,
-	"man" => \$manual,
-	"v|version" => \$version,
-	"MoreInfo" => \$further_information,	
+	######################
+
 	"Debug" => \$debugger,
 );
 
@@ -1814,14 +1820,6 @@ sub splitting_fastq {
 sub time_log {	
 	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
 	$step_time = $$step_time_tmp;
-}
-
-sub printError {
-    my $msg = $_[0];
-	print "\n\n";DOMINO::printHeader(" ERROR ","!!"); print "\n";
-    print STDERR $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n\n\n";
-	DOMINO::printHeader("","!!"); DOMINO::printHeader("","!!"); 
-    DOMINO::printError_log($msg, $error_log);
 }
 
 

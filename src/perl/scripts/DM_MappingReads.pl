@@ -8,27 +8,34 @@ BEGIN {
 	require DOMINO;
 	require Parallel::ForkManager;
 }
+#################################################################
 my $domino_version ="DOMINO v1.1 ## Revised 30-10-2018";
 my $scripts_path = $FindBin::Bin."/../";
 my $samtools_path = $scripts_path."samtools-1.3.1/samtools";
 my $bowtie_path = $scripts_path."bowtie2-2.2.9/";
+#################################################################
 
 ## We would use Bowtie2 for mapping the reads		
 DOMINO::printHeader("", "#");	DOMINO::printHeader(" Mapping Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
 
+#################################################################
+## Arguments
 my $path = $ARGV[0];
 my $step_time = $ARGV[1];
+#################################################################
 
+#################################################################
+## Get general parameters and files
 my $hash_parameters = DOMINO::get_parameters($path."/");
 my $domino_mapping_files_Ref = DOMINO::get_DOMINO_files($path."/");
 my %domino_mapping_files = %{$domino_mapping_files_Ref};
-
 my $align_dirname = $$hash_parameters{'mapping'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'mapping'}{'cpu'}[0];
+#################################################################
 
-#############################################################
+#######################################################
 ### Get Pre-assemble taxa read contigs of each taxa ### 
-#############################################################
+#######################################################
 print "\n"; DOMINO::printHeader(" Get FASTQ files of the contigs generated ", "%"); print "\n";
 chdir $align_dirname; #&debugger_print("Change dir to: ".$align_dirname);
 

@@ -9,14 +9,20 @@ BEGIN {
 	require Spreadsheet::WriteExcel;
 }
 
+#################################################################
 my $absolute_path = $ARGV[0];
 my $path = $ARGV[1];
 my $markers_file = $ARGV[2];
-
-## param
 if(!defined($markers_file)) { DOMINO::printError("No marker files are provided in DM_print_Excel module : [$0]\n"); exit; } ## give error message for DOMINO debug
+#################################################################
+
+#################################################################
 my $domino_version ="DOMINO v1.1 ## Revised 24-10-2018";
 my $hash_parameters = DOMINO::get_parameters($absolute_path."/");
+my $hash_files = DOMINO::get_DOMINO_files($absolute_path."/");
+#################################################################
+
+#################################################################
 my $no_parameters; if ($hash_parameters == 0) { $no_parameters = 1; }
 my @array_markers;
 open (FILE, "$markers_file");
@@ -176,12 +182,12 @@ unless ($no_parameters) {
 		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'entropy'}, $format_right); 
 		$col = $first_col + 1; $row++; $row++;
 		$worksheet_parameters->write($row, $col, "Database(s)", $format_bold); $row++;
-		my @array_db = @{$$hash_parameters{'clean_data'}{'db'}};
+		my @array_db = @{$$hash_files{'clean_data'}{'db'}};
 		for (my $i=0; $i < scalar @array_db; $i++) {
 			$worksheet_parameters->write($row, $col, $array_db[$i], $format_left); $row++;
 		} $row++; $row++;
 	
-		if ($$hash_parameters{'clean_data'}{"QC_analysis"}) {
+		if ($$hash_files{'clean_data'}{"QC_analysis"}) {
 			my %QC_hash = %{$$hash_parameters{'clean_data'}{'QC_analysis'}};
 			foreach my $taxa (sort keys %QC_hash) {
 				my $worksheet_name = "Quality Filtering Stats $taxa";
@@ -253,7 +259,7 @@ unless ($no_parameters) {
 			$worksheet_parameters->write($row, $col, "CAP3: Disabled", $format);
 		} $row++; $row++; $row++; 
 		
-		if ($$hash_parameters{'assembly'}{'stats'}) {
+		if ($$hash_files{'assembly'}{'stats'}) {
 			my %hash = %{$$hash_parameters{'assembly'}{'stats'}};
 			foreach my $taxa (sort keys %hash) {
 				my $worksheet_name = "Assembly Stats $taxa";

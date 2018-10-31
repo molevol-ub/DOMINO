@@ -60,10 +60,6 @@ $manual, $abs_folder, $mrs, $debugger, $flagSpades, $noOfProcesses, $version,
 @user_files, $DOMINO_files, $overlap_CAP3, $similar_CAP3, $user_files, $further_information,
 @file_abs_path, $step_time, $check_threads, $helpAsked1, %domino_params);
 
-my %input_options = (1 =>'454_sff', 2 =>'454_fastq', 3=>'454_multiple_fastq', 
-	4 => 'Illumina', 5 => 'Illumina_multiple_fastq', 6 => 'Illumina_pair_end', 
-	7 => 'Illumina_pair_end_multiple_fastq');
-
 ######################
 ## Get user options ##
 ######################
@@ -512,6 +508,9 @@ if (!$abs_folder || !$file_type) { DOMINO::dieNicely();
 		DOMINO::printInput_type(); DOMINO::dieNicely();
 }}
 
+## Get input options
+my %input_options = %{ DOMINO::input_option_hash() }; 
+
 ## Using default options if not provided
 if (!$mrs) { $mrs = 80; } #default
 if (!$overlap_CAP3) { $overlap_CAP3 = 80; } #default
@@ -759,8 +758,7 @@ foreach my $taxa (keys %domino_files) {
 	}	
 }
 my $dump_file_hash = DOMINO::retrieve_info(\@array_files, %domino_files);
-my $hash_ref = DOMINO::get_uniq_hash($dump_file_hash);
-&debugger_print("DOMINO Files"); &debugger_print("Ref", $hash_ref); print "\n";
+&debugger_print("DOMINO Files"); &debugger_print("Ref", $dump_file_hash); print "\n";
 
 ###########################################
 ### Cleaning or renaming some files	###
@@ -771,7 +769,7 @@ unless ($avoidDelTMPfiles) {
 	&clean_assembling_folders(); print "\n\n";
 }
 if (-r -e -s $dump_param) { remove_tree($dump_param); $dump_param = $dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param); }
-if (-r -e -s $dump_file) { remove_tree($dump_file);   $dump_file = $dirname."/DOMINO_dump_information.txt"; DOMINO::printDump($hash_ref, $dump_file);}
+if (-r -e -s $dump_file) { remove_tree($dump_file);   $dump_file = $dirname."/DOMINO_dump_information.txt"; DOMINO::printDump($dump_file_hash, $dump_file);}
 
 ###########################
 ### 	Finish the job	###

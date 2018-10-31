@@ -60,7 +60,7 @@ use Data::Dumper;
 use POSIX qw(strftime);
 use FindBin;
 use lib $FindBin::Bin."/lib";
-
+use List::MoreUtils qw(firstidx);
 BEGIN {
 	require DOMINO;
 	require File::Copy;
@@ -69,10 +69,6 @@ BEGIN {
 	require Parallel::ForkManager;
 	require Spreadsheet::WriteExcel;
 }
-
-use List::MoreUtils qw(firstidx);
-
-## TODO: Control if too many CPU (>6) provided or too many files (>20), do not print too much info
 
 ##################################
 ##	Initializing some variables	##
@@ -96,18 +92,7 @@ $debugger, $helpAsked1, $VAR_inc, $CONS_inc, $option_all, $totalContigs2use4mark
 $number_sp, $genome_fasta, $scripts_path, $dnaSP_flag, $SLIDING_user, %mapping_contigs, $file2dump_param
 );
 
-my %ambiguity_DNA_codes = (
-"R" => ["A","G"], "Y" => ["C","T"], "K" => ["G","T"], "M" => ["A","C"], "S" => ["G","C"], 
-"W" => ["A","T"], "B" => ["G","C","T"], "D" => ["A","G","T"], "H" => ["A","C","T"], 
-"V" => ["A","C","G"], "N" => ["A","C","G","T"]);
 
-my %ambiguity_DNA_codes_reverse;
-foreach my $keys (sort keys %ambiguity_DNA_codes) {
-	my @array = sort @{$ambiguity_DNA_codes{$keys}};
-	my $string = join "",@array;
-	$ambiguity_DNA_codes_reverse{$string} = $keys;	
-}
-	
 ######################
 ## Get user options	##
 ######################
@@ -117,20 +102,22 @@ GetOptions(
 	"man" => \$manual,
 	"v|version" => \$version, 
 	"MoreInfo" => \$further_information,
+	##########################
 
 	"DM|development_module=s" => \$behaviour,
-
 	"o|outputFolder=s" => \$folder,
 	"p|number_cpu:i" => \$num_proc_user, ## default 2
-
 	"option=s" => \$option,
 	"type_input=s" => \$input_type,
+	##########################
+
 	"genome_fasta=s" => \$genome_fasta,
 	"user_contig_files:s" => \@user_contig_files,
 	"user_cleanRead_files:s" => \@user_cleanRead_files,
 	"RADseq_file=s" => \$msa_file, ## Loci data enters as msa_file 
 	"msa_file=s" => \$msa_file, ## Multiple alignments in one phylip file
 	"msa_folder=s" => \$msa_fasta_folder, ## Multiple files in phylip or fasta
+	##########################
 
 	"rdgopen|read_gap_open_penalty=i" => \$rdgopen, #5
 	"rdgexten|read_gap_extension_penalty=i" => \$rdgexten, #3
@@ -138,21 +125,6 @@ GetOptions(
 	"rfgexten|ref_gap_extension_penalty=i" => \$rfgexten, #3
  	"mp|mismatch_penalty=i" => \$mis_penalty, #4
 	"PV|polymorphism" => \$polymorphism_user,
-
-	"taxa_names=s" => \$MID_taxa_names,
-	"CD|conserved_differences=i" => \$window_var_CONS, #1 ## variations_conserved_region
-	"CL|conserved_length=s" => \$window_size_CONS_range, ##size_conserved_region
-	"VD|variable_divergence=f" => \$variable_divergence, ## MINIMUN_variation_percentage: Valor 0-1
-	"VL|variable_length=s" =>  \$window_size_VARS_range, #400::600 ## size_variable_region
-	"VP|variable_positions=s" => \$variable_positions_user_range, ## 1::5
-	"MCT|minimum_number_taxa_covered:i" => \$minimum_number_taxa_covered,
-
-	"NPG|No_Profile_Generation" => \$avoid_mapping,
-	"TempFiles" => \$avoidDelete_tmp_files,
-
-	"low_coverage_data" => \$DOMINO_simulations,
-	"map_contig_files" => \$map_contig_files,
-	"max_SoftClipping=i" => \$cigar_pct,
 	"MPA|missing_perct_allowed:i" => \$missing_allowed,
  	"SLCD|significance_level_coverage_distribution=s" => \$level_significance_coverage_distribution,  ## -lscd 1e-05
  	"bowtie_local" => \$bowtie_local,
@@ -163,8 +135,24 @@ GetOptions(
  	"C-SI_inc:i" => \$CONS_inc,
  	"totalContigs2use4markers:i" => \$totalContigs2use4markers,
  	"subset_offset:i" => \$subset_offset_user,
+	##########################
 
- 	"all" => \$option_all, 	
+	"taxa_names=s" => \$MID_taxa_names,
+	"CD|conserved_differences=i" => \$window_var_CONS, #1 ## variations_conserved_region
+	"CL|conserved_length=s" => \$window_size_CONS_range, ##size_conserved_region
+	"VD|variable_divergence=f" => \$variable_divergence, ## MINIMUN_variation_percentage: Valor 0-1
+	"VL|variable_length=s" =>  \$window_size_VARS_range, #400::600 ## size_variable_region
+	"VP|variable_positions=s" => \$variable_positions_user_range, ## 1::5
+	"MCT|minimum_number_taxa_covered:i" => \$minimum_number_taxa_covered,
+	##########################
+
+	"NPG|No_Profile_Generation" => \$avoid_mapping,
+	"TempFiles" => \$avoidDelete_tmp_files,
+	"low_coverage_data" => \$DOMINO_simulations,
+	"map_contig_files" => \$map_contig_files,
+	"max_SoftClipping=i" => \$cigar_pct,
+	##########################
+
  	"Debug" => \$debugger,
 );
 
@@ -836,14 +824,16 @@ doi:10.1093/bioinformatics/btw534
 
 =cut
 
+#############################################################################################################################
 ## Check mandatory options
 if (!$folder) { DOMINO::printError("No folder provided...\n"); DOMINO::dieNicely(); }
 my %type_input = ("single_end" => 1, "pair_end" => 1,);
 if (!$type_input{$input_type}) {
 	DOMINO::printError("Input type provided ($input_type) does not match single_end or pair_end\n");
 	DOMINO::dieNicely();}
+#############################################################################################################################
 
-#######################################
+######################################
 ###	Initialise some PATH variables	### 
 #######################################
 ## Directory names
@@ -859,7 +849,6 @@ my $date = localtime;
 my $align_dirname = $folder_abs_path."/".$datestring."_DM_mapping"; 
 my $mapping_parameters = $folder_abs_path."/".$datestring."_Mapping-Parameters.txt";
 my $mapping_markers_errors_details = $folder_abs_path."/".$datestring."_Mapping_ERROR.txt";
-push (@{ $domino_params{'mapping'}{'mapping_markers_errors_details'} }, $mapping_markers_errors_details);
 my $msa_dirname = $align_dirname."/MSA_files";
 
 ## Markers dirname
@@ -897,17 +886,6 @@ if ($behaviour eq 'selection') {
 	}
 	$identify_markers=1;
 } else { DOMINO::printError("\nPlease choose between selection/discovery...\n"); DOMINO::dieNicely(); }
-push (@{ $domino_params{'marker'}{'behaviour'} }, $behaviour);
-
-# Control if missing options
-if (!$variable_positions_user_range and !$variable_divergence) {
-	DOMINO::printError("Exiting the script. A range for variable positions or a minimum divergence is missing.\n Use the option -VP|--variable_positions [min::max] or -VD|--variable_divergence [float number]..\n"); DOMINO::dieNicely();
-}
-unless (!$variable_divergence) { 
-	if ($variable_divergence =~ /.*\,.*/) { $variable_divergence =~ s/\,/\./; }
-	if ($variable_divergence < 0) {$variable_divergence = 0.000000000000000000000000000000001;} ## Set a very small value if -VD 0 
-}
-push (@{ $domino_params{'marker'}{'variable_divergence'} }, $variable_divergence);
 
 if ($option eq "DOMINO_files") {
 	if (!$input_type) { DOMINO::printError("-type_input option is missing...\nPlease provide it in order to proceed with the computation...."); DOMINO::dieNicely(); }
@@ -921,14 +899,11 @@ if ($option eq "DOMINO_files") {
 } elsif ($option eq "msa_alignment") {
 	if (!$msa_file and !$msa_fasta_folder) { DOMINO::printError("\nNo file or folder provided...\n"); DOMINO::dieNicely(); }
 } elsif ($option eq "RADseq") {
-	$option = "msa_alignment";
-	$radseq_like_data = 1;
+	$option = "msa_alignment"; $radseq_like_data = 1;
 	if (!$msa_file) { DOMINO::printError("Exiting the script. No file provided. \nUse the option -RADseq_file [file]..\n"); DOMINO::dieNicely(); }
 	push (@{ $domino_params{'marker'}{'RADseq'} }, "YES");
-	
 } else { DOMINO::printError("\nOption provided is not known...\n"); DOMINO::dieNicely();}
-push (@{ $domino_params{'mapping'}{'option'} }, $option);
-push (@{ $domino_params{'marker'}{'option'} }, $option);
+
 
 ##################################################
 ## Get some info about the files names and tags ##
@@ -944,7 +919,9 @@ unless ($option eq "msa_alignment" || $option eq "RADseq") {
 		push (@{$domino_files{'taxa'}{'user_Taxa'}}, $MID_name_array[$j]);
 		push (@{$domino_files{$MID_name_array[$j]}{'taxa'}}, 1);
 		$number_sp++;
-}}
+	}
+	push (@{$domino_params{"mapping"}{'number_sp'}}, $number_sp);
+}
 if ($option eq "genome") {$number_sp++;} ## when reference genome provided, the ref taxa also counts
 
 ## Start the Analysis
@@ -957,6 +934,15 @@ if ($keepbam) { print "\nKeepbam option not yet implemented....\nSorry for that.
 ##		Checking and Printing user options					##
 ##############################################################
 print "\n\n"; DOMINO::printHeader(" Input File and Parameter Preprocessing ","#"); print "\n";
+
+# Control if missing options
+if (!$variable_positions_user_range and !$variable_divergence) {
+	DOMINO::printError("Exiting the script. A range for variable positions or a minimum divergence is missing.\n Use the option -VP|--variable_positions [min::max] or -VD|--variable_divergence [float number]..\n"); DOMINO::dieNicely();
+}
+unless (!$variable_divergence) { 
+	if ($variable_divergence =~ /.*\,.*/) { $variable_divergence =~ s/\,/\./; }
+	if ($variable_divergence < 0) {$variable_divergence = 0.000000000000000000000000000000001;} ## Set a very small value if -VD 0 
+}
 
 ## checking if any option is missing and using default
 if (!$num_proc_user) { $num_proc_user = 2; }
@@ -972,6 +958,48 @@ if (!$level_significance_coverage_distribution) { $level_significance_coverage_d
 if (!$missing_allowed) { $missing_allowed = 0.1;} ## Def. 0.1: When looking for a marker if 10% of the length is missing for any specie, discard 
 if (!$totalContigs2use4markers) {$totalContigs2use4markers = 20000;} ## use by default the largest 20.000 contigs
 if (!$subset_offset_user) {$subset_offset_user = 50;} ## Split subsets into 50 contigs to avoid collapsing RAM
+## push default parameters
+my $answer_dnaSP; if ($dnaSP_flag) { $answer_dnaSP++; $polymorphism_user=1;}
+my $answer_PV; if ($polymorphism_user) { $answer_PV++}
+my $BowtieLocal; if ($bowtie_local) { $BowtieLocal++} 
+my $mapContigFiles; if ($map_contig_files) { $mapContigFiles++}
+my $LowCoverageData; if ($DOMINO_simulations) { $LowCoverageData++}
+
+#############################################################################################################################
+## Get all parameters
+push (@{ $domino_params{'marker'}{'variable_divergence'} }, $variable_divergence);
+push (@{ $domino_params{'marker'}{'behaviour'} }, $behaviour);
+push (@{ $domino_params{'mapping'}{'option'} }, $option);
+push (@{ $domino_params{'marker'}{'option'} }, $option);
+push (@{ $domino_params{'mapping'}{'dnaSP'} }, 1);
+push (@{ $domino_params{'mapping'}{'polymorphism_user'} }, 1);
+push (@{ $domino_params{'mapping'}{'bowtie_local'} }, 1);
+push (@{ $domino_params{'mapping'}{'mapContigFiles'} }, 1);
+push (@{ $domino_params{'mapping'}{'LowCoverageData'} }, 1);
+push (@{ $domino_params{'mapping'}{'mapping_markers_errors_details'} }, $mapping_markers_errors_details);
+push (@{ $domino_params{'mapping'}{'cpu'} }, $num_proc_user);
+push (@{ $domino_params{'mapping'}{'type_input'} }, $input_type);
+push (@{ $domino_params{'mapping'}{'rdgopen'} }, $rdgopen);
+push (@{ $domino_params{'mapping'}{'rdgexten'} }, $rdgexten);
+push (@{ $domino_params{'mapping'}{'rfgopen'} }, $rfgopen);
+push (@{ $domino_params{'mapping'}{'rfgexten'} }, $rfgexten);
+push (@{ $domino_params{'mapping'}{'mis_penalty'} }, $mis_penalty);
+push (@{ $domino_params{'mapping'}{'level_significance_coverage_distribution'} }, $level_significance_coverage_distribution);
+push (@{ $domino_params{'mapping'}{'polymorphism'} }, $answer_PV);
+push (@{ $domino_params{'mapping'}{'dnaSP'} }, $answer_dnaSP);
+push (@{ $domino_params{'mapping'}{'low_coverage_data'} }, $LowCoverageData);
+push (@{ $domino_params{'mapping'}{'map_contig_files'} }, $mapContigFiles);
+push (@{ $domino_params{'mapping'}{'bowtie_local'} }, $BowtieLocal);
+push (@{ $domino_params{'marker'}{'SLIDING_user'} }, $SLIDING_user);
+push (@{ $domino_params{'marker'}{'cigar_pct'} }, $cigar_pct);
+push (@{ $domino_params{'marker'}{'V-SI_inc'} }, $VAR_inc);
+push (@{ $domino_params{'marker'}{'C-SI_inc'} }, $CONS_inc);
+push (@{ $domino_params{'marker'}{'subset_offset_user'} }, $subset_offset_user);
+push (@{ $domino_params{'marker'}{'totalContigs2use4markers'} }, $totalContigs2use4markers);
+push (@{ $domino_params{'marker'}{'missing_allowed'} }, $missing_allowed);
+push (@{ $domino_params{'marker'}{'window_var_CONS'} }, $window_var_CONS);
+push (@{ $domino_params{'marker'}{'totalContigs2use4markers'} }, $totalContigs2use4markers);
+push (@{ $domino_params{'marker'}{'subset_offset_user'} }, $subset_offset_user);
 
 ## Get ranges
 my ($variable_positions_user_min, $variable_positions_user_max);
@@ -1028,39 +1056,10 @@ if ($behaviour eq "discovery") {
 # MCT
 if (!$minimum_number_taxa_covered) { $minimum_number_taxa_covered = $number_sp;  ## Force to be all the taxa
 } else { if ($minimum_number_taxa_covered > $number_sp) { DOMINO::printError("Minimum number of covered taxa (MCT) is bigger than the number of taxa provided...\n"); DOMINO::dieNicely(); }} 
-
-## push default parameters
-my $answer_dnaSP; if ($dnaSP_flag) { $answer_dnaSP = 'YES'; $polymorphism_user=1; push (@{ $domino_params{'mapping'}{'dnaSP'} }, 1);} else { $answer_dnaSP = 'NO';}
-my $answer_PV; if ($polymorphism_user) { $answer_PV = 'YES'; push (@{ $domino_params{'mapping'}{'polymorphism_user'} }, 1);} else { $answer_PV = 'NO';}
-my $BowtieLocal; if ($bowtie_local) { $BowtieLocal = 'YES'; push (@{ $domino_params{'mapping'}{'bowtie_local'} }, 1);} else { $BowtieLocal = 'NO';} 
-my $mapContigFiles; if ($map_contig_files) { $mapContigFiles = 'YES'; push (@{ $domino_params{'mapping'}{'mapContigFiles'} }, 1); } else { $mapContigFiles = 'NO';} 
-my $LowCoverageData; if ($DOMINO_simulations) { $LowCoverageData = 'YES'; push (@{ $domino_params{'mapping'}{'LowCoverageData'} }, 1);} else { $LowCoverageData = 'NO';} 
-push (@{ $domino_params{'mapping'}{'cpu'} }, $num_proc_user);
-push (@{ $domino_params{'mapping'}{'type_input'} }, $input_type);
-push (@{ $domino_params{'mapping'}{'rdgopen'} }, $rdgopen);
-push (@{ $domino_params{'mapping'}{'rdgexten'} }, $rdgexten);
-push (@{ $domino_params{'mapping'}{'rfgopen'} }, $rfgopen);
-push (@{ $domino_params{'mapping'}{'rfgexten'} }, $rfgexten);
-push (@{ $domino_params{'mapping'}{'mis_penalty'} }, $mis_penalty);
-push (@{ $domino_params{'mapping'}{'level_significance_coverage_distribution'} }, $level_significance_coverage_distribution);
-push (@{ $domino_params{'mapping'}{'polymorphism'} }, $answer_PV);
-push (@{ $domino_params{'mapping'}{'dnaSP'} }, $answer_dnaSP);
-push (@{ $domino_params{'mapping'}{'low_coverage_data'} }, $LowCoverageData);
-push (@{ $domino_params{'mapping'}{'map_contig_files'} }, $mapContigFiles);
-push (@{ $domino_params{'mapping'}{'bowtie_local'} }, $BowtieLocal);
-push (@{ $domino_params{'marker'}{'SLIDING_user'} }, $SLIDING_user);
-push (@{ $domino_params{'marker'}{'cigar_pct'} }, $cigar_pct);
-push (@{ $domino_params{'marker'}{'V-SI_inc'} }, $VAR_inc);
-push (@{ $domino_params{'marker'}{'C-SI_inc'} }, $CONS_inc);
-push (@{ $domino_params{'marker'}{'subset_offset_user'} }, $subset_offset_user);
-push (@{ $domino_params{'marker'}{'totalContigs2use4markers'} }, $totalContigs2use4markers);
-push (@{ $domino_params{'marker'}{'missing_allowed'} }, $missing_allowed);
-push (@{ $domino_params{'marker'}{'window_var_CONS'} }, $window_var_CONS);
-push (@{ $domino_params{'marker'}{'totalContigs2use4markers'} }, $totalContigs2use4markers);
-push (@{ $domino_params{'marker'}{'subset_offset_user'} }, $subset_offset_user);
-
 &debugger_print("DOMINO Parameters");&debugger_print("Ref", \%domino_params);
+#############################################################################################################################
 
+#############################################################################################################################
 ## Check parameters previous run
 if ($avoid_mapping) {
 	my (%domino_files_dump, %domino_params_dump);
@@ -1156,7 +1155,9 @@ if ($avoid_mapping) {
 			$MID_taxa_names = $domino_params{'marker'}{'taxa_string'}[0];
 }}}
 &debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files);
+#############################################################################################################################
 
+#############################################################################################################################
 ## Print Different options
 if (!$avoid_mapping) {
 	if (-d $align_dirname) { ## Checking if the Directory already exists because a previous analysis
@@ -1211,7 +1212,7 @@ if ($option eq 'user_assembly_contigs') {
 				push (@{ $domino_files{$1}{'contigs'} }, $user_contig_files[$i]); ## push the whole file path			
 			} else { DOMINO::printError("Please check the tag for the file $user_contig_files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
 	}}
-	if (!$map_contig_files) { &user_cleanRead_files(); }
+	if (!$map_contig_files) { &user_cleanRead_files();  push (@{ $domino_params{'mapping'}{'user_cleanRead_files'}}, 1);}
 } elsif ($option eq 'DOMINO_files') {
 	unless ($avoid_mapping) {
 		my $assembling_dirname = DOMINO::get_earliest("assembly", $folder_abs_path);
@@ -1233,7 +1234,7 @@ if ($option eq 'user_assembly_contigs') {
 		## Obtain clean reads
 		if (scalar @user_cleanRead_files == 0) { 
 			&get_clean_files();	## use clean reads to map
-		} else { &user_cleanRead_files(); 
+		} else { &user_cleanRead_files();  push (@{ $domino_params{'mapping'}{'user_cleanRead_files'}}, 1);
 		} ## user provides reads to map
 }} elsif ($option eq 'genome') {
 	my $tmp = abs_path($genome_fasta);
@@ -1250,7 +1251,8 @@ if ($option eq 'user_assembly_contigs') {
 		DOMINO::printError("Clean Read files were not provided...\nDOMINO would check in the output folder provided if there is a DOMINO_clean_data containing the FASTQ files for each taxa...."); 
 		&get_clean_files();
 	} else { 
-		&user_cleanRead_files(); 
+		&user_cleanRead_files();
+        push (@{ $domino_params{'mapping'}{'user_cleanRead_files'}}, 1);
 	}	
 	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
 	
@@ -1373,15 +1375,27 @@ $mapping_markers_errors_details = $folder_abs_path."/".$datestring."_Markers_ERR
 DOMINO::printDetails("\t- DM markers parameters details would be print into file:\n\t\t$param_Detail_file_markers...\n", $param_Detail_file_markers);
 DOMINO::printDetails("\t- DM markers errors occurred during the process would be print into file:\n\t\t$mapping_markers_errors_details...\n\n", $param_Detail_file_markers);
 print "\n"; &time_log(); print "\n";
+#############################################################################################################################
 
+#############################################################################################################################
 my $dump_file = $align_dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
 my $dump_param = $align_dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
 
-################################################################################################
+####################################################################################
 ##########	Mapping/Alignment of the contigs 		################################
-################################################################################################
+####################################################################################
 if (!$avoid_mapping) {	
 	if ($option ne "msa_alignment") {
+	
+	my $domino_Scripts_Mapping = $domino_Scripts."/DM_MappingReads.pl";
+	my $command = "perl $domino_Scripts_Mapping ".$folder_abs_path." $step_time";
+	print $command."\n";
+	system($command);
+	
+	exit();
+	
+	
+=head	
 		## We would use Bowtie2 for mapping the reads		
 		DOMINO::printHeader("", "#");	DOMINO::printHeader(" Mapping Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
 		
@@ -1856,6 +1870,7 @@ if (!$avoid_mapping) {
 			print "\n\n"; DOMINO::printHeader("", "+");DOMINO::printHeader(" Mapping finished for Reference $reference_identifier ", "+");DOMINO::printHeader("", "+"); &time_log(); print "\n";		
 		} # foreach reference
 
+=cut	
 	} elsif ($option eq "msa_alignment") {	
 	
 		mkdir $msa_dirname, 0755; chdir $align_dirname;
@@ -2148,6 +2163,10 @@ mkdir $marker_dirname, 0755; chdir $marker_dirname; &debugger_print("Changing di
 if ($avoid_mapping) { 
 	File::Copy::move($mapping_parameters, $marker_dirname."/"); 
 }
+
+## Get DNA code
+my %ambiguity_DNA_codes = %{ &ambiguity_DNA_codes() };
+
 ### MSA alignment
 if ($option eq "msa_alignment") {
 
@@ -3722,16 +3741,6 @@ sub fetching_range_seqs_array_Pileup {
 			return $sub_array;
 }}}
 
-sub get_amb_code {
-	my $ref_hash = $_[0];
-	my @array = keys %{$ref_hash};
-	my @array_sorted = sort @array;
-	my $string = join "",@array_sorted;
-	if ($ambiguity_DNA_codes_reverse{$string}) {
-		return $ambiguity_DNA_codes_reverse{$string};
-	} else { return "N"; }		
-}
-
 sub get_clean_files {
 	
 	my $clean_folder = DOMINO::get_earliest("clean_data", $folder_abs_path);
@@ -3929,7 +3938,7 @@ sub print_Excel {
 	my $markers_file_ref = $_[0]; 
 	my $path = $_[1];
 	
-	my $domino_Scripts_excel = $domino_Scripts."/DM_print_Excel.pl";
+	my $domino_Scripts_excel = $domino_Scripts."/DM_PrintExcel.pl";
 	system("perl $domino_Scripts_excel $folder_abs_path $$path $$markers_file_ref");
 	my $excel_woorkbook_name = $$path."/DM_markers-summary.xls";
 	my $markers_count;

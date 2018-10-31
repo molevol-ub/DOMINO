@@ -13,6 +13,7 @@ require List::MoreUtils;
 use List::MoreUtils qw(firstidx);
 use Data::Dumper;
 
+#################################################################
 my $domino_Scripts = $FindBin::Bin;
 my $scripts_path = $FindBin::Bin."/";
 ## General binaries variables
@@ -20,6 +21,7 @@ my $samtools_path = $scripts_path."samtools-1.3.1/samtools";
 my $bowtie_path = $scripts_path."bowtie2-2.2.9/";
 my $BLAST = $scripts_path."NCBI_BLAST/";
 my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
+#################################################################
 
 ###################
 ## Call programs ##
@@ -403,7 +405,9 @@ sub retrieve_info {
 			} else { push (@{ $hash{$array[0]}{$array[1]}}, $array[2]); }
 		} close (DUMP_IN);
 	} 
-	return \%hash;
+	
+	my $hash_ref = &get_uniq_hash(\%hash);
+	return $hash_ref;
 }
 
 sub get_earliest {
@@ -471,27 +475,10 @@ sub get_parameters {
 		}
 		if ($dir eq "assembly" || $dir eq "clean_data" || $dir eq "mapping" || $dir eq "markers" ) {
 			my $params = $dirs{$dir}{$last}."/DOMINO_dump_param.txt"; 		push (@params, $params);
-			my $files = $dirs{$dir}{$last}."/DOMINO_dump_information.txt";	push (@info, $files);
 	}}
 
 	my $hash_param = &retrieve_info(\@params, \%parameters);
-	my $hash_info = &retrieve_info(\@info, \%initial_files);
-	%parameters = %{$hash_param};
-	
-	#print Dumper $hash_info;
-	foreach my $keys (keys %{$hash_info}) {
-		if ($$hash_info{$keys}{"QC_stats"}) {
-			$parameters{"clean_data"}{"QC_analysis"}{$keys} = $$hash_info{$keys}{"QC_stats"}[0];
-		} 
-		if ($$hash_info{$keys}{"FINAL_stats"}) {
-			$parameters{"assembly"}{"stats"}{$keys} = $$hash_info{$keys}{"FINAL_stats"}[0];
-		}
-		if ($$hash_info{$keys}{"db"}) {
-			push (@{ $parameters{"clean_data"}{"db"} }, @{ $$hash_info{$keys}{"db"} });
-		}		
-	}
-	if (!%parameters) { return 0;	
-	} else { return \%parameters;}
+	return $hash_param;
 }
 
 sub get_DOMINO_files {
@@ -519,10 +506,7 @@ sub get_DOMINO_files {
 			my $files = $dirs{$dir}{$last}."/DOMINO_dump_information.txt";	push (@info, $files);
 	}}
 	my $hash_info = &retrieve_info(\@info, \%initial_files);
-	%files = %{$hash_info};
-
-	if (!%files) { return 0;	
-	} else { return \%files;}
+	return $hash_info;
 }
 
 sub get_uniq_hash {
@@ -978,6 +962,49 @@ sub readFASTA_IDSfile {
 	}
 	close(FILE); $/ = "\n"; 
 	return \%hash;
+}
+
+sub input_option_hash {
+	
+	my %input_options = (
+		1 =>'454_sff', 
+		2 =>'454_fastq', 
+		3=>'454_multiple_fastq', 
+		4 => 'Illumina', 
+		5 => 'Illumina_multiple_fastq', 
+		6 => 'Illumina_pair_end', 
+		7 => 'Illumina_pair_end_multiple_fastq'
+	);
+	
+	return \%input_options;
+}
+
+sub ambiguity_DNA_codes {
+	my %ambiguity_DNA_codes = (
+		"R" => ["A","G"], "Y" => ["C","T"], "K" => ["G","T"], "M" => ["A","C"], "S" => ["G","C"], 
+		"W" => ["A","T"], "B" => ["G","C","T"], "D" => ["A","G","T"], "H" => ["A","C","T"], 
+		"V" => ["A","C","G"], "N" => ["A","C","G","T"]
+	);
+	return \%ambiguity_DNA_codes;
+}
+
+sub get_amb_code {
+	my $ref_hash = $_[0];
+	
+	my %ambiguity_DNA_codes_reverse;
+	my %ambiguity_DNA_codes = %{ &ambiguity_DNA_codes() };
+	foreach my $keys (sort keys %ambiguity_DNA_codes) {
+		my @array = sort @{$ambiguity_DNA_codes{$keys}};
+		my $string = join "",@array;
+		$ambiguity_DNA_codes_reverse{$string} = $keys;	
+	}
+
+	my @array = keys %{$ref_hash};
+	my @array_sorted = sort @array;
+	my $string = join "",@array_sorted;
+	if ($ambiguity_DNA_codes_reverse{$string}) {
+		return $ambiguity_DNA_codes_reverse{$string};
+	} else { return "N"; }		
 }
 
 1;

@@ -22,17 +22,6 @@ my $taxa = $ARGV[3];
 my $returned_outfolder = $ARGV[4];
 my $path = $ARGV[5];
 
-my %ambiguity_DNA_codes = (
-"R" => ["A","G"], "Y" => ["C","T"], "K" => ["G","T"], "M" => ["A","C"], "S" => ["G","C"], 
-"W" => ["A","T"], "B" => ["G","C","T"], "D" => ["A","G","T"], "H" => ["A","C","T"], 
-"V" => ["A","C","G"], "N" => ["A","C","G","T"]);
-
-my %ambiguity_DNA_codes_reverse;
-foreach my $keys (sort keys %ambiguity_DNA_codes) {
-	my @array = sort @{$ambiguity_DNA_codes{$keys}};
-	my $string = join "",@array;
-	$ambiguity_DNA_codes_reverse{$string} = $keys;	
-}
 ## get general parameters
 my $hash_parameters = DOMINO::get_parameters($path."/");
 my @temp_name = split ("\.sorted.bam", $sorted_bam);
@@ -47,7 +36,10 @@ if ($sytem_command_pileup != 0) {
 unless (-d $returned_outfolder) { mkdir $returned_outfolder, 0755; } 
 #&debugger_print("Changing dir to $returned_outfolder");
 
+## Get reference fasta information
 my $reference_hash_fasta = DOMINO::readFASTA_hash($contig_file);
+## Get DNA code
+my %ambiguity_DNA_codes = %{ &ambiguity_DNA_codes() };
 
 #print "\t- Filtering the PILEUP generated\n";
 my ($previous_contig, $previous_fasta_contig, @array_positions, @fasta_positions);
