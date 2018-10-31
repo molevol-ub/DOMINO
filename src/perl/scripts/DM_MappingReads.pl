@@ -13,12 +13,10 @@ my $domino_version ="DOMINO v1.1 ## Revised 30-10-2018";
 my $scripts_path = $FindBin::Bin."/../";
 my $samtools_path = $scripts_path."samtools-1.3.1/samtools";
 my $bowtie_path = $scripts_path."bowtie2-2.2.9/";
-#################################################################
-
-## We would use Bowtie2 for mapping the reads		
-DOMINO::printHeader("", "#");	DOMINO::printHeader(" Mapping Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
+my $domino_Scripts = $scripts_path."scripts";
 
 #################################################################
+
 ## Arguments
 my $path = $ARGV[0];
 my $step_time = $ARGV[1];
@@ -29,6 +27,10 @@ my $step_time = $ARGV[1];
 my $hash_parameters = DOMINO::get_parameters($path."/");
 my $domino_mapping_files_Ref = DOMINO::get_DOMINO_files($path."/");
 my %domino_mapping_files = %{$domino_mapping_files_Ref};
+
+#print Dumper $hash_parameters;
+#print Dumper $domino_mapping_files_Ref;
+
 my $align_dirname = $$hash_parameters{'mapping'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'mapping'}{'cpu'}[0];
 #################################################################
@@ -37,13 +39,12 @@ my $num_proc_user = $$hash_parameters{'mapping'}{'cpu'}[0];
 ### Get Pre-assemble taxa read contigs of each taxa ### 
 #######################################################
 print "\n"; DOMINO::printHeader(" Get FASTQ files of the contigs generated ", "%"); print "\n";
-chdir $align_dirname; #&debugger_print("Change dir to: ".$align_dirname);
+#&debugger_print("Change dir to: ".$align_dirname);
 
 ## Mapping of the reads, all taxa used as reference
 foreach my $reference_identifier (sort keys %domino_mapping_files) {
 	unless ($domino_mapping_files{$reference_identifier}{'contigs'}) { next; }
-	chdir $align_dirname; 
-	#&debugger_print("Change dir to: ".$align_dirname);
+	chdir $align_dirname; #&debugger_print("Change dir to: ".$align_dirname);
 
 	my (@sam_files, @clean_sam_files, @sorted_bam); 
 		
@@ -129,7 +130,7 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 		my $pid = $pm_read_Reference->start() and next;
 		my %domino_mapping_files_split_mapping;
 		push(@{ $domino_mapping_files_split_mapping{$reads}{'LOG'}}, $out_log_file);
-
+		
 		## Mapping Parameters
 		my $R_group_id = '--rg-id '.$reads;
 		my $R_group_name = ' --rg '.$reads;
@@ -189,8 +190,7 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 		my $scalar = scalar @number_contigs;
 		print LOG "+ This SAM file contains $scalar referense sequences...\n";
 		system("ln -s $sam_name"); 
-		my @temp_name = split ("/", $sam_name);
-		my $sam_base_name = $temp_name[-1];
+		my @temp_name = split ("/", $sam_name); my $sam_base_name = $temp_name[-1];
 		
 		my $sorted_bam_file = DOMINO::generate_bam($sam_name, $split_CPU);
 		DOMINO::generate_index_bam($sorted_bam_file);
@@ -269,9 +269,9 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 					## we would check if any hard or soft clipping is introduced
 					## (inherited from a previous version using BWA)
 					
-					my $cigar=$sam[5];
-					my $xcent = 0; my $xcentmax = 0; my $pos = 0; my $NOpos = 0;
-					my $cigar_pct_convert = $$hash_parameters{'mapping'}{'cigar_pct'}[0]/100;
+					my $cigar=$sam[5]; my $xcent = 0; my $xcentmax = 0; my $pos = 0; my $NOpos = 0;
+					my $int= $$hash_parameters{'marker'}{'cigar_pct'}[0];
+					my $cigar_pct_convert = $int/100;
 					
 					#&debugger_print("\nLINE: ".$line."\nCIGAR: ".$cigar."\nMAX_CIGAR: ".$cigar_pct_convert."\n");
 					while ($cigar !~ /^$/){         		
@@ -504,8 +504,24 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 	print "\n\n"; DOMINO::printHeader("", "+");DOMINO::printHeader(" Mapping finished for Reference $reference_identifier ", "+");DOMINO::printHeader("", "+"); &time_log(); print "\n";		
 } # foreach reference
 
+DOMINO::print_success_Step("mapping");
+
+
 sub time_log {	
 	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
 	$step_time = $$step_time_tmp;
 }
 
+sub generate_filter_PILEUP {
+	my $sorted_bam = $_[0]; my $contig_file = $_[1]; 
+	my $reference_id = $_[2]; my $taxa = $_[3];
+	
+	my $dir_path = $domino_mapping_files{$reference_id}{'dir'}[0];
+	my $tmp = $dir_path."/ARRAY_files_".$taxa."_PROFILE"; 
+
+	my $domino_Scripts_GeneratePileup = $domino_Scripts."/DM_GeneratePileup.pl";
+	my $command = "perl $domino_Scripts_GeneratePileup $sorted_bam $contig_file $reference_id $taxa $tmp $path";  #print $command."\n"; 
+	system($command);	
+	chdir $dir_path; #&debugger_print("Changing dir to $dir_path");
+	return($tmp);	
+}

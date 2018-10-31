@@ -39,7 +39,7 @@ unless (-d $returned_outfolder) { mkdir $returned_outfolder, 0755; }
 ## Get reference fasta information
 my $reference_hash_fasta = DOMINO::readFASTA_hash($contig_file);
 ## Get DNA code
-my %ambiguity_DNA_codes = %{ &ambiguity_DNA_codes() };
+my %ambiguity_DNA_codes = %{ DOMINO::ambiguity_DNA_codes() };
 
 #print "\t- Filtering the PILEUP generated\n";
 my ($previous_contig, $previous_fasta_contig, @array_positions, @fasta_positions);

@@ -15,7 +15,7 @@ use Data::Dumper;
 
 #################################################################
 my $domino_Scripts = $FindBin::Bin;
-my $scripts_path = $FindBin::Bin."/";
+my $scripts_path = $FindBin::Bin."/../";
 ## General binaries variables
 my $samtools_path = $scripts_path."samtools-1.3.1/samtools";
 my $bowtie_path = $scripts_path."bowtie2-2.2.9/";
