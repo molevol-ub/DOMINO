@@ -7,6 +7,7 @@ use lib $FindBin::Bin."/../lib";
 BEGIN {
 	require DOMINO;
 	require Parallel::ForkManager;
+	require File::Path; use File::Path qw(remove_tree);
 }
 #################################################################
 my $domino_version ="DOMINO v1.1 ## Revised 30-10-2018";
@@ -33,6 +34,7 @@ my %domino_mapping_files = %{$domino_mapping_files_Ref};
 
 my $align_dirname = $$hash_parameters{'mapping'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'mapping'}{'cpu'}[0];
+my %new_domino_files;
 #################################################################
 
 #######################################################
@@ -494,16 +496,23 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 	} ## foreach reads
 	$pm_read_Reference->wait_all_children;			
 	
+	
 	## Get files for later dump
 	foreach my $reads_here (sort keys %domino_mapping_files) {
 		unless ($domino_mapping_files{$reads_here}{'reads'}) { next; }
 		my @dump_files = @{ $domino_mapping_files{$reads_here}{"DUMP_Mapping::Ref:".$reference_identifier} };
-		DOMINO::retrieve_info(\@dump_files, \%domino_mapping_files);
+		%new_domino_files = %{ DOMINO::retrieve_info(\@dump_files, \%new_domino_files) }; 
+		#print Dumper \%new_domino_files;
 	}
 	#&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_mapping_files);
 	print "\n\n"; DOMINO::printHeader("", "+");DOMINO::printHeader(" Mapping finished for Reference $reference_identifier ", "+");DOMINO::printHeader("", "+"); &time_log(); print "\n";		
+	DOMINO::print_success_Step("mapping_ref_".$reference_identifier);
+
 } # foreach reference
 
+### dump info
+my $dump_file = $align_dirname."/DOMINO_dump_information.txt";
+if (-r -e -s $dump_file) { remove_tree($dump_file); DOMINO::printDump(\%new_domino_files, $dump_file);}
 DOMINO::print_success_Step("mapping");
 
 
