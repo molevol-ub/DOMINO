@@ -402,10 +402,11 @@ sub retrieve_info {
 			my $line = $_; chomp $line;
 			my @array = split("\t", $line);
 			if ($hash_Ref eq 1) { $hash{$array[0]} = $array[1];
-			} else { push (@{ $hash{$array[0]}{$array[1]}}, $array[2]); }
-		} close (DUMP_IN);
+			} else { 
+				push (@{ $hash{$array[0]}{$array[1]}}, $array[2]);
+		}} close (DUMP_IN);
 	} 
-	
+	if ($hash_Ref eq 1) { return \%hash; }
 	my $hash_ref = &get_uniq_hash(\%hash);
 	return $hash_ref;
 }
@@ -483,7 +484,6 @@ sub get_parameters {
 
 sub get_DOMINO_files {
 	my $path = $_[0];
-	my %parameters;
 	my $array_files_ref=DOMINO::readDir($path);
 	my @array_files = @$array_files_ref;
 	my (%dirs, $earliest);
@@ -733,43 +733,6 @@ sub line_splitter {
 	return \@array; 
 }
 
-sub loci_file_splitter {
-	# Splits fasta file and takes into account to add the whole sequence if it is broken
-	my $file = $_[0];
-	my $block = $_[1];
-	my $ext = $_[2]; # fasta, fastq, loci, fa
-
-	open (FH, "<$file") or die "Could not open file $file [DOMINO.pm:loci_file_splitter]";
-	print "\t- Blocks of $block characters would be generated...\n";
-	my $j = 0; my @files;
-	while (1) {
-		my $chunk;
-	   	my @tmp = split (".".$ext, $file);
-		my $file_name = $tmp[0];
-		my $block_file = $file_name."_part-".$j."_tmp.".$ext;
-		print "\t- Printing file $block_file\n";
-		push (@files, $block_file);
-		open(OUT, ">$block_file") or die "Could not open destination file [DOMINO.pm:loci_file_splitter]";
-		if (!eof(FH)) { 
-			read(FH, $chunk,$block);  
-			#if ($j > 0) { $chunk = $chunk; }
-			print OUT $chunk;
-		} ## Print the amount of chars	
-		if (!eof(FH)) { $chunk = <FH>; print OUT $chunk; } ## print the whole line if it is broken	
-		if (!eof(FH)) { 
-			$/ = "\/\/"; ## Telling perl where a new line starts
-			$chunk = <FH>; 
-			chop $chunk;
-			print OUT $chunk;
-			print OUT "/\n"; 
-			$/ = "\n";
-			$chunk = <FH>; 
-		} ## print the sequence if it is broken
-		$j++; close(OUT); last if eof(FH);
-	}
-	close(FH); return (\@files);	
-}
-
 sub qualfa2fq_modified_bwa {
 
 	##########################################################################################
@@ -1005,6 +968,272 @@ sub get_amb_code {
 	if ($ambiguity_DNA_codes_reverse{$string}) {
 		return $ambiguity_DNA_codes_reverse{$string};
 	} else { return "N"; }		
+}
+
+sub print_Excel {
+
+	my $markers_file_ref = $_[0]; 
+	my $path = $_[1];
+	
+	my $domino_Scripts_excel = $domino_Scripts."/DM_PrintExcel.pl";
+	system("perl $domino_Scripts_excel $folder_abs_path $$path $$markers_file_ref");
+	my $excel_woorkbook_name = $$path."/DM_markers-summary.xls";
+	my $markers_count;
+	open (MARKER, "<$$markers_file_ref"); while (<MARKER>) { if ($_ =~ /.*\_\#.*/) {$markers_count++} } close (MARKER);
+	
+	## Print results and instructions
+	print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" RESULTS ","#"); DOMINO::printHeader("", "#");
+	print "\n+ DOMINO has retrieved $markers_count markers\n";
+	my $instructions_txt = $marker_dirname."/Instructions.txt";
+	my $MSA = $$path."/MSA_markers";
+	open (OUT, ">$instructions_txt");
+	my $string = "+ Several files and folders has been generated:
+\t+ $marker_dirname: contains DOMINO markers detected for each taxa as a reference and the clusterized results.
+\t+ $$path: contains the clusterized and definitive results for DOMINO markers.
+\t+ $excel_woorkbook_name: contains information of the markers identified and parameters used by DOMINO.
+\t+ $MSA folder contains a single file for each marker identified.\n\n";	
+	print OUT $string; print $string."\n"; close(OUT);
+	return $excel_woorkbook_name;
+}
+
+sub sliding_window_conserve_variable {
+
+	my $id = $_[0]; my $seq = $_[1]; 
+	my @output_file_info;
+	my $dna_seq = $$seq; my $seqlen = length($$seq);
+	
+	## Loop
+	for (my $i=0; $i < $seqlen; $i += $SLIDING_user) {
+		# AAATATGACTATCGATCGATCATGCTACGATCGATCGATCGTACTACTACGACTGATCGATCGATCGACGACTGAC
+		# 		P1		P2|P3							P4|P5						P6
+		my $coord_P1 = $i; #print "P1: $coord_P1\n";
+		for (my $h=$domino_params{'marker'}{'window_size_CONS_min'}[0]; $h <= $domino_params{'marker'}{'window_size_CONS_max'}[0]; $h += $CONS_inc) {
+			my $coord_P2 = $i + $h; 			#print "P2: $coord_P2\n";
+			my $coord_P3 = $coord_P2 + 1; 		#print "P3: $coord_P3\n";
+			if ($coord_P3 > $seqlen) {next;} 
+
+			for (my $j = $domino_params{'marker'}{'window_size_VARS_min'}[0]; $j <= $domino_params{'marker'}{'window_size_VARS_max'}[0]; $j += $VAR_inc) {
+				my $coord_P4 = $coord_P3 + $j; #print "P4: $coord_P4\n";
+				my $coord_P5 = $coord_P4 + 1; #print "P5: $coord_P5\n";
+				my $coord_P6 = $coord_P5 + $h; #print "P6: $coord_P6\n";
+
+				if ($coord_P4 > $seqlen){next;} 
+				if ($coord_P5 > $seqlen){next;} 
+				if ($coord_P6 > $seqlen){next;}				
+
+				#print "\n******\n";
+				#print "Contig: $$id\nMax: $seqlen\nVL: $j\nCL: $h\nPositions:\n";
+				#print "P1:$coord_P1\nP2:$coord_P2\nP3:$coord_P3\nP4:$coord_P5\nP6: $coord_P6\n";
+				#print "******\n\n";
+
+				## Get substrings
+				my $length_string_P1_P2 = $coord_P2 - $coord_P1;
+				my $string_P1_P2 = substr($dna_seq, $coord_P1, $length_string_P1_P2);
+
+				my $length_string_P3_P4 = $coord_P4 - $coord_P3;
+				my $string_P3_P4 = substr($dna_seq, $coord_P3, $length_string_P3_P4);
+
+				my $length_string_P5_P6 = $coord_P6 - $coord_P5;
+				my $string_P5_P6 = substr($dna_seq, $coord_P5, $length_string_P5_P6);
+				
+				## Count the variable positions in each 
+				my $count_string_P1_P2 = $string_P1_P2 =~ tr/1//; ## Conserved 
+				my $count_string_P3_P4 = $string_P3_P4 =~ tr/1//; ## Variable
+				my $count_string_P5_P6 = $string_P5_P6  =~ tr/1//; ## Conserved
+				my $count_N_P1_P2 = $string_P1_P2 =~ tr/N//; ## Conserved 
+				my $count_N_P5_P6 = $string_P5_P6  =~ tr/N//; ## Conserved
+				
+				## More than variations allowed in conserved
+				if ($count_string_P1_P2 > $window_var_CONS) { next; } 
+				if ($count_string_P5_P6 > $window_var_CONS) { next; }
+				if ($count_N_P1_P2 > $window_var_CONS) { next; } 
+				if ($count_N_P5_P6 > $window_var_CONS) { next; } 
+
+				#Get marker profile					
+				my $total_length = $coord_P6 - $coord_P1;
+				my $marker_profile = $string_P1_P2.$string_P3_P4.$string_P5_P6;
+				
+				### Check variation
+				my $expected_var_sites;	my $flag_error=0;
+				if ($variable_divergence) {
+					# If a minimun divergence, get the expected variable sites for the length
+					$expected_var_sites = int($variable_divergence * $total_length);
+					unless ($count_string_P3_P4 >= $expected_var_sites) { $flag_error++; }			
+				} else {
+					# User provides a number of variable positions or a range
+					if ($expected_var_sites > $domino_params{'marker'}{'variable_positions_user_min'}[0]) {
+						unless ($expected_var_sites < $domino_params{'marker'}{'variable_positions_user_max'}[0]) {
+							$flag_error++;
+						}} else { $flag_error++; }
+				}
+				
+				## Missing % of bases missing
+				my $missing_count = $marker_profile =~ tr/N//;
+				my $missing_count2 = $marker_profile =~ tr/-//;
+				$missing_count += $missing_count2;
+				my $missing_count_percent = ($missing_count/$total_length)*100;
+				my $percent_total_length = $total_length * $missing_allowed;  ## Default 0.05
+
+				if ($flag_error > 0) {	next; } #if ($debugger) { print "\n\nERROR!\n\n######################################\n\n"; }
+				if ($missing_count_percent < $percent_total_length) {
+					push (@output_file_info, "$$id\t$coord_P1:$coord_P2\t$coord_P3:$coord_P4\t$coord_P5:$coord_P6");
+
+					#if ($debugger) {
+						#print "\n\n***********************************************\n";
+						#print "Marker: $coord_P1:$coord_P2 $coord_P3:$coord_P4 $coord_P5:$coord_P6\n";
+						#print "Contig: $$id\nMax: $seqlen\nVL: $j\nCL: $h\n\nPositions:\n";
+						#print "P1:$coord_P1\nP2:$coord_P2\nP3:$coord_P3\nP4:$coord_P5\nP6: $coord_P6\n";
+						#print "\nSubsets\n";
+						#print "Conserved (P1-P2): ".length($string_P1_P2)."\n"; print "$string_P1_P2\n";
+						#print "Variable (P3-P4): ".length($string_P3_P4)."\n";  print $string_P3_P4."\n";
+						#print "Conserved (P5-P6): ".length($string_P5_P6)."\n"; print $string_P5_P6."\n";
+						#print "\nVariations:\n";
+						#print "Count_string_P1_P2: $count_string_P1_P2\n";
+						#print "Count_string_P3_P4: $count_string_P3_P4\n";
+						#print "Count_string_P5_P6: $count_string_P5_P6\n";
+						#print "\nMarker:\n";
+						#print "Total Length:$total_length\tVariable Positions:$count_string_P3_P4\tExpected:$expected_var_sites\n";
+						#print "Missing allowed: $percent_total_length %\tMissing:$missing_count_percent %\n";
+						#print "***********************************************\n";
+					#}
+	} else { next;	}}}}
+	return \@output_file_info;
+
+}
+
+sub check_DOMINO_marker {
+	
+	my $file = $_[0]; ## OUTPUT
+	my $dir = $_[1];	
+	my $DOMINO_markers_file = $_[2]; ## markers collapse
+	my $ref_taxa_all = $_[3]; 			# if MSA alignment it is a file containing msa
+
+	my @files; 
+	
+	## Check each group of overlapping markers
+	open (MARKERS, "$DOMINO_markers_file") or die "Could not open file $DOMINO_markers_file [DM_MarkerScan: check_DOMINO_marker]";
+	my $j = 1; my %hash_array;
+	while (1) {
+		my $chunk;
+		if (!eof(MARKERS)) { 
+			$/ = "\/\/"; ## Telling perl where a new line starts
+			$chunk = <MARKERS>; 
+			push(@{$hash_array{$j}}, $chunk);
+		} 
+		$j++; 
+		last if eof(MARKERS);
+	}
+	$/ = "\n";	
+	#print Dumper \%hash_array; 
+
+	my $marker_number = 0;
+	foreach my $group (sort {$a <=> $b} keys %hash_array) {
+		## Split chunk push into array
+		my @array_markers_tmp = @{ $hash_array{$group} };
+		my @array_markers;
+		for (my $i=0; $i < scalar @array_markers_tmp; $i++) {
+			#print "CHUNK!\n"; print $array_markers_tmp[$i]."\n"; print "********\n";
+			my @array = split("\n", $array_markers_tmp[$i]);
+			for (my $j=0; $j < scalar @array; $j++) {
+				chomp($array[$j]);
+				if ($array[$j] =~ ".*:.*") {
+					push(@array_markers, $array[$j]);
+		}}}
+		## For each group of markers, evaluate the features
+		for (my $i=0; $i < scalar @array_markers; $i++) {
+			my @contig_name = split("##", $array_markers[$i]);
+			my @array = split(":", $contig_name[1]);
+			my $coord_P1 = $array[0]; my $coord_P2 = $array[1];
+			my $coord_P3 = $array[2]; my $coord_P4 = $array[3];
+			my $coord_P5 = $array[4]; my $coord_P6 = $array[5];
+			my $taxa = $array[6];
+			# print $contig_name[0]."\t".join(",",@array)."\n"; exit();
+			
+			## Retrieve msa for this marker			
+			my %hash; my %fasta_msa_sub;
+			if ($option eq "msa_alignment") {
+				my $fasta_msa_sub_ref = DOMINO::readFASTA_hash($ref_taxa_all);
+				%fasta_msa_sub = %{ $fasta_msa_sub_ref };
+			} else {
+				my @desired_taxa = split(",", $taxa);
+				for (my $j=0; $j < scalar @desired_taxa; $j++) {
+					next if ($ref_taxa_all eq $desired_taxa[$j]);
+					my $fasta_each_taxa = $domino_files{$desired_taxa[$j]}{"PROFILE::Ref:".$ref_taxa_all}[0]."/".$contig_name[0]."_sequence.fasta";
+					if (-f $fasta_each_taxa) {
+						$fasta_msa_sub{$desired_taxa[$j]} = $fasta_each_taxa;
+					} else { 
+						$fasta_msa_sub{$desired_taxa[$j]} = "missing"; 
+				}}
+				my $reference_file_contig = $domino_files{$ref_taxa_all}{'REF_DIR'}[0]."/".$contig_name[0].".fasta";
+				$fasta_msa_sub{$ref_taxa_all} = $reference_file_contig;
+			}
+			foreach my $keys (sort keys %fasta_msa_sub ) {			
+				if ($fasta_msa_sub{$keys} =~ /missing/) {next;}
+				if ($fasta_msa_sub{$keys} =~ /.*fasta/) {
+					open (FILE, $fasta_msa_sub{$keys});
+					my ($titleline, $sequence);
+					$/ = ">"; ## Telling perl where a new line starts
+					while (<FILE>) {		
+						next if /^#/ || /^\s*$/;
+						chomp;
+						($titleline, $sequence) = split(/\n/,$_,2);
+						next unless ($sequence && $titleline);
+						chomp $sequence;
+						$sequence =~ s/\s+//g; $sequence =~ s/\r//g; $titleline =~ s/\r//g;
+					}
+					close(FILE); $/ = "\n";
+					my ($seq_id, $seq) = &fetching_range_seqs($keys, $coord_P1, $coord_P6, $sequence);
+					$hash{$keys} = $seq;
+				} else {
+					my ($seq_id, $seq) = &fetching_range_seqs($keys, $coord_P1, $coord_P6, $fasta_msa_sub{$keys});
+					$hash{$keys} = $seq;
+			}}
+			my $seq_name;
+			
+			## Check pairwise MSA
+			my $valueReturned = &check_marker_pairwise(\%hash);
+			if ($valueReturned == 1) { ## if it is variable for each pairwise comparison
+				## Get variable positions for the whole marker
+				my $array_ref_returned = &check_marker_ALL(\%hash, "Ref");
+				if ($array_ref_returned eq 'NO') { 
+					remove_tree($msa_file);
+				} else {
+					$marker_number++;
+					my $msa_file = $dir."/".$contig_name[0]."_marker_".$marker_number.".fasta";
+					open (MSA_OUT, ">$msa_file");
+					foreach my $seqs (sort keys %hash) { print MSA_OUT ">".$seqs."\n".$hash{$seqs}."\n"; }
+					close (MSA_OUT);
+					push (@files, $msa_file);
+					my @arrayReturned = @$array_ref_returned; 	
+					## 0: taxa join(::) ## 1: variable sites  ## 2: length of the marker ## 3: profile string ## 4: effective length
+	
+					my $msa_file_array = $dir."/".$contig_name[0]."_marker_".$marker_number."_ARRAY.txt";
+					open (ARRAY, ">$msa_file_array"); print ARRAY ">".$contig_name[0]."_marker_".$marker_number."_ARRAY\n".$arrayReturned[3]."\n"; close (ARRAY);
+	
+					## Print into a file						
+					my $percentage = ($arrayReturned[1]/$arrayReturned[4])*100;
+					my $variation_sprintf = sprintf ("%.3f", $percentage);
+					my $marker2write = $contig_name[0]."_#$marker_number";
+					my @array2print = ($marker2write, $array[0].":".$array[1], $array[2].":".$array[3], $array[4].":".$array[5], $arrayReturned[2], $variation_sprintf, $array[6]); 
+					my $string = join("\t", @array2print);
+					open (OUT, ">>$file"); print OUT $string."\n"; close(OUT); last;		
+	}}}} close (MARKERS);	
+	return (\@files);
+}
+
+sub check_overlapping_markers {
+
+	my $file = $_[0]; 				## markers_shared 
+	my $mergeArray_file = $_[1];
+
+	my @array = split(".txt", $file); 
+	my $file2return = $array[0]."_overlapped_Markers.txt";
+
+	my $domino_Scripts_MarkerOverlap = $domino_Scripts."/DM_MarkerOverlap.pl";
+	my $command = "perl $domino_Scripts_MarkerOverlap $file $mergeArray_file $file2return $folder_abs_path"; #print $command."\n"; 
+	system($command);
+	
+	return $file2return;	
 }
 
 1;

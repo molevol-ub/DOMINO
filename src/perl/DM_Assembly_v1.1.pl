@@ -7,7 +7,7 @@
 ### Sánchez-Gracia, and Julio Rozas.					     		
 ###########################################################################################
 ##	Usage:
-##      perl DM_Assembly_v1.0.2.pl
+##      perl DM_Assembly_v1.1.pl
 ##
 ##    ###########################
 ##    ### General Information ###

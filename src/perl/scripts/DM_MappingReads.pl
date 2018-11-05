@@ -26,9 +26,7 @@ my $step_time = $ARGV[1];
 #################################################################
 ## Get general parameters and files
 my $hash_parameters = DOMINO::get_parameters($path."/");
-my $domino_mapping_files_Ref = DOMINO::get_DOMINO_files($path."/");
-my %domino_mapping_files = %{$domino_mapping_files_Ref};
-
+my %domino_mapping_files = %{ DOMINO::get_DOMINO_files($path."/") };
 #print Dumper $hash_parameters;
 #print Dumper $domino_mapping_files_Ref;
 
@@ -501,7 +499,7 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 	foreach my $reads_here (sort keys %domino_mapping_files) {
 		unless ($domino_mapping_files{$reads_here}{'reads'}) { next; }
 		my @dump_files = @{ $domino_mapping_files{$reads_here}{"DUMP_Mapping::Ref:".$reference_identifier} };
-		%new_domino_files = %{ DOMINO::retrieve_info(\@dump_files, \%new_domino_files) }; 
+		%new_domino_files = %{ DOMINO::retrieve_info(\@dump_files, \%domino_mapping_files) }; 
 		#print Dumper \%new_domino_files;
 	}
 	#&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_mapping_files);
@@ -515,6 +513,9 @@ my $dump_file = $align_dirname."/DOMINO_dump_information.txt";
 if (-r -e -s $dump_file) { remove_tree($dump_file); DOMINO::printDump(\%new_domino_files, $dump_file);}
 DOMINO::print_success_Step("mapping");
 
+###########################
+####### SUBROUTINES #######
+###########################
 
 sub time_log {	
 	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
