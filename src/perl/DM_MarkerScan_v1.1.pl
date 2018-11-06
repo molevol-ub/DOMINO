@@ -912,19 +912,13 @@ if (!$avoid_mapping) {
 		####		Parse alignment
 		####
 		DOMINO::printHeader("", "#"); DOMINO::printHeader(" Parsing Alignment Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
-
+		## to Debug
 		## DM_ParseMSA_files.pl $folder_abs_path
 		#################################################################################################
 
 	}
-
-	## Dump info up to now to a file
-	if (-r -e -s $dump_file) { remove_tree($dump_file) };
-	DOMINO::printDump(\%domino_files, $dump_file);	
-
-	## Dump parameters to a file
-	if (-r -e -s $dump_param) { remove_tree($dump_param) };
-	DOMINO::printDump(\%domino_params, $dump_param);	
+	## Dump info up to now to a file if (-r -e -s $dump_file) { remove_tree($dump_file) }; DOMINO::printDump(\%domino_files, $dump_file);	
+	## Dump parameters to a file if (-r -e -s $dump_param) { remove_tree($dump_param) }; DOMINO::printDump(\%domino_params, $dump_param);	
 
 	## Move parameters and error file to folder
 	File::Copy::move($mapping_parameters, $align_dirname."/");
@@ -961,12 +955,14 @@ my %ambiguity_DNA_codes = %{ DOMINO::ambiguity_DNA_codes() };
 if ($option eq "msa_alignment") {
 	#################################################################################################
 	DOMINO::printHeader("", "#"); DOMINO::printHeader(" Parsing Alignment Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
+	## to Debug
 
-	## DM_MarkerSelection.pl $folder_abs_path
-	my $domino_Scripts_MarkerSelection = $domino_Scripts."/DM_MarkerSelection.pl";
-	my $command = "perl $domino_Scripts_MarkerSelection ".$folder_abs_path." $step_time";
-	print "\n[ System Call: ".$command." ]\n\n";
-	system($command);
+## to Debug	## DM_MarkerSelection.pl $folder_abs_path
+## to Debug
+## to Debug	my $domino_Scripts_MarkerSelection = $domino_Scripts."/DM_MarkerSelection.pl";
+## to Debug	my $command = "perl $domino_Scripts_MarkerSelection ".$folder_abs_path." $step_time";
+## to Debug	print "\n[ System Call: ".$command." ]\n\n";
+## to Debug	system($command);
 	#################################################################################################
 }
 &time_log(); print "\n";
@@ -1097,229 +1093,6 @@ sub check_file {
 	} else { DOMINO::printError("Please provide several files for each taxa..."); DOMINO::printFormat_message(); DOMINO::dieNicely(); }
 }
 
-sub check_marker_pairwise {
-
-	## Given a MSA file in a hash, check each taxa pairwise
-	my $hash_ref = $_[0];
-	my @taxa = keys %$hash_ref;
-	my (%seen, %pairwise, %discard);
-	for (my $j=0; $j < scalar @taxa; $j++) {
-		my $reference = $taxa[$j];
-		if (!$domino_files{$reference}{'taxa'}) {next;}
-		foreach my $keys (sort keys %$hash_ref) {
-			if (!$domino_files{$keys}{'taxa'}) {next;}
-			if ($seen{$keys}) {next;}
-			if ($discard{$keys}) {next;}
-			if ($keys eq $reference) {next;}
-			
-			my $seq2check = $$hash_ref{$keys};			
-			my @array_reference = split("",$$hash_ref{$reference});
-			my @array2check = split("", $$hash_ref{$keys});
-			my @array;
-			
-			for (my $i=0; $i < scalar @array_reference; $i++) {
-				my $reference_nuc = $array_reference[$i];
-				my $base2check = $array2check[$i];
-				push(@array, &check_reference_bp($reference_nuc, $base2check));
-			}
-			
-			my $string = join "", @array;
-			my $var_sites_sub = $string =~ tr/1/1/;
-			my $con_sites_sub = $string =~ tr/0/0/;
-			my $total_sub = $con_sites_sub + $var_sites_sub;			
-			
-			if ($var_sites_sub == 0) { ## If does not fit the necessary divergence
-				$seen{$reference}++; $discard{$keys}++; $pairwise{$reference}{$keys} = "NO!";
-				if ($variable_divergence) { &debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t0\t".$variable_divergence);
-				} else { 					&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t0\t".$variable_positions_user_range);
-				}
-				next;
-			}
-			
-			my $percentage_sub = $var_sites_sub/$total_sub;
-			if ($variable_divergence) { &debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t".$percentage_sub."\t".$variable_divergence);
-			} else {					&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t".$percentage_sub."\t".$variable_positions_user_range);
-			}
-			
-			if ($domino_params{'marker'}{'variable_positions_user_min'}) {
-				if ($var_sites_sub > $domino_params{'marker'}{'variable_positions_user_min'}[0]) { 
-					if ($var_sites_sub < $domino_params{'marker'}{'variable_positions_user_max'}[0]) { 
-						$pairwise{$reference}{$keys} = "YES!";
-						&debugger_print("YES");
-					} else {&debugger_print("NO");}
-				} else {
-					## If does not fit the necessary divergence
-					$seen{$reference}++; $discard{$keys}++; ## avoid checking if it is not variable
-					$pairwise{$reference}{$keys} = "NO!";
-					&debugger_print("NO");
-			}} elsif ($domino_params{'marker'}{'variable_divergence'}) {
-				if ($percentage_sub > $domino_params{'marker'}{'variable_divergence'}[0]) { 
-					$pairwise{$reference}{$keys} = "YES!";
-					&debugger_print("YES");
-				} else {
-					## If does not fit the necessary divergence
-					&debugger_print("NO");
-					$pairwise{$reference}{$keys} = "NO!";
-					$seen{$reference}++; $discard{$keys}++; ## avoid checking if it is not variable
-		}}}
-		$seen{$reference}++; ## avoid checking again the same pair
-	}
-	my $flag_fitting = 0;
-	foreach my $keys (sort keys %pairwise) {
-		if ($discard{$keys}) {next;}
-		foreach my $k (sort keys %{$pairwise{$keys}}) {
-			if ($discard{$k}) {next;}
-			if ($pairwise{$keys}{$k} eq 'YES!') {
-				$flag_fitting++;
-	}}}
-
-	#print Dumper \%pairwise;
-	if ($number_sp == 2) {
-		if ($flag_fitting == 1) {
-			#print "YES!\n"; 
-			return '1'; 
-		} else {
-			#print "NO!\n";
-			return '0'; 
-	}} else {
-		if ($flag_fitting < $domino_params{'marker'}{'MCT'}[0]) {
-			#print "NO!\n";
-			return '0'; 
-		} else {
-			#print "YES!\n"; 
-			return '1'; 
-	}}	
-}
-
-sub check_marker_ALL {
-	##########################################################################################
-	##	This function checks each region using all taxa provided and generates the 			##	
-	##	variation profile for the whole set													##
-	## 		        																		##
-	##	jfsanchezherrero@ub.edu 09/02/2016													##
-	## 		        																		##
-	##########################################################################################
-
-	my $file = $_[0];	my $ref = $_[1];
-	#print "check_marker_ALL $file\n";
-	my (%hash, $length, @taxa, @length_seqs);
-	if ($ref) {
-		## get alignment from hash
-		foreach my $seqs (sort keys %{ $file }) {
-			my @array = split("", $$file{$seqs});
-			if (!$domino_files{$seqs}{'taxa'}) {next;}
-			push (@{ $hash{$seqs}}, @array);
-			$length = scalar @array;
-			push (@length_seqs, $length);
-			push (@taxa, $seqs);
-		}	
-	} else {
-		## get alignment from file
-		open(FILE, $file) || die "Could not open the file $file ... [DM_MarkerScan: check_marker_ALL] \n";
-		$/ = ">"; ## Telling perl where a new line starts
-		while (<FILE>) {		
-			next if /^#/ || /^\s*$/;
-			chomp;
-			my ($titleline, $sequence) = split(/\n/,$_,2);
-			next unless ($sequence && $titleline);
-			chomp $sequence;
-			$sequence =~ s/\s+//g; $sequence =~ s/\r//g;
-			$titleline =~ s/\r//g;
-			#print $titleline."\n".$sequence."\n";
-			my @array = split("", $sequence);
-			if (!$domino_files{$titleline}{'taxa'}) {next;}
-			push (@{ $hash{$titleline}}, @array);
-			$length = scalar @array;
-			push (@length_seqs, $length);
-			push (@taxa, $titleline);
-		}
-		close(FILE); $/ = "\n";	
-	}
-
-	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
-	my @tmp_length_uniq = do { my %seen; grep { !$seen{$_}++ } @length_seqs };
-	if (scalar @tmp_length_uniq > 1) {
-		DOMINO::printError("There is problem: length of the markers do not match for $file..."); return "";
-	} else { $length_seqs[0] = $length; }	
-	
-	my @profile;
-	for (my $i=0; $i < $length; $i++) {
-		my $flag_position = 0;
-		my @tmp;
-		foreach my $seqs (sort keys %hash) { push (@tmp, $hash{$seqs}[$i]); }
-		my @tmp_uniq_sort = do { my %seen; grep { !$seen{$_}++ } @tmp };
-
-		if (scalar @tmp_uniq_sort == 1) {
-			if ($tmp_uniq_sort[0] eq 'N') { 						push (@profile, 'N');
-			} elsif ($tmp_uniq_sort[0] eq '-') { 					push (@profile, '-');
-			} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[0]}) { 	push (@profile, '1');
-			} else {  												push (@profile, '0'); 
-			}
-		} else {
-			## We are assuming the calling has been correctly done and
-			## the ambiguity codes are due to polymorphism
-			my $escape_flag = 0;
-			my (@tmp, @amb);
-			for (my $j=0; $j < scalar @tmp_uniq_sort; $j++) {
-				if ($tmp_uniq_sort[$j] eq '-') { ## Gaps would be codify as -
-					$escape_flag++;
-				} elsif ($tmp_uniq_sort[$j] eq 'N') { ## Gaps would be codify as -
-					$escape_flag++;
-				} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[$j]}) {
-					push(@amb, $tmp_uniq_sort[$j]);
-				} else { 
-					push(@tmp, $tmp_uniq_sort[$j]); 
-			}}
-
-			if ($escape_flag) {  push (@profile, '-');			
-			} else {
-				if (scalar @amb == 0) { ## No ambiguous code
-					push (@profile, '1');			
-				} elsif (scalar @amb == 1) { ## 1 amb code
-					for (my $h=0; $h < scalar @amb; $h++) {
-						my $flag_yes = 0;
-						for (my $k = 0; $k < scalar @{ $ambiguity_DNA_codes{$amb[$h]} }; $k++) {
-							if (grep /$ambiguity_DNA_codes{$amb[$h]}[$k]/, @tmp) { $flag_yes++; }
-						}
-						if ($flag_yes > 0) {
-							if ($polymorphism_user) { 	
-								push (@profile, '1'); 	## if polymorphism
-							} else { 					
-								push (@profile, '0'); ## The ambiguous is the present snps: 	YCT => [ Y > C/T ]
-						}} else { 						
-							push (@profile, '1');	## The ambiguous is not the present snps  	MGG => [ M > A/C ]
-				}}} elsif (scalar @amb > 1) {  			
-					push (@profile, '1');   ## Several
-	}}}}
-	my $string = join ("", @profile); undef %hash; undef @profile;
-
-	######
-	###### FINDING THE GLITCH
-	######
-
-	my $var_sites = $string =~ tr/1/1/; ## count variable sites
-	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
-	my $species = join (",", sort @taxa);
-	my $count_length = $con_sites + $var_sites;
-	if ($var_sites == 0) { 
-		#print "NO: $species, $var_sites, $length, $string, $count_length\n";
-		#if ($dnaSP_flag) { } else { return 'NO'; } 
-		#if we get to provide these markers there is no need to do DOMINO as we will be reporting everything
-		return 'NO';
-	}
-	my $missing = $length - $count_length;
-	my $missing_allowed_length = $missing_allowed * $length;
-	if ($missing > $missing_allowed_length) { 
-		#print "NO: $species, $var_sites, $length, $string, $count_length\n";
-		if ($dnaSP_flag) {} else { return 'NO';  }
-		#if we get to provide these markers there is no need to do DOMINO as we will be reporting everything
-		return 'NO';
-	}
-	my @array = ($species, $var_sites, $length, $string, $count_length);
-	#print Dumper \@array; print "\n";
-	return \@array;
-}
-
 sub check_reference_bp {
 
 	my $reference_nuc = $_[0];
@@ -1376,69 +1149,6 @@ sub check_reference_bp {
 	}
 }
 
-sub clean_tmp_files_marker_dir {
-	
-	##########################################################################################
-	##	 																					##
-	##  This function 																		##
-	## 		        																		##
-	##	Jose Fco. Sanchez Herrero, 08/05/2014 jfsanchezherrero@ub.edu						##
-	## 		        																		##
-	##########################################################################################
-	
-	my $marker_folder = $_[0];
-	my $files_dir_ref = DOMINO::readDir($marker_folder);
-	my @tmp_files = @$files_dir_ref;
-	my $tmp_dir = "intermediate_files"; mkdir $tmp_dir, 0755;
-	my $pileup_merged;
-	
-	for (my $i = 0; $i < scalar @tmp_files; $i++) {
-		## Skip
-		if ($tmp_files[$i] eq ".DS_Store" || $tmp_files[$i] eq "." || $tmp_files[$i] eq ".." ) { next; }
-		
-		## Intermediate files 
-		if ($tmp_files[$i] =~ /ARRAY\_files\_.*/)  { remove_tree ($tmp_files[$i]);  next;}
-		if ($tmp_files[$i] =~ /PROFILE\_merge\_.*/) { $pileup_merged = $tmp_files[$i]; next;}
-
-		## Output results
-		if ($tmp_files[$i] =~ /DM_.*/) { next; } 
-		if ($tmp_files[$i] =~ /Error_contigs.txt/) { next; } 
-
-		## Temporary files 
-		if ($tmp_files[$i] =~ /.*merge.*/ ) { File::Copy::move($tmp_files[$i], $tmp_dir); next;
- 		} elsif ($tmp_files[$i] =~ /\.profile.*/ ) { File::Copy::move($tmp_files[$i], $tmp_dir); next;
- 		} else { File::Copy::move($tmp_files[$i], $tmp_dir); next; }
-	}
-
-	## Delete temporary folder	
-	unless ($avoidDelete_tmp_files) { 
-		remove_tree($tmp_dir); remove_tree($pileup_merged);
-	}
-}
-
-sub delete_files_mapping {  
-	
-	my $dir_to_delete = $_[0];
-	my $ref_id = $_[1];
-	my $files_dir_ref = DOMINO::readDir($dir_to_delete);
-	my @mapping_files = @$files_dir_ref;
-	my $temp_dir = "temp_dir";
-	mkdir $temp_dir, 0755; 
-	
-	for (my $i=0; $i < scalar @mapping_files; $i++) {		
-		if ($mapping_files[$i] eq ".DS_Store" || $mapping_files[$i] eq "." || $mapping_files[$i] eq ".." ) { next; }
-		if (-z $mapping_files[$i]) {File::Copy::move($mapping_files[$i], $temp_dir)
-		}elsif ($mapping_files[$i] =~ /$ref_id.*clean_filtered.sorted.bam$/) {next; 
-		}elsif($mapping_files[$i] =~ /.*pileup\_ARRAY\.txt/) { File::Copy::move($mapping_files[$i], $temp_dir);
-		}elsif($mapping_files[$i] =~ /ARRAY\_files\_.*/) { next; 
-		}elsif($mapping_files[$i] =~ /.*clean\_filtered\.sam/) { next; 
-		}elsif($mapping_files[$i] =~ /.*coverage\_stats\_After\_filtering\.txt/) { next; 
-		}elsif($mapping_files[$i] =~ /tmp.*/) { remove_tree($mapping_files[$i]); 
-		}else{ File::Copy::move($mapping_files[$i], $temp_dir);}
-	}
-	remove_tree($temp_dir);
-}
-
 sub debugger_print {
 	my $string = $_[0];
 	my $ref = $_[1];
@@ -1478,25 +1188,6 @@ sub fastq_files {
 	}
 }
 
-sub fetching_range_seqs_array_Pileup {
-	my $contig_name = $_[0];
-	my $start = $_[1];
-	my $end = $_[2];
-	my $folder_ref = $_[3];
-	my $folder_name = $_[4];
-	
-	my @array_folder = @$folder_ref;	
-	for (my $i=0; $i < scalar @array_folder; $i++) {		
-		if ($array_folder[$i] eq "." || $array_folder[$i] eq ".." || $array_folder[$i] eq ".DS_Store" ) {next;}
-		if ($array_folder[$i] =~ /$contig_name\_ARRAY\.txt/) {
-			my $ref_hash_array = DOMINO::readFASTA_hash($folder_name."/".$array_folder[$i]);
-			my $array_seq_desired = $$ref_hash_array{$contig_name};
-			my $real_start = $start - 1;
-			my $length = $end - $real_start;	
-			my $sub_array = substr ($array_seq_desired, $real_start, $length);
-			return $sub_array;
-}}}
-
 sub get_clean_files {
 	
 	my $clean_folder = DOMINO::get_earliest("clean_data", $folder_abs_path);
@@ -1511,26 +1202,6 @@ sub get_clean_files {
 		push (@files2, $clean_folder."/".$files[$i]);
 	}
 	&fastq_files(\@files2);
-}
-
-sub get_headers_sam {
-	##########################################################################################
-	##  This function checks the SAM files generated and discards bad reads mapping,		##
-	##	unmapping reads or multimapping reads.												##
-	##	Jose Fco. Sanchez Herrero, 08/05/2014 jfsanchezherrero@ub.edu						##
-	##	Cristina Frias Lopez 				  cristinafriaslopez@ub.edu 					##
-	##########################################################################################
-	my $file_sam = $_[0];
-	my @array;
-	open (SAM, "<$file_sam");
-	while (<SAM>) {
-		chomp;
-		my $line = $_;
-		if ($line =~ /^@/ ) {
-			push (@array, $line);
-	}}
-	close(SAM);
-	return \@array;
 }
 
 sub time_log {	

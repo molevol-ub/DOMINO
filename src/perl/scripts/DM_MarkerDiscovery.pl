@@ -246,8 +246,8 @@ my $dir2print_markers = $PILEUP_merged_folder_abs_path."/MSA_fasta_tmp"; mkdir $
 ## Check for markers: USING THREADS, ONE FOR EACH BLOCK OF CONTIGS
 my $pm_MARKER_PILEUP =  new Parallel::ForkManager($num_proc_user); ## Number of subprocesses equal to CPUs as CPU/subprocesses = 1;
 my $SETS;
-if ($totalContigs2use4markers % 2) { 	$SETS = int($totalContigs2use4markers/$subset_offset) + 1;			## Even number
-} else { 								$SETS = int($totalContigs2use4markers/$subset_offset); }	## Odd number 	
+if ($totalContigs2use4markers % 2) { 	$SETS = int($totalContigs2use4markers/$num_proc_user) + 1;	## Even number
+} else { 								$SETS = int($totalContigs2use4markers/$num_proc_user); }	## Odd number 	
 print "+ Dataset would be splitted for speeding computation into $SETS subsets...\n";
 
 my $counter=0; 
@@ -283,7 +283,9 @@ for (my $set=1; $set <= $SETS; $set++) {
 			my %tmp_fasta = %{$tmp_hash_reference};
 			foreach my $seqs (sort keys %tmp_fasta) {
 				push (@{ $contigs_pileup_fasta{$subset_array[$j]} }, $tmp_fasta{$seqs});
-	}}}		
+	}}}
+	
+	print "$set .\n";		
 
 	my $mergeProfile = $PILEUP_merged_folder_abs_path."/SET_$set"."_merged_ARRAY.txt";
 	my $string = $$hash_parameters{'marker'}{"window_size_VARS_range"}[0];$string =~ s/\:\:/-/; 
@@ -337,19 +339,29 @@ for (my $set=1; $set <= $SETS; $set++) {
 		if ($var_sites != 0 && $cons_sites != 0) { 
 			open (FH, ">>$mergeProfile"); print FH ">$seqs\n$tmp_string\n"; close(FH);
 		} else { next; } 
-		my $infoReturned = DOMINO::sliding_window_conserve_variable(\$seqs, \$tmp_string);
-		if ($infoReturned) { 
-			open (TMP_COORD, ">$SLIDING_file");
-			for (my $j=0; $j < scalar @$infoReturned; $j++) {
-				print OUT_COORD $$infoReturned[$j]."\n";
-				print TMP_COORD $$infoReturned[$j]."\n";
-				print SHARED $$infoReturned[$j]."\t".$ref_taxa."\n";
+
+		print "$set ..\n";
+		
+		my $tmp_dir = $PILEUP_merged_folder_abs_path."/SET_".$set."_tmp_dir";
+		unless (-d $tmp_dir) { mkdir $tmp_dir;}
+		my $file_infoReturned = $tmp_dir."/$seqs.txt";
+		my $domino_Scripts_MarkerSliding = $domino_Scripts."/DM_MarkerSliding.pl";
+		my $sliding_command = "perl $domino_Scripts_MarkerSliding $path $seqs $tmp_string $file_infoReturned"; #print "{ Call: $sliding_command }\n";
+		system($sliding_command);
+		
+		print "$set ...\n";	print $file_infoReturned."\n";	
+
+		if ($file_infoReturned) { 
+			open (IN, "<$file_infoReturned");
+			while (<IN>) {
+				chomp;
+				print OUT_COORD $_."\n";
+				print SHARED $_."\t".$ref_taxa."\n";
 			}
-			close (TMP_COORD);
 		} else { delete $contigs_pileup_fasta{$seqs}; next; ## if empty next
 		}
 		
-		delete $contigs_pileup_fasta{$seqs}; undef $infoReturned;
+		delete $contigs_pileup_fasta{$seqs};
 		
 		######################################################################
 		## Check the coordinates foreach taxa against the merge statistics  ##
@@ -365,13 +377,12 @@ for (my $set=1; $set <= $SETS; $set++) {
 	}}}
 	close (OUT_COORD); close (SHARED);
 
+	#if empty file
+	unless (-e -r -s $mergeCoord) { undef %pileup_files_threads; $pm_MARKER_PILEUP->finish(); } 
+	unless (-e -r -s $mergeProfile) { undef %pileup_files_threads; $pm_MARKER_PILEUP->finish();  } 
 	undef %contigs_pileup_fasta; # no longer necessary
-	unless (-e -r -s $mergeCoord) { #if empty file
-		undef %pileup_files_threads; $pm_MARKER_PILEUP->finish(); 
-	} 
-	unless (-e -r -s $mergeProfile) { #if empty file
-		undef %pileup_files_threads; $pm_MARKER_PILEUP->finish(); 
-	} 
+
+	print "$set ....\n";		
 
 	##########################################
 	## Get Coordinates of Molecular Markers ##
@@ -530,8 +541,9 @@ print "+ Marker development for $ref_taxa is finished here...\n\n"; &time_log();
 ### dump info
 my @array = ( $align_dirname."/DOMINO_dump_information.txt" );
 %new_domino_files = %{ DOMINO::retrieve_info(\@array, \%new_domino_files)}; 
-if (-r -e -s $array[0]) { remove_tree($array[0]); 
-DOMINO::printDump(\%new_domino_files, $array[0]);} 
+if (-r -e -s $array[0]) { remove_tree($array[0]); } 
+my %hash = %{ DOMINO::get_uniq_hash(\%new_domino_files) };
+DOMINO::printDump(\%hash, $array[0]);
 
 DOMINO::print_success_Step("marker_discovery");
 
@@ -576,7 +588,9 @@ sub get_coordinates_each_taxa {
 	open (ERR, ">>$$error_file") or DOMINO::printError("Could not open error file $$error_file");
 
 	### open coord and check coord of file 1
-	open (COORD,"<$merge_file_coord") or DOMINO::printError("Could not open merge coordenates $$merge_file_coord");
+	print $merge_file_coord."\n";
+	
+	open (COORD, "<$merge_file_coord") or DOMINO::printError("Could not open merge coordenates $merge_file_coord");
 	while(<COORD>){
 		chomp;
 		my $line = $_;

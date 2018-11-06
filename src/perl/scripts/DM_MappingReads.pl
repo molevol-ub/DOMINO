@@ -509,8 +509,9 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 } # foreach reference
 
 ### dump info
+my %hash = %{ DOMINO::get_uniq_hash(\%new_domino_files) };
 my $dump_file = $align_dirname."/DOMINO_dump_information.txt";
-if (-r -e -s $dump_file) { remove_tree($dump_file); DOMINO::printDump(\%new_domino_files, $dump_file);}
+if (-r -e -s $dump_file) { remove_tree($dump_file); DOMINO::printDump(\%hash, $dump_file);}
 DOMINO::print_success_Step("mapping");
 
 ###########################
