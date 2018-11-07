@@ -11,8 +11,8 @@ BEGIN {
 
 #################################################################
 my $absolute_path = $ARGV[0];
-my $path = $ARGV[1];
-my $markers_file = $ARGV[2];
+my $path = $ARGV[2];
+my $markers_file = $ARGV[1];
 if(!defined($markers_file)) { DOMINO::printError("No marker files are provided in DM_print_Excel module : [$0]\n"); exit; } ## give error message for DOMINO debug
 #################################################################
 
@@ -182,7 +182,7 @@ unless ($no_parameters) {
 		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'entropy'}, $format_right); 
 		$col = $first_col + 1; $row++; $row++;
 		$worksheet_parameters->write($row, $col, "Database(s)", $format_bold); $row++;
-		my @array_db = @{$$hash_files{'clean_data'}{'db'}};
+		my @array_db = @{$$hash_files{'original'}{'db'}};
 		for (my $i=0; $i < scalar @array_db; $i++) {
 			$worksheet_parameters->write($row, $col, $array_db[$i], $format_left); $row++;
 		} $row++; $row++;
@@ -418,4 +418,24 @@ for (my $i=0; $i < scalar @array; $i++) {
 	$worksheet_parameters->write($row, $col, $j, $format_right); $counter++;	$row++;
 } 
 $workbook->close();
-DOMINO::print_Success_Step("excel");
+
+######
+my $markers_count;
+open (MARKER, "<$markers_file"); while (<MARKER>) { if ($_ =~ /.*\_\#.*/) {$markers_count++} } close (MARKER);
+	
+## Print results and instructions
+print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" RESULTS ","#"); DOMINO::printHeader("", "#");
+print "\n+ DOMINO has retrieved $markers_count markers\n";
+my $marker_dirname = $$hash_parameters{"marker"}{"folder"}[-1];
+my $instructions_txt = $marker_dirname."/Instructions.txt";
+my $MSA = $path."/MSA_markers";
+open (OUT, ">$instructions_txt");
+my $string2print = "+ Several files and folders has been generated:
+\t+ $marker_dirname: contains DOMINO markers detected for each taxa as a reference and the clusterized results.
+\t+ $path: contains the clusterized and definitive results for DOMINO markers.
+\t+ $excel_woorkbook_name: contains information of the markers identified and parameters used by DOMINO.
+\t+ $MSA folder contains a single file for each marker identified.\n\n";	
+print OUT $string2print; print $string2print."\n"; close(OUT);
+
+
+DOMINO::print_success_Step("excel");

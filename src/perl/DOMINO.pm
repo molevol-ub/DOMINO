@@ -466,8 +466,7 @@ sub get_parameters {
 			my $time_stamp=$1; my $type = $2;
 			$dirs{$type}{$time_stamp} = $path.$array_files[$i];
 	}}
-	#print Dumper \%dirs;
-	
+	#print Dumper \%dirs;  	
 	my @params; my @info; my %initial_files;
 	foreach my $dir (sort keys %dirs) {
 		my $last;
@@ -477,7 +476,7 @@ sub get_parameters {
 		if ($dir eq "assembly" || $dir eq "clean_data" || $dir eq "mapping" || $dir eq "markers" ) {
 			my $params = $dirs{$dir}{$last}."/DOMINO_dump_param.txt"; 		push (@params, $params);
 	}}
-
+	#print Dumper \@params;
 	my $hash_param = &retrieve_info(\@params, \%parameters);
 	return $hash_param;
 }
@@ -970,165 +969,319 @@ sub get_amb_code {
 	} else { return "N"; }		
 }
 
-sub print_Excel {
-
-	my $markers_file_ref = $_[0]; 
-	my $path = $_[1];
+sub fetching_range_seqs {
 	
-	my $domino_Scripts_excel = $domino_Scripts."/DM_PrintExcel.pl";
-	system("perl $domino_Scripts_excel $folder_abs_path $$path $$markers_file_ref");
-	my $excel_woorkbook_name = $$path."/DM_markers-summary.xls";
-	my $markers_count;
-	open (MARKER, "<$$markers_file_ref"); while (<MARKER>) { if ($_ =~ /.*\_\#.*/) {$markers_count++} } close (MARKER);
+	my $contig_name = $_[0];
+	my $start = $_[1];
+	my $end = $_[2];
+	my $sequence = $_[3];
 	
-	## Print results and instructions
-	print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" RESULTS ","#"); DOMINO::printHeader("", "#");
-	print "\n+ DOMINO has retrieved $markers_count markers\n";
-	my $instructions_txt = $marker_dirname."/Instructions.txt";
-	my $MSA = $$path."/MSA_markers";
-	open (OUT, ">$instructions_txt");
-	my $string = "+ Several files and folders has been generated:
-\t+ $marker_dirname: contains DOMINO markers detected for each taxa as a reference and the clusterized results.
-\t+ $$path: contains the clusterized and definitive results for DOMINO markers.
-\t+ $excel_woorkbook_name: contains information of the markers identified and parameters used by DOMINO.
-\t+ $MSA folder contains a single file for each marker identified.\n\n";	
-	print OUT $string; print $string."\n"; close(OUT);
-	return $excel_woorkbook_name;
+	my $length = $end - $start;	
+	my $sub_seq = substr($sequence, $start, $length);
+	my $seq_id = ">".$contig_name."_coord_".$start."_".$end;
+	return($seq_id, $sub_seq);	
 }
 
-sub check_DOMINO_marker {
-	
-	my $file = $_[0]; ## OUTPUT
-	my $dir = $_[1];	
-	my $DOMINO_markers_file = $_[2]; ## markers collapse
-	my $ref_taxa_all = $_[3]; 			# if MSA alignment it is a file containing msa
+sub check_marker_pairwise {
 
-	my @files; 
+	## Given a MSA file in a hash, check each taxa pairwise
+	my $hash_ref = $_[0];
+	my $MCT = $_[1];
+	my $variable_positions_user_min = $_[2]; 
+	my $variable_positions_user_max = $_[3];
+	my $variable_divergence = $_[4];
+	my $polymorph = $_[5];
 	
-	## Check each group of overlapping markers
-	open (MARKERS, "$DOMINO_markers_file") or die "Could not open file $DOMINO_markers_file [DM_MarkerScan: check_DOMINO_marker]";
-	my $j = 1; my %hash_array;
-	while (1) {
-		my $chunk;
-		if (!eof(MARKERS)) { 
-			$/ = "\/\/"; ## Telling perl where a new line starts
-			$chunk = <MARKERS>; 
-			push(@{$hash_array{$j}}, $chunk);
-		} 
-		$j++; 
-		last if eof(MARKERS);
-	}
-	$/ = "\n";	
-	#print Dumper \%hash_array; 
-
-	my $marker_number = 0;
-	foreach my $group (sort {$a <=> $b} keys %hash_array) {
-		## Split chunk push into array
-		my @array_markers_tmp = @{ $hash_array{$group} };
-		my @array_markers;
-		for (my $i=0; $i < scalar @array_markers_tmp; $i++) {
-			#print "CHUNK!\n"; print $array_markers_tmp[$i]."\n"; print "********\n";
-			my @array = split("\n", $array_markers_tmp[$i]);
-			for (my $j=0; $j < scalar @array; $j++) {
-				chomp($array[$j]);
-				if ($array[$j] =~ ".*:.*") {
-					push(@array_markers, $array[$j]);
-		}}}
-		## For each group of markers, evaluate the features
-		for (my $i=0; $i < scalar @array_markers; $i++) {
-			my @contig_name = split("##", $array_markers[$i]);
-			my @array = split(":", $contig_name[1]);
-			my $coord_P1 = $array[0]; my $coord_P2 = $array[1];
-			my $coord_P3 = $array[2]; my $coord_P4 = $array[3];
-			my $coord_P5 = $array[4]; my $coord_P6 = $array[5];
-			my $taxa = $array[6];
-			# print $contig_name[0]."\t".join(",",@array)."\n"; exit();
+	my @taxa = keys %$hash_ref;
+	my (%seen, %pairwise, %discard);
+	for (my $j=0; $j < scalar @taxa; $j++) {
+		my $reference = $taxa[$j];
+		#if (!$domino_files{$reference}{'taxa'}) {next;}
+		foreach my $keys (sort keys %$hash_ref) {
+			#if (!$domino_files{$keys}{'taxa'}) {next;}
+			if ($seen{$keys}) {next;}
+			if ($discard{$keys}) {next;}
+			if ($keys eq $reference) {next;}
 			
-			## Retrieve msa for this marker			
-			my %hash; my %fasta_msa_sub;
-			if ($option eq "msa_alignment") {
-				my $fasta_msa_sub_ref = DOMINO::readFASTA_hash($ref_taxa_all);
-				%fasta_msa_sub = %{ $fasta_msa_sub_ref };
-			} else {
-				my @desired_taxa = split(",", $taxa);
-				for (my $j=0; $j < scalar @desired_taxa; $j++) {
-					next if ($ref_taxa_all eq $desired_taxa[$j]);
-					my $fasta_each_taxa = $domino_files{$desired_taxa[$j]}{"PROFILE::Ref:".$ref_taxa_all}[0]."/".$contig_name[0]."_sequence.fasta";
-					if (-f $fasta_each_taxa) {
-						$fasta_msa_sub{$desired_taxa[$j]} = $fasta_each_taxa;
-					} else { 
-						$fasta_msa_sub{$desired_taxa[$j]} = "missing"; 
-				}}
-				my $reference_file_contig = $domino_files{$ref_taxa_all}{'REF_DIR'}[0]."/".$contig_name[0].".fasta";
-				$fasta_msa_sub{$ref_taxa_all} = $reference_file_contig;
+			my $seq2check = $$hash_ref{$keys};			
+			my @array_reference = split("",$$hash_ref{$reference});
+			my @array2check = split("", $$hash_ref{$keys});
+			my @array;
+			
+			for (my $i=0; $i < scalar @array_reference; $i++) {
+				my $reference_nuc = $array_reference[$i];
+				my $base2check = $array2check[$i];
+				push(@array, &check_reference_bp($reference_nuc, $base2check, ));
 			}
-			foreach my $keys (sort keys %fasta_msa_sub ) {			
-				if ($fasta_msa_sub{$keys} =~ /missing/) {next;}
-				if ($fasta_msa_sub{$keys} =~ /.*fasta/) {
-					open (FILE, $fasta_msa_sub{$keys});
-					my ($titleline, $sequence);
-					$/ = ">"; ## Telling perl where a new line starts
-					while (<FILE>) {		
-						next if /^#/ || /^\s*$/;
-						chomp;
-						($titleline, $sequence) = split(/\n/,$_,2);
-						next unless ($sequence && $titleline);
-						chomp $sequence;
-						$sequence =~ s/\s+//g; $sequence =~ s/\r//g; $titleline =~ s/\r//g;
-					}
-					close(FILE); $/ = "\n";
-					my ($seq_id, $seq) = &fetching_range_seqs($keys, $coord_P1, $coord_P6, $sequence);
-					$hash{$keys} = $seq;
-				} else {
-					my ($seq_id, $seq) = &fetching_range_seqs($keys, $coord_P1, $coord_P6, $fasta_msa_sub{$keys});
-					$hash{$keys} = $seq;
-			}}
-			my $seq_name;
 			
-			## Check pairwise MSA
-			my $valueReturned = &check_marker_pairwise(\%hash);
-			if ($valueReturned == 1) { ## if it is variable for each pairwise comparison
-				## Get variable positions for the whole marker
-				my $array_ref_returned = &check_marker_ALL(\%hash, "Ref");
-				if ($array_ref_returned eq 'NO') { 
-					remove_tree($msa_file);
+			my $string = join "", @array;
+			my $var_sites_sub = $string =~ tr/1/1/;
+			my $con_sites_sub = $string =~ tr/0/0/;
+			my $total_sub = $con_sites_sub + $var_sites_sub;			
+			
+			if ($var_sites_sub == 0) { ## If does not fit the necessary divergence
+				$seen{$reference}++; $discard{$keys}++; $pairwise{$reference}{$keys} = "NO!";
+				if ($variable_divergence) { 
+					#&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t0\t".$variable_divergence);
+				} else { 					
+					#&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t0\t".$variable_positions_user_range);
+				}
+				next;
+			}
+			
+			my $percentage_sub = $var_sites_sub/$total_sub;
+			if ($variable_divergence) { 
+				#&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t".$percentage_sub."\t".$variable_divergence);
+			} else {					
+				#&debugger_print($reference."\t".$keys."\t".$var_sites_sub."\t".$con_sites_sub."\t".$percentage_sub."\t".$variable_positions_user_range);
+			}
+			
+			if ($variable_positions_user_min) {
+				if ($var_sites_sub > $variable_positions_user_min) { 
+					if ($var_sites_sub < $variable_positions_user_max) { 
+						$pairwise{$reference}{$keys} = "YES!";
+						#&debugger_print("YES");
+					} else { 
+						#&debugger_print("NO");
+					}
 				} else {
-					$marker_number++;
-					my $msa_file = $dir."/".$contig_name[0]."_marker_".$marker_number.".fasta";
-					open (MSA_OUT, ">$msa_file");
-					foreach my $seqs (sort keys %hash) { print MSA_OUT ">".$seqs."\n".$hash{$seqs}."\n"; }
-					close (MSA_OUT);
-					push (@files, $msa_file);
-					my @arrayReturned = @$array_ref_returned; 	
-					## 0: taxa join(::) ## 1: variable sites  ## 2: length of the marker ## 3: profile string ## 4: effective length
-	
-					my $msa_file_array = $dir."/".$contig_name[0]."_marker_".$marker_number."_ARRAY.txt";
-					open (ARRAY, ">$msa_file_array"); print ARRAY ">".$contig_name[0]."_marker_".$marker_number."_ARRAY\n".$arrayReturned[3]."\n"; close (ARRAY);
-	
-					## Print into a file						
-					my $percentage = ($arrayReturned[1]/$arrayReturned[4])*100;
-					my $variation_sprintf = sprintf ("%.3f", $percentage);
-					my $marker2write = $contig_name[0]."_#$marker_number";
-					my @array2print = ($marker2write, $array[0].":".$array[1], $array[2].":".$array[3], $array[4].":".$array[5], $arrayReturned[2], $variation_sprintf, $array[6]); 
-					my $string = join("\t", @array2print);
-					open (OUT, ">>$file"); print OUT $string."\n"; close(OUT); last;		
-	}}}} close (MARKERS);	
-	return (\@files);
+					## If does not fit the necessary divergence
+					$seen{$reference}++; $discard{$keys}++; ## avoid checking if it is not variable
+					$pairwise{$reference}{$keys} = "NO!";
+					#&debugger_print("NO");
+				}
+			} elsif ($variable_divergence) {
+				if ($percentage_sub > $variable_divergence) { 
+					$pairwise{$reference}{$keys} = "YES!";
+					#&debugger_print("YES");
+				} else {
+					## If does not fit the necessary divergence
+					#&debugger_print("NO");
+					$pairwise{$reference}{$keys} = "NO!";
+					$seen{$reference}++; $discard{$keys}++; ## avoid checking if it is not variable
+				}
+			}
+		}
+		$seen{$reference}++; ## avoid checking again the same pair
+	}
+	my $flag_fitting = 0;
+	foreach my $keys (sort keys %pairwise) {
+		if ($discard{$keys}) {next;}
+		foreach my $k (sort keys %{$pairwise{$keys}}) {
+			if ($discard{$k}) {next;}
+			if ($pairwise{$keys}{$k} eq 'YES!') {
+				$flag_fitting++;
+	}}}
+
+	#print Dumper \%pairwise;
+	if ($number_sp == 2) {
+		if ($flag_fitting == 1) {
+			#print "YES!\n"; 
+			return '1'; 
+		} else {
+			#print "NO!\n";
+			return '0'; 
+	}} else {
+		if ($flag_fitting < $MCT) {
+			#print "NO!\n";
+			return '0'; 
+		} else {
+			#print "YES!\n"; 
+			return '1'; 
+	}}	
 }
 
-sub check_overlapping_markers {
+sub check_marker_ALL {
+	##########################################################################################
+	##	This function checks each region using all taxa provided and generates the 			##	
+	##	variation profile for the whole set													##
+	## 		        																		##
+	##	jfsanchezherrero@ub.edu 09/02/2016													##
+	## 		        																		##
+	##########################################################################################
 
-	my $file = $_[0]; 				## markers_shared 
-	my $mergeArray_file = $_[1];
-
-	my @array = split(".txt", $file); 
-	my $file2return = $array[0]."_overlapped_Markers.txt";
-
-	my $domino_Scripts_MarkerOverlap = $domino_Scripts."/DM_MarkerOverlap.pl";
-	my $command = "perl $domino_Scripts_MarkerOverlap $file $mergeArray_file $file2return $folder_abs_path"; #print $command."\n"; 
-	system($command);
+	my $file = $_[0];	
+	my $ref = $_[1];
+	my $missing_allowed = $_[2];
+	my $polymorphism_user = $_[3];
+	my $dnaSP_flag = $_[4];
 	
-	return $file2return;	
+	#print "check_marker_ALL $file\n";
+	my (%hash, $length, @taxa, @length_seqs);
+	if ($ref) {
+		## get alignment from hash
+		foreach my $seqs (sort keys %{ $file }) {
+			my @array = split("", $$file{$seqs});
+			#if (!$domino_files{$seqs}{'taxa'}) {next;}
+			push (@{ $hash{$seqs}}, @array);
+			$length = scalar @array;
+			push (@length_seqs, $length);
+			push (@taxa, $seqs);
+		}	
+	} else {
+		## get alignment from file
+		open(FILE, $file) || die "Could not open the file $file ... [DM_MarkerScan: check_marker_ALL] \n";
+		$/ = ">"; ## Telling perl where a new line starts
+		while (<FILE>) {		
+			next if /^#/ || /^\s*$/;
+			chomp;
+			my ($titleline, $sequence) = split(/\n/,$_,2);
+			next unless ($sequence && $titleline);
+			chomp $sequence;
+			$sequence =~ s/\s+//g; $sequence =~ s/\r//g;
+			$titleline =~ s/\r//g;
+			#print $titleline."\n".$sequence."\n";
+			my @array = split("", $sequence);
+			if (!$domino_files{$titleline}{'taxa'}) {next;}
+			push (@{ $hash{$titleline}}, @array);
+			$length = scalar @array;
+			push (@length_seqs, $length);
+			push (@taxa, $titleline);
+		}
+		close(FILE); $/ = "\n";	
+	}
+
+	## Get DNA code
+	my %ambiguity_DNA_codes = %{ &ambiguity_DNA_codes() };
+
+	#print Dumper \%hash; ## get into a hash a value [taxa] with an array the marker base by base
+	my @tmp_length_uniq = do { my %seen; grep { !$seen{$_}++ } @length_seqs };
+	if (scalar @tmp_length_uniq > 1) {
+		&printError("There is problem: length of the markers do not match for $file..."); return "";
+	} else { $length_seqs[0] = $length; }	
+	
+	my @profile;
+	for (my $i=0; $i < $length; $i++) {
+		my $flag_position = 0;
+		my @tmp;
+		foreach my $seqs (sort keys %hash) { push (@tmp, $hash{$seqs}[$i]); }
+		my @tmp_uniq_sort = do { my %seen; grep { !$seen{$_}++ } @tmp };
+
+		if (scalar @tmp_uniq_sort == 1) {
+			if ($tmp_uniq_sort[0] eq 'N') { 						push (@profile, 'N');
+			} elsif ($tmp_uniq_sort[0] eq '-') { 					push (@profile, '-');
+			} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[0]}) { 	push (@profile, '1');
+			} else {  												push (@profile, '0'); 
+			}
+		} else {
+			## We are assuming the calling has been correctly done and
+			## the ambiguity codes are due to polymorphism
+			my $escape_flag = 0;
+			my (@tmp, @amb);
+			for (my $j=0; $j < scalar @tmp_uniq_sort; $j++) {
+				if ($tmp_uniq_sort[$j] eq '-') { ## Gaps would be codify as -
+					$escape_flag++;
+				} elsif ($tmp_uniq_sort[$j] eq 'N') { ## Gaps would be codify as -
+					$escape_flag++;
+				} elsif ($ambiguity_DNA_codes{$tmp_uniq_sort[$j]}) {
+					push(@amb, $tmp_uniq_sort[$j]);
+				} else { 
+					push(@tmp, $tmp_uniq_sort[$j]); 
+			}}
+
+			if ($escape_flag) {  push (@profile, '-');			
+			} else {
+				if (scalar @amb == 0) { ## No ambiguous code
+					push (@profile, '1');			
+				} elsif (scalar @amb == 1) { ## 1 amb code
+					for (my $h=0; $h < scalar @amb; $h++) {
+						my $flag_yes = 0;
+						for (my $k = 0; $k < scalar @{ $ambiguity_DNA_codes{$amb[$h]} }; $k++) {
+							if (grep /$ambiguity_DNA_codes{$amb[$h]}[$k]/, @tmp) { $flag_yes++; }
+						}
+						if ($flag_yes > 0) {
+							if ($polymorphism_user) { 	
+								push (@profile, '1'); 	## if polymorphism
+							} else { 					
+								push (@profile, '0'); ## The ambiguous is the present snps: 	YCT => [ Y > C/T ]
+						}} else { 						
+							push (@profile, '1');	## The ambiguous is not the present snps  	MGG => [ M > A/C ]
+				}}} elsif (scalar @amb > 1) {  			
+					push (@profile, '1');   ## Several
+	}}}}
+	my $string = join ("", @profile); undef %hash; undef @profile;
+
+	my $var_sites = $string =~ tr/1/1/; ## count variable sites
+	my $con_sites = $string =~ tr/0/0/; ## count conserved sites
+	my $species = join (",", sort @taxa);
+	my $count_length = $con_sites + $var_sites;
+	if ($var_sites == 0) { 
+		#print "NO: $species, $var_sites, $length, $string, $count_length\n";
+		#if ($dnaSP_flag) { } else { return 'NO'; } 
+		#if we get to provide these markers there is no need to do DOMINO as we will be reporting everything
+		return 'NO';
+	}
+	my $missing = $length - $count_length;
+	my $missing_allowed_length = $missing_allowed * $length;
+	if ($missing > $missing_allowed_length) { 
+		#print "NO: $species, $var_sites, $length, $string, $count_length\n";
+		if ($dnaSP_flag) {} else { return 'NO';  }
+		#if we get to provide these markers there is no need to do DOMINO as we will be reporting everything
+		return 'NO';
+	}
+	my @array = ($species, $var_sites, $length, $string, $count_length);
+	#print Dumper \@array; print "\n";
+	return \@array;
+}
+
+sub check_reference_bp {
+
+	my $reference_nuc = $_[0];
+	my $base2check = $_[1];
+	my $polymorphism_user = $_[2];
+	
+	## Get DNA code
+	my %ambiguity_DNA_codes = %{ &ambiguity_DNA_codes() };
+
+	## For this taxa
+	if ($base2check eq "-" || $reference_nuc eq "-") { 
+		return '-';
+	} elsif ($base2check eq "N" || $reference_nuc eq "N") { 
+		return 'N';
+	} elsif ($reference_nuc ne $base2check) { 
+		## Check wether there is an ambiguity code or not
+		## and also if user would like some polymorphism
+		## and decide whether it is a variable or conserved position
+		my $flag = 1;
+		if ($ambiguity_DNA_codes{$reference_nuc} || $ambiguity_DNA_codes{$base2check}) { ## one or the other or both
+			if ($ambiguity_DNA_codes{$reference_nuc} and $ambiguity_DNA_codes{$base2check}) {
+				## Both bases are ambiguous
+				for (my $h = 0; $h < scalar @{ $ambiguity_DNA_codes{$base2check}}; $h++) {
+					for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$reference_nuc}}; $j++) {
+						if ($ambiguity_DNA_codes{$reference_nuc}[$j] eq $ambiguity_DNA_codes{$base2check}[$h]) {
+							$flag = 0;
+						} else {
+							if ($polymorphism_user) {
+								$flag = 1;	last;
+			}}}}
+			} elsif ($ambiguity_DNA_codes{$reference_nuc}) {
+				for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$reference_nuc}}; $j++) {
+					if ($ambiguity_DNA_codes{$reference_nuc}[$j] eq $base2check) {
+						$flag = 0;								
+					} else {
+						if ($polymorphism_user) {
+							$flag = 1;	last;
+				}}}
+			} elsif ($ambiguity_DNA_codes{$base2check}) {
+				for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$base2check}}; $j++) {
+					if ($ambiguity_DNA_codes{$base2check}[$j] eq $reference_nuc) {
+						$flag = 0;								
+					} else {
+						if ($polymorphism_user) {
+							$flag = 1;	last;
+				}}}}
+		} else { 
+			## If neither the reference or the base to check are ambiguous
+			## and they are different, this would be a variable site
+			$flag = 1;
+		}
+		if ($flag == 0) { return '0'; } else { return '1'; }
+
+	} elsif ($reference_nuc eq $base2check) { 					## Both bases are the same, this is a conserved site
+		return '0';
+	} else {
+		return '-';
+	}
 }
 
 1;

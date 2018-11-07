@@ -868,25 +868,30 @@ my $domino_Scripts = $scripts_path."scripts";
 ## Any previous run?
 if ($avoid_mapping) { 
 	my $answer = &check_previous(); 
-	if ($answer eq "YES") { $avoid_mapping = 1;
+	if ($answer eq "YES") { 
+		$avoid_mapping = 1;
 	} else { undef $avoid_mapping; }
 }
 
 ## print options to screen
 &print_options();
 
+#######################################
 ## Debug print Dumper \%domino_files; print Dumper \%domino_params; exit();
-
 ## dump information
-my $dump_file = $align_dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
-my $dump_param = $align_dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
-############################################################################################################
+my ($dump_file, $dump_param);
+$dump_file = $align_dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
+$dump_param = $align_dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
 
-## START
 ####################################################################################
-##########	Mapping/Alignment of the contigs 		################################
+## 								START
 ####################################################################################
+
 if (!$avoid_mapping) {	
+	####################################################################################
+	##########	Mapping/Alignment of the contigs 		################################
+	####################################################################################
+	
 	if ($option ne "msa_alignment") {
 	
 		#################################################################################################
@@ -927,6 +932,7 @@ if (!$avoid_mapping) {
 	print "+ Files would be obtained...\n\n"; ## No_Profile_Generation|NPG: just get files
 	## retrieve information generated
 	my @array = ($dump_file); %domino_files = %{ DOMINO::retrieve_info(\@array, \%domino_files) };
+	my @array_param = ($dump_param); %domino_params = %{ DOMINO::retrieve_info(\@array_param, \%domino_params) };
 	## %domino_params
 }
 
@@ -945,8 +951,9 @@ if ($avoid_mapping) {
 	File::Copy::move($mapping_parameters, $marker_dirname."/"); 
 }
 
-## Get DNA code
-my %ambiguity_DNA_codes = %{ DOMINO::ambiguity_DNA_codes() };
+## dump information
+$dump_file = $marker_dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
+$dump_param = $marker_dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
 
 ##########################################################
 ############# MARKER SELECTION ###########################
@@ -956,17 +963,15 @@ if ($option eq "msa_alignment") {
 	#################################################################################################
 	DOMINO::printHeader("", "#"); DOMINO::printHeader(" Parsing Alignment Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
 	## to Debug
-
-## to Debug	## DM_MarkerSelection.pl $folder_abs_path
-## to Debug
-## to Debug	my $domino_Scripts_MarkerSelection = $domino_Scripts."/DM_MarkerSelection.pl";
-## to Debug	my $command = "perl $domino_Scripts_MarkerSelection ".$folder_abs_path." $step_time";
-## to Debug	print "\n[ System Call: ".$command." ]\n\n";
-## to Debug	system($command);
+	## to Debug	## DM_MarkerSelection.pl $folder_abs_path
+	## to Debug
+	## to Debug	my $domino_Scripts_MarkerSelection = $domino_Scripts."/DM_MarkerSelection.pl";
+	## to Debug	my $command = "perl $domino_Scripts_MarkerSelection ".$folder_abs_path." $step_time";
+	## to Debug	print "\n[ System Call: ".$command." ]\n\n";
+	## to Debug	system($command);
 	#################################################################################################
 }
 &time_log(); print "\n";
-
 ## Debug print Dumper \%domino_files; print Dumper \%domino_params; exit();
 
 ## Other types of data
@@ -975,6 +980,7 @@ if ($option eq "msa_alignment") {
 ##########################################################
 my $genome_marker_bool = 0;
 my $all_markers_file = $marker_dirname."/markers.txt";
+my $test=0;
 foreach my $ref_taxa (sort keys %domino_files) {
 
 	## For each taxa specified, obtain putative molecular markers
@@ -999,6 +1005,9 @@ foreach my $ref_taxa (sort keys %domino_files) {
 	print "\n[ System Call: ".$command." ]\n\n";
 	system($command);
 	#################################################################################################
+
+	#$test++; if ($test == 2) { last; }	
+
 } #each reference taxa
 
 #################################################################################################
@@ -1017,6 +1026,8 @@ if ($genome_fasta) {
 	#################################################################################################
 
 } else { ## multiple references
+
+	print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" Clustering markers for unique results ", "#"); DOMINO::printHeader("", "#");
 
 	### Clusterize markers for each taxa and provide unique results
 	my $domino_Scripts_MarkerClusterize = $domino_Scripts."/DM_MarkerClusterize.pl";
@@ -1091,62 +1102,6 @@ sub check_file {
 				DOMINO::printError("$file_to_check...\n File does not contain any name provided using taxa_names option.\nMaybe it is under controlled but just bear it in mind...\nDOMINO would not die here...\n"); 
 		}}
 	} else { DOMINO::printError("Please provide several files for each taxa..."); DOMINO::printFormat_message(); DOMINO::dieNicely(); }
-}
-
-sub check_reference_bp {
-
-	my $reference_nuc = $_[0];
-	my $base2check = $_[1];
-	
-	## For this taxa
-	if ($base2check eq "-" || $reference_nuc eq "-") { 
-		return '-';
-	} elsif ($base2check eq "N" || $reference_nuc eq "N") { 
-		return 'N';
-	} elsif ($reference_nuc ne $base2check) { 
-		## Check wether there is an ambiguity code or not
-		## and also if user would like some polymorphism
-		## and decide whether it is a variable or conserved position
-		my $flag = 1;
-		if ($ambiguity_DNA_codes{$reference_nuc} || $ambiguity_DNA_codes{$base2check}) { ## one or the other or both
-			if ($ambiguity_DNA_codes{$reference_nuc} and $ambiguity_DNA_codes{$base2check}) {
-				## Both bases are ambiguous
-				for (my $h = 0; $h < scalar @{ $ambiguity_DNA_codes{$base2check}}; $h++) {
-					for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$reference_nuc}}; $j++) {
-						if ($ambiguity_DNA_codes{$reference_nuc}[$j] eq $ambiguity_DNA_codes{$base2check}[$h]) {
-							$flag = 0;
-						} else {
-							if ($polymorphism_user) {
-								$flag = 1;	last;
-			}}}}
-			} elsif ($ambiguity_DNA_codes{$reference_nuc}) {
-				for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$reference_nuc}}; $j++) {
-					if ($ambiguity_DNA_codes{$reference_nuc}[$j] eq $base2check) {
-						$flag = 0;								
-					} else {
-						if ($polymorphism_user) {
-							$flag = 1;	last;
-				}}}
-			} elsif ($ambiguity_DNA_codes{$base2check}) {
-				for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$base2check}}; $j++) {
-					if ($ambiguity_DNA_codes{$base2check}[$j] eq $reference_nuc) {
-						$flag = 0;								
-					} else {
-						if ($polymorphism_user) {
-							$flag = 1;	last;
-				}}}}
-		} else { 
-			## If neither the reference or the base to check are ambiguous
-			## and they are different, this would be a variable site
-			$flag = 1;
-		}
-		if ($flag == 0) { return '0'; } else { return '1'; }
-
-	} elsif ($reference_nuc eq $base2check) { 					## Both bases are the same, this is a conserved site
-		return '0';
-	} else {
-		return '-';
-	}
 }
 
 sub debugger_print {
@@ -1314,16 +1269,16 @@ sub check_options {
 	if (!$subset_offset_user) {$subset_offset_user = 50;} ## Split subsets into 50 contigs to avoid collapsing RAM
 	
 	## get optional
-	my $answer_dnaSP; if ($dnaSP_flag) { $answer_dnaSP++; $polymorphism_user=1; push (@{ $domino_params{'mapping'}{'dnaSP'} }, 1);}
-	my $answer_PV; if ($polymorphism_user) { $answer_PV++; push (@{ $domino_params{'mapping'}{'polymorphism'} }, 1);}
-	my $BowtieLocal; if ($bowtie_local) { $BowtieLocal++; push (@{ $domino_params{'mapping'}{'bowtie_local'} }, 1);} 
-	my $mapContigFiles; if ($map_contig_files) { $mapContigFiles++; push (@{ $domino_params{'mapping'}{'map_contig_files'} }, 1);}
-	my $LowCoverageData; if ($DOMINO_simulations) { $LowCoverageData++; push (@{ $domino_params{'mapping'}{'low_coverage_data'} }, 1);}
+	my $answer_dnaSP = 0; if ($dnaSP_flag) { $answer_dnaSP++; $polymorphism_user=1;}
+	my $answer_PV = 0; if ($polymorphism_user) { $answer_PV++; }
+	my $BowtieLocal = 0; if ($bowtie_local) { $BowtieLocal++; } 
+	my $mapContigFiles = 0; if ($map_contig_files) { $mapContigFiles++; }
+	my $LowCoverageData = 0; if ($DOMINO_simulations) { $LowCoverageData++; }
 	
 	my ($variable_positions_user_min, $variable_positions_user_max);
 	my ($window_size_CONS_min, $window_size_CONS_max);
 	my ($window_size_VARS_min, $window_size_VARS_max);
-
+	
 	## Get ranges
 	if ($variable_positions_user_range) {
 		if ($variable_positions_user_range =~ m/.*\:\:.*/) {
@@ -1384,8 +1339,7 @@ sub check_options {
 	## push parameters
 	push (@{ $domino_params{'mapping'}{'option'} }, $option);
 	push (@{ $domino_params{'mapping'}{'mapping_markers_errors_details'} }, $mapping_markers_errors_details);
-	push (@{ $domino_params{'mapping'}{'mapping_parameters'} }, $mapping_parameters);
-		
+	push (@{ $domino_params{'mapping'}{'mapping_parameters'} }, $mapping_parameters);		
 	push (@{ $domino_params{'mapping'}{'cpu'} }, $num_proc_user);
 	push (@{ $domino_params{'mapping'}{'type_input'} }, $input_type);
 	push (@{ $domino_params{'mapping'}{'rdgopen'} }, $rdgopen);
@@ -1394,8 +1348,14 @@ sub check_options {
 	push (@{ $domino_params{'mapping'}{'rfgexten'} }, $rfgexten);
 	push (@{ $domino_params{'mapping'}{'mis_penalty'} }, $mis_penalty);
 	push (@{ $domino_params{'mapping'}{'level_significance_coverage_distribution'} }, $level_significance_coverage_distribution);
-	push (@{ $domino_params{'mapping'}{'folder'} }, $align_dirname);
-	
+	push (@{ $domino_params{'mapping'}{'folder'} }, $align_dirname);	
+	push (@{ $domino_params{'mapping'}{'dnaSP'} }, $answer_dnaSP);
+	push (@{ $domino_params{'mapping'}{'polymorphism'} }, $answer_PV);
+	push (@{ $domino_params{'mapping'}{'bowtie_local'} }, $BowtieLocal);
+	push (@{ $domino_params{'mapping'}{'map_contig_files'} }, $mapContigFiles);
+	push (@{ $domino_params{'mapping'}{'low_coverage_data'} }, $LowCoverageData);
+
+	push (@{ $domino_params{'marker'}{'cpu'} }, $num_proc_user);
 	push (@{ $domino_params{'marker'}{'variable_divergence'} }, $variable_divergence);
 	push (@{ $domino_params{'marker'}{'behaviour'} }, $behaviour);
 	push (@{ $domino_params{'marker'}{'option'} }, $option);
@@ -1411,6 +1371,7 @@ sub check_options {
 	push (@{ $domino_params{'marker'}{'totalContigs2use4markers'} }, $totalContigs2use4markers);
 	push (@{ $domino_params{'marker'}{'subset_offset_user'} }, $subset_offset_user);
 	push (@{ $domino_params{'marker'}{'MCT'} }, $minimum_number_taxa_covered);
+	push (@{ $domino_params{'marker'}{'folder'} }, $marker_dirname);
 	
 	&debugger_print("DOMINO Parameters");&debugger_print("Ref", \%domino_params);
 	#############################################################################################################################
@@ -1434,10 +1395,11 @@ sub check_previous {
 		next if ($keys eq "date"); next if ($keys eq "folder");
 		next if ($keys eq "mapping_markers_errors_details");
 		next if ($keys eq "mapping_parameters"); 
-		next if ($keys eq "dump_file");
+		next if ($keys eq "dump_file"); next if ($keys eq "cpu");
 		
 		my $prev = $domino_params_dump{'mapping'}{$keys}[0];
 		my $curr = $domino_params{'mapping'}{$keys}[0];
+		#print "Keys: $keys Curr: $curr Prev: $prev\n"; 
 		unless ($prev eq $curr ) {
 			$undef_mapping++; DOMINO::printError("There is difference: $keys $curr =/= $prev\n"); ## test
 	}}
@@ -1476,14 +1438,28 @@ sub check_previous {
 	if ($undef_mapping > 0) {
 		undef $avoid_mapping;
 		DOMINO::printDetails("+ Although option -No_Profile_Generation was provided, it would be done again as parameters do not match with the available mapping folder...\n",$mapping_parameters, $param_Detail_file_markers);
-		push (@{$domino_params{"mapping"}{"date"}}, $date);
-		push (@{$domino_params{"marker"}{"date"}}, $date);
 		return ("NO");
 	} else {
 		DOMINO::printDetails("+ A previous profile has been generated with the same parameters and details...\n",$mapping_parameters, $param_Detail_file_markers);
-		%domino_files = %domino_files_dump;
-		%domino_params = %domino_params_dump;
-		push (@{$domino_params{"marker"}{"date"}}, $date);
+		#%domino_files = %domino_files_dump;
+		
+		## Dump info up to now to a file 
+		foreach my $keys (keys %domino_files_dump) {
+			foreach my $subkeys (keys %{ $domino_files_dump{$keys} }) {
+			push (@{ $domino_files{$keys}{$subkeys} },  $domino_files_dump{$keys}{$subkeys}[0]);
+		}}
+		%domino_files = %{ DOMINO::get_uniq_hash(\%domino_files) };
+		
+		## Dump info up to now to a file 
+		foreach my $keys (keys %domino_params_dump) {
+			foreach my $subkeys (keys %{ $domino_params_dump{$keys} }) {
+			push (@{ $domino_params{$keys}{$subkeys} },  $domino_params_dump{$keys}{$subkeys}[0]);
+		}}
+		$domino_params{"marker"}{"date"}[0] = $date;
+		undef $domino_params{"marker"}{"folder"};
+		$domino_params{"marker"}{"folder"}[0] = $marker_dirname;
+		%domino_params = %{ DOMINO::get_uniq_hash(\%domino_params) };
+
 		if (!$number_sp) {
 			$number_sp = $domino_params{'marker'}{'number_taxa'}[0]; 
 			$minimum_number_taxa_covered = $domino_params{'marker'}{'MCT'}[0];

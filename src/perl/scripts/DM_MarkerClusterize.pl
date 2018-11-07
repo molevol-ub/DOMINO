@@ -6,13 +6,14 @@ use FindBin;
 use lib $FindBin::Bin."/../lib";
 BEGIN {
 	require DOMINO;
+	require File::Copy;
 	require Parallel::ForkManager;
 	require File::Path; use File::Path qw(remove_tree);
 }
 #################################################################
 my $domino_version ="DOMINO v1.1 ## Revised 30-10-2018";
 my $scripts_path = $FindBin::Bin."/../";
-my $domino_Scripts = $scripts_path."scripts";
+my $domino_Scripts = $FindBin::Bin;
 my $BLAST = $scripts_path."NCBI_BLAST/";
 
 #################################################################
@@ -25,15 +26,12 @@ my $step_time = $ARGV[1];
 #################################################################
 ## Get general parameters and files
 my $hash_parameters = DOMINO::get_parameters($path."/");
-my $domino_align_files_Ref = DOMINO::get_DOMINO_files($path."/");
-my %domino_align_files = %{$domino_align_files_Ref};
+my %domino_cluster_files = %{ DOMINO::get_DOMINO_files($path."/") };
+	#print Dumper $hash_parameters;
+	#print Dumper \%domino_cluster_files;
 
-#print Dumper $hash_parameters;
-#print Dumper $domino_align_files_Ref;
-
-my $align_dirname = $$hash_parameters{'mapping'}{'folder'}[0];
-my $num_proc_user = $$hash_parameters{'mapping'}{'cpu'}[0];
-my $msa_dirname = $align_dirname."/MSA_files";
+my $marker_dirname = $$hash_parameters{'marker'}{'folder'}[-1];
+my $num_proc_user = $$hash_parameters{'marker'}{'cpu'}[0];
 
 my %new_domino_files;
 my %new_dowmino_param;
@@ -42,9 +40,8 @@ my %new_dowmino_param;
 #############################################################
 ## Clusterize markers using different taxa as reference ##
 #############################################################
-print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" Clustering markers for unique results ", "#"); DOMINO::printHeader("", "#");
 my $blast_dir = $marker_dirname."/clustering";
-mkdir $blast_dir, 0755; chdir $blast_dir; 	&debugger_print("Changing dir to $blast_dir");
+mkdir $blast_dir, 0755; chdir $blast_dir; #&debugger_print("Changing dir to $blast_dir");
 
 # read dir
 my $files_dir_ref = DOMINO::readDir($marker_dirname);
@@ -57,16 +54,17 @@ print "+ Merging different DOMINO markers according to the taxa of reference...\
 
 # get sequences
 my @CoordMarker;
-foreach my $keys (sort keys %domino_files) {
-	if ($domino_files{$keys}{'taxa'}) {
-		push (@CoordMarker, $domino_files{$keys}{'coordinates'}[0]);
-		my $coordinate_file = $domino_files{$keys}{'markers'}[0];
+foreach my $keys (sort keys %domino_cluster_files) {
+	if (!$domino_cluster_files{$keys}{'coordinates'}) {next;}
+	if ($domino_cluster_files{$keys}{'taxa'}) {
+		push (@CoordMarker, $domino_cluster_files{$keys}{'coordinates'}[0]);
+		my $coordinate_file = $domino_cluster_files{$keys}{'markers'}[0];
 		if (-e -r -s $coordinate_file) {
 			my $hash = DOMINO::readFASTA_hash($coordinate_file);
 			foreach my $seq (keys %{$hash}) {
 				print ALL_coordinates ">".$seq."_taxa_".$keys."\n".$$hash{$seq}."\n";
 		}}
-		my $contig_file = $domino_files{$keys}{'CONTIGS'}[0];
+		my $contig_file = $domino_cluster_files{$keys}{'CONTIGS'}[0];
 		if (-e -r -s $contig_file) {
 			my $size_file = DOMINO::get_size($contig_file);
 			open (FH, $contig_file);
@@ -76,12 +74,12 @@ foreach my $keys (sort keys %domino_files) {
 
 ## Use BLAST for clustering sequences
 print "+ Generate a BLAST database...\n"; 
-my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($all_coordinates_file, $BLAST, $mapping_markers_errors_details);
-&debugger_print($blast_DB_message);
+my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($all_coordinates_file, $BLAST, $$hash_parameters{"mapping"}{"mapping_markers_errors_details"}[0]);
+#&debugger_print($blast_DB_message);
 if ($blast_DB eq "1") {
 	DOMINO::printError("Early termination of the DOMINO Marker Scan...");
 	my $msg= "\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"; 
-	print $msg; DOMINO::printError_log($msg); DOMINO::finish_time_stamp($start_time);  exit();
+	print $msg; DOMINO::printError_log($msg); exit();
 } 
 
 ## Parallelize BLAST
@@ -99,7 +97,7 @@ for (my $j = 0; $j < scalar @{ $fasta_files_split_BLAST }; $j++) {
 	print "\t- Sending BLASTn command for clustering [$int/$total]...\n";
 	my $blast_search_tmp = "blast_search.txt_tmp".$j; 
 	my ($blastn, $blastn_message) = DOMINO::blastn($all_coordinates_file, $blast_DB, $blast_search_tmp, $BLAST);
-	&debugger_print($blastn_message);
+	#&debugger_print($blastn_message);
 	$pm_BLAST->finish(); # finish for each contig
 } 
 $pm_BLAST->wait_all_children; #each marker
@@ -111,7 +109,7 @@ print "+ Filtering BLAST search now...\n";
 my $contig_length_Ref = DOMINO::readFASTA_hash($all_coordinates_file);
 my (%markers2keep, @markers_seen, %clusterized_contigs_keep);
 my $first_hit = 0;
-my $aln_overlapped = $domino_params{'marker'}{'window_size_VARS_max'}[0] + $domino_params{'marker'}{'window_size_CONS_max'}[0];
+my $aln_overlapped = $$hash_parameters{'marker'}{'window_size_VARS_max'}[0] + $$hash_parameters{'marker'}{'window_size_CONS_max'}[0];
 print "+ Clustering markers with > $aln_overlapped bp overlapped...\n";
 open (BLAST, $blast_search); while (<BLAST>) {
 	my $line = $_;
@@ -146,7 +144,7 @@ foreach my $keys (sort keys %$contig_length_Ref) {
 
 ## Printing definitely Results
 my $definitely_results_dirname = $marker_dirname."/DOMINO_markers_Results";
-mkdir $definitely_results_dirname, 0755; chdir $definitely_results_dirname; &debugger_print("Changing dir to $definitely_results_dirname");
+mkdir $definitely_results_dirname, 0755; chdir $definitely_results_dirname; #&debugger_print("Changing dir to $definitely_results_dirname");
 print "+ Getting the information ready for the visualization of results...\n";
 my $contig_def_results_sequences = "DM_contigs.fasta";
 open (CONTIGS_DEF, ">$contig_def_results_sequences");
@@ -176,11 +174,10 @@ for (my $h = 0; $h < scalar @CoordMarker; $h++) {
 				$hash4markers2keep{$contig_split[0]}{$coord_string} = $line;
 }}} close(tmp_COOR); }
 
-my $coordinates_def_results = "DM_markers-coordinates.txt";
+my $coordinates_def_results = $definitely_results_dirname."/DM_markers-coordinates.txt";
 open (COOR, ">$coordinates_def_results");
 print COOR "Contig\t\tConserved_Region\tVariable_Region\tConserved_Region\tMapping_Taxa\Length\tDivergence\n";
 my %rename;
-
 foreach my $contigs (sort keys %hash4markers2keep) {
 	my $counter = 0;
 	foreach my $markers (sort keys %{ $hash4markers2keep{$contigs} }) {
@@ -200,9 +197,10 @@ close(COOR); &time_log(); print "\n";
 
 ## Get MSA markers
 my $markers_msa_folder = $definitely_results_dirname."/MSA_markers"; mkdir $markers_msa_folder, 0755;
-foreach my $keys (sort keys %domino_files) {
-	if ($domino_files{$keys}{'taxa'}) {
-		my $MSA_markers_each_Taxa = $domino_files{$keys}{'MSA_markers'}[0];
+foreach my $keys (sort keys %domino_cluster_files) {
+	if (!$domino_cluster_files{$keys}{'coordinates'}) {next;}
+	if ($domino_cluster_files{$keys}{'taxa'}) {
+		my $MSA_markers_each_Taxa = $domino_cluster_files{$keys}{'MSA_markers'}[0];
 		my $array_Ref = DOMINO::readDir($MSA_markers_each_Taxa);
 		for (my $i=0; $i < scalar @{ $array_Ref }; $i++) {
 			my @name = split(".fasta", $$array_Ref[$i]);
@@ -211,9 +209,18 @@ foreach my $keys (sort keys %domino_files) {
 }}}}
 
 ## Print excel for clusterized results
-print "+ Generating an Excel file for DOMINO markers coordinates...\n"; 
-DOMINO::print_Excel(\$coordinates_def_results, \$definitely_results_dirname);
+print "+ Generating an Excel file for DOMINO markers coordinates...\n";
+
+my $domino_Scripts_excel = $domino_Scripts."/DM_PrintExcel.pl";
+my $command = "perl $domino_Scripts_excel $path $coordinates_def_results $definitely_results_dirname";
+print "\n\n[ System Call: ".$command." ]\n";
+system($command);
 
 ###########################
 ####### SUBROUTINES #######
 ###########################
+
+sub time_log {	
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
+	$step_time = $$step_time_tmp;
+}

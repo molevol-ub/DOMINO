@@ -39,7 +39,6 @@ close(FILE);
 
 # Debug 
 #print Dumper \%tmp_hash;
-	
 my %coord_seen;
 foreach my $contig (sort keys %tmp_hash) {
 	foreach my $taxa (sort keys %{ $tmp_hash{$contig} }) {		
