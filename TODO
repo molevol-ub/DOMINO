@@ -2,25 +2,29 @@
 
 Wrap the package into docker
 
-install.sh
+- install.sh
 	Check Installation somehow
 	
-DM_Clean_v1.0.2.pl
+- DM_Clean_v1.0.2.pl
 	Sort and get uniq contaminants if contaminants found
 	FIX RENAME FOR LATER ASSEMBLY STEPS
 	
-DM_Assembly_v1.0.2.pl
+- DM_Assembly_v1.0.2.pl
 	SPAdes for Mac?
 	
-DM_MarkerScan_v1.0.2.pl
+- DM_MarkerScan_v1.0.3.pl
 	
-	Fix marker overlapper
-	Fix marker clustering
-	Explain new parameters implemented
 	Update manual and documentation
 	
 	Delete DOMINO_dump_information.txt
 	Fix Excel output and check if appropiate
-	Fix memory RAM glitch
 
-DOMINO.pm 
+- DOMINO.pm 
+
+- Implement independent files
+
+- Check every time you run any DOMINO script a small script that checks every module/dependency is OK: 
+	Update: DM_dependencies.pl
+	
+- Provide error message:
+	DM_contig_stats.pl	

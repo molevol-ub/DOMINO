@@ -39,6 +39,10 @@ report to the main authors.
 
 Version Release History
 ====================================
+#########
+v1.1
+Modular version of DOMINO allowing a better implementation
+
 v1.0.1
 - Fixed a bug when using -NPG option in the marker discovery step
 
