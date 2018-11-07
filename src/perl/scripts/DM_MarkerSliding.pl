@@ -10,7 +10,7 @@ BEGIN {
 	require File::Path; use File::Path qw(remove_tree);
 }
 #################################################################
-my $domino_version ="DOMINO v1.1 ## Revised 30-10-2018";
+my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
 my $scripts_path = $FindBin::Bin."/../";
 my $domino_Scripts = $scripts_path."scripts";
 my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";

@@ -14,7 +14,7 @@ my $mergeArray_file = $ARGV[1];
 my $file2return = $ARGV[2];
 my $path = $ARGV[3];
 
-my $domino_version ="DOMINO v1.1 ## Revised 30-10-2018";
+my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
 my $hash_parameters = DOMINO::get_parameters($path."/");
 
 #&debugger_print("Checking file $file [DM_MarkerScan: check_overlapping_markers]");

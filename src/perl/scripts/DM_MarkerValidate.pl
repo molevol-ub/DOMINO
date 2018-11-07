@@ -15,8 +15,7 @@ my $DOMINO_markers_file = $ARGV[2];
 my $ref_taxa_all = $ARGV[3];
 my $path = $ARGV[4];
 #################################################################
-
-my $domino_version ="DOMINO v1.1 ## Revised 30-10-2018";
+my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
 my $hash_parameters = DOMINO::get_parameters($path."/");
 my %new_domino_files = %{ DOMINO::get_DOMINO_files($path."/") };
 ##print Dumper \%new_domino_files; exit();

@@ -17,7 +17,7 @@ if(!defined($markers_file)) { DOMINO::printError("No marker files are provided i
 #################################################################
 
 #################################################################
-my $domino_version ="DOMINO v1.1 ## Revised 24-10-2018";
+my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
 my $hash_parameters = DOMINO::get_parameters($absolute_path."/");
 my $hash_files = DOMINO::get_DOMINO_files($absolute_path."/");
 #################################################################

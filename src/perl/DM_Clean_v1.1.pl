@@ -7,7 +7,7 @@
 ###	Sánchez-Gracia, and Julio Rozas.		
 ###########################################################################################
 ##	Usage:
-##      perl DM_Clean_v1.0.2.pl
+##      perl DM_Clean_v1.1.pl
 ##
 ##    ###########################
 ##    ### General Information ###
@@ -138,7 +138,7 @@ pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPT
 
 =item B<>
 
-DM_Clean_v1.0.2.pl 
+DM_Clean_v1.1.pl 
 
 =back
 	
@@ -148,7 +148,7 @@ DM_Clean_v1.0.2.pl
 
 =item B<>
 
-DOMINO v1.1 ## Revised 23-10-2018
+DOMINO v1.1 ## Revised 07-11-2018
 
 =back
 
@@ -158,7 +158,7 @@ DOMINO v1.1 ## Revised 23-10-2018
 
 =item B<>
 
-perl DM_Clean_v1.0.2.pl 
+perl DM_Clean_v1.1.pl 
 
 =item B<###########################>
 
@@ -469,56 +469,56 @@ Keep all intermediate files.
 
 =item B<454 SFF: Unique file>
 
- perl [DOMINO_scripts_path]/DM_Clean_v1.0.2.pl -type_file 1 -o test_SFF_file 
+ perl [DOMINO_scripts_path]/DM_Clean_v1.1.pl -type_file 1 -o test_SFF_file 
  -input file.sff -b MID_barcodes.txt
 
 =item B<>
 
 =item B<454 Fastq: Unique file>
 
- perl [DOMINO_scripts_path]/DM_Clean_v1.0.2.pl -type_file 2 -o test_454_fastq 
+ perl [DOMINO_scripts_path]/DM_Clean_v1.1.pl -type_file 2 -o test_454_fastq 
  -input file.fastq -b MID_barcodes.txt
 
 =item B<>
 
 =item B<454: Multiple fastq files>
 
- perl [DOMINO_scripts_path]/DM_Clean_v1.0.2.pl -type_file 3 -o test_454_multiple 
+ perl [DOMINO_scripts_path]/DM_Clean_v1.1.pl -type_file 3 -o test_454_multiple 
  -input sp1.fastq -input sp2.fastq -input sp3.fastq 
 
 =item B<>
 
 =item B<Illumina: Unique file>
 
- perl [DOMINO_scripts_path]/DM_Clean_v1.0.2.pl -type_file 4 -o test_Illumina 
+ perl [DOMINO_scripts_path]/DM_Clean_v1.1.pl -type_file 4 -o test_Illumina 
  -input Illumina_Multiple-taxa.fastq -b MID_barcodes.txt 
 
 =item B<>
 
 =item B<Illumina: Multiple fastq files>
 
- perl [DOMINO_scripts_path]/DM_Clean_v1.0.2.pl -type_file 5 -o test_Illumina_multi_files 
+ perl [DOMINO_scripts_path]/DM_Clean_v1.1.pl -type_file 5 -o test_Illumina_multi_files 
  -input sp1_Illumina.fastq -input sp2_Illumina.fastq -input sp3_Illumina.fastq 
  
 =item B<>
 
 =item B<Illumina Paired-end Files: Unique file containing all taxa>
 
- perl [DOMINO_scripts_path]/DM_Clean_v1.0.2.pl -type_file 6 -o test_Illumina_pair_end 
+ perl [DOMINO_scripts_path]/DM_Clean_v1.1.pl -type_file 6 -o test_Illumina_pair_end 
  -b MID_barcodes.txt -input reads_R1.fastq -input reads_R2.fastq 
 
 =item B<>
 
 =item B<Illumina Paired-end Files: Multiple Paired-end FASTQ files>
 
- perl [DOMINO_scripts_path]/DM_Clean_v1.0.2.pl -type_file 7 -o test_mult_pair_end 
+ perl [DOMINO_scripts_path]/DM_Clean_v1.1.pl -type_file 7 -o test_mult_pair_end 
  -input sp1_R1.fastq -input sp1_R2.fastq -input sp2_R1.fastq -input sp2_R2.fastq
 
 =item B<>
 
 =item B<Using User provided databases>
 
- perl [DOMINO_scripts_path]/DM_Clean_v1.0.2.pl -type_file 3 -o test_454_multiple 
+ perl [DOMINO_scripts_path]/DM_Clean_v1.1.pl -type_file 3 -o test_454_multiple 
  -input sp1.fastq -input sp2.fastq -input sp3.fastq -db file1.fasta -db file2.fasta 
  -only_user_db
 
@@ -526,7 +526,7 @@ Keep all intermediate files.
 
 =item B<No Contaminant Search>
 
- perl [DOMINO_scripts_path]/DM_Clean_v1.0.2.pl -type_file 3 -o test_454_multiple 
+ perl [DOMINO_scripts_path]/DM_Clean_v1.1.pl -type_file 3 -o test_454_multiple 
  -input sp1.fastq -input sp2.fastq -input sp3.fastq -no_db_search
 
 =item B<>

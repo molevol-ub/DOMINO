@@ -125,7 +125,7 @@ DM_Assembly_v1.1.pl
 
 =over 2
 
-DOMINO v1.1 ## Revised 23-10-2018
+DOMINO v1.1 ## Revised 07-11-2018
 
 =back	
 	
@@ -290,7 +290,7 @@ B<-DOMINO_files [Default]>
 
 Default option. DOMINO uses the pre-processed reads in /DM_clean_data folder for the assembly.
 
-If QC is not desired, please prepare the files using '-only_tag_files' option using the DM_Clean_v1.0.2.pl script or provide appropriately tagged files.
+If QC is not desired, please prepare the files using '-only_tag_files' option using the DM_Clean_v1.1.pl script or provide appropriately tagged files.
 
 B<-user_files>
 

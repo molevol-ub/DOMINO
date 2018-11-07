@@ -11,7 +11,7 @@ BEGIN {
 	require File::Path; use File::Path qw(remove_tree);
 }
 #################################################################
-my $domino_version ="DOMINO v1.1 ## Revised 30-10-2018";
+my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
 my $scripts_path = $FindBin::Bin."/../";
 my $domino_Scripts = $FindBin::Bin;
 my $BLAST = $scripts_path."NCBI_BLAST/";

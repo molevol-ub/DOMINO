@@ -8,7 +8,7 @@
 ###											###
 #######################################################################################
 ##	Usage:
-##      perl DM_MarkerScan_1.0.3.pl
+##      perl DM_MarkerScan_1.1.pl
 ##
 ##    ###########################
 ##    ### General Information ###
@@ -181,7 +181,7 @@ pod2usage( -exitstatus => 0, -verbose => 99, -sections => "NAME|VERSION|DESCRIPT
 
 =over 2
 
-DM_MarkerScan_1.0.3.pl
+DM_MarkerScan_1.1.pl
 
 =back
 		
@@ -189,7 +189,7 @@ DM_MarkerScan_1.0.3.pl
 
 =over 2
 
-DOMINO v1.1 ## Revised 23-10-2018
+DOMINO v1.1 ## Revised 07-11-2018
 
 =back
 	
@@ -199,7 +199,7 @@ DOMINO v1.1 ## Revised 23-10-2018
 
 =item B<>
 	
-perl DM_MarkerScan_1.0.3.pl
+perl DM_MarkerScan_1.1.pl
 
 =item B<###########################>
 	
@@ -667,25 +667,25 @@ Keep all intermediate files.
 
 =item B<DOMINO files: single end -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option DOMINO_files
+ perl DM_MarkerScan_v1.1.pl -option DOMINO_files
  -type_input single_end -o test/ -taxa_names Dmelanogaster,Dsimulans,Dyakuba 
  -VD 0.01 -CL 40 -VL 400 -CD 1 -DM discovery 
 
 =item B<DOMINO files: single end, No Mapping  -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option DOMINO_files
+ perl DM_MarkerScan_v1.1.pl -option DOMINO_files
  -type_input single_end -o test/ -taxa_names Dmelanogaster,Dsimulans,Dyakuba 
  -VD 0.01 -CL 40 -VL 500 -CD 1 -NPG -MCT 2 -MPA 25 -DM discovery 
 
 =item B<DOMINO files: paired-end -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option DOMINO_files
+ perl DM_MarkerScan_v1.1.pl -option DOMINO_files
  -type_input pair_end -o test/ -taxa_names Dmelanogaster,Dsimulans,Dyakuba 
  -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 -DM discovery 
 
 =item B<User provides contigs and reads (single end) -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option user_assembly_contigs -type_input single_end -o test/ 
+ perl DM_MarkerScan_v1.1.pl -option user_assembly_contigs -type_input single_end -o test/ 
  -taxa_names Dmelanogaster,Dsimulans,Dyakuba -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 
  -user_contig_files path_to_file1/Dmelanogaster.contigs.fasta -user_contig_files path_to_file2/Dsimulans.contigs.fasta 
  -user_contig_files path_to_file3/Dyakuba.contigs.fasta -user_cleanRead_files Dmelanogaster.clean.fastq 
@@ -693,7 +693,7 @@ Keep all intermediate files.
 
 =item B<User provides contigs and reads (paired-end) -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option user_assembly_contigs -type_input pair_end -o test/ 
+ perl DM_MarkerScan_v1.1.pl -option user_assembly_contigs -type_input pair_end -o test/ 
  -taxa_names Dmelanogaster,Dsimulans,Dyakuba -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 
  -user_contig_files path_to_file1/clean_assembly_id-Dmelanogaster.contigs.fasta 
  -user_contig_files path_to_file2/clean_assembly_id-Dsimulans.contigs.fasta 
@@ -705,7 +705,7 @@ Keep all intermediate files.
 
 =item B<User provides contigs but no reads, and specifies to map contigs vs contigs  -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option user_assembly_contigs -type_input single_end -o test/ 
+ perl DM_MarkerScan_v1.1.pl -option user_assembly_contigs -type_input single_end -o test/ 
  -taxa_names Dmelanogaster,Dsimulans,Dyakuba -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 
  -user_contig_files path_to_file1/clean_assembly_id-Dmelanogaster.contigs.fasta 
  -user_contig_files path_to_file2/clean_assembly_id-Dsimulans.contigs.fasta 
@@ -714,7 +714,7 @@ Keep all intermediate files.
 
 =item B<User provides a reference genome and reads (single end) -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option genome -type_input single_end -o test/ 
+ perl DM_MarkerScan_v1.1.pl -option genome -type_input single_end -o test/ 
  -taxa_names Dmelanogaster,Dsimulans,Dyakuba -VD 0.01 -CL 40 -VL 400 -CD 1 -SLCD 1e-06 -mp 4 
  -genome_fasta path_to_genomes_folder/NCBI_id-Dpseudobscura.fasta
  -user_cleanRead_files Dmelanogaster.clean.fastq -user_cleanRead_files Dsimulans.clean.fastq 
@@ -722,42 +722,42 @@ Keep all intermediate files.
 
 =item B<MSA alignment: A single MSA in PHYLIP -- Single File -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/ -msa_file file.phy 
+ perl DM_MarkerScan_v1.1.pl -option msa_alignment -o test/ -msa_file file.phy 
  -taxa_names cow,carp,horse,human -VD 0.01 -CL 40 -VL 400 -CD 1 -DM discovery 
 
 =item B<MSA alignment: A single MSA in FASTA -- Single File -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/ -msa_file file.fasta 
+ perl DM_MarkerScan_v1.1.pl -option msa_alignment -o test/ -msa_file file.fasta 
  -taxa_names cow,carp,horse,human -VD 0.01 -CL 40 -VL 400 -CD 1 -DM discovery 
 
 =item B<MSA alignment: A single PHYLIP file -- Multiple MSA -- Discovery>
 
- perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/ -msa_file multi_msa_file.phy 
+ perl DM_MarkerScan_v1.1.pl -option msa_alignment -o test/ -msa_file multi_msa_file.phy 
  -taxa_names cow,carp,horse,human -VD 0.01 -CL 40 -VL 400 -CD 1 -DM discovery 
 
 =item B<MSA alignment: A single PHYLIP file -- Multiple MSA -- Selection>
 
- perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/ -msa_file multi_msa_file.phy 
+ perl DM_MarkerScan_v1.1.pl -option msa_alignment -o test/ -msa_file multi_msa_file.phy 
  -taxa_names cow,carp,horse,human -VD 0.01 -DM selection 
 
 =item B<MSA alignment: Multiple files in PHYLIP -- Folder -- Selection>
 
- perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/  -msa_folder /home/user/MSA
+ perl DM_MarkerScan_v1.1.pl -option msa_alignment -o test/  -msa_folder /home/user/MSA
  -taxa_names cow,carp,horse,human -VD 0.01 -DM selection 
 
 =item B<MSA alignment: Multiple files in FASTA MSA -- Folder -- Selection>
 
- perl DM_MarkerScan_v1.0.2.pl -option msa_alignment -o test/  -msa_folder /home/user/MSA
+ perl DM_MarkerScan_v1.1.pl -option msa_alignment -o test/  -msa_folder /home/user/MSA
  -taxa_names cow,carp,horse,human -VD 0.01 -DM selection
 
 =item B<RAD-MSA alignment: single file in pyRAD format -- File -- Selection>
 
- perl DM_MarkerScan_v1.0.2.pl -option RADseq -o test/  -RADseq_file output.loci
+ perl DM_MarkerScan_v1.1.pl -option RADseq -o test/  -RADseq_file output.loci
  -taxa_names ind1,ind3,ind5,ind8,ind9 -VD 0.01 -DM selection
 
 =item B<RAD-MSA alignment: single file in STACKS format -- File -- Selection>
 
- perl DM_MarkerScan_v1.0.2.pl -option RADseq -o test/  -RADseq_file output.fa
+ perl DM_MarkerScan_v1.1.pl -option RADseq -o test/  -RADseq_file output.fa
  -taxa_names ind1,ind3,ind5,ind8,ind9 -VD 0.01 -DM selection
 
 =back	
