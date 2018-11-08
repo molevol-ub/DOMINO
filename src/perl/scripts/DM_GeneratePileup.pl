@@ -21,9 +21,10 @@ my $reference_id = $ARGV[2];
 my $taxa = $ARGV[3];
 my $returned_outfolder = $ARGV[4];
 my $path = $ARGV[5];
+##########################################################################################
 
 ## get general parameters
-my $hash_parameters = DOMINO::get_parameters($path."/");
+my $hash_parameters = DOMINO::get_parameters($path."/", "mapping");
 my @temp_name = split ("\.sorted.bam", $sorted_bam);
 my ($ID, @sam);
 my $input_pileup = $temp_name[0].".profile";
@@ -35,11 +36,13 @@ if ($sytem_command_pileup != 0) {
 }
 unless (-d $returned_outfolder) { mkdir $returned_outfolder, 0755; } 
 #&debugger_print("Changing dir to $returned_outfolder");
+##########################################################################################
 
 ## Get reference fasta information
 my $reference_hash_fasta = DOMINO::readFASTA_hash($contig_file);
 ## Get DNA code
 my %ambiguity_DNA_codes = %{ DOMINO::ambiguity_DNA_codes() };
+##########################################################################################
 
 #print "\t- Filtering the PILEUP generated\n";
 my ($previous_contig, $previous_fasta_contig, @array_positions, @fasta_positions);

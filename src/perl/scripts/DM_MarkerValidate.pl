@@ -16,9 +16,8 @@ my $ref_taxa_all = $ARGV[3];
 my $path = $ARGV[4];
 #################################################################
 my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
-my $hash_parameters = DOMINO::get_parameters($path."/");
-my %new_domino_files = %{ DOMINO::get_DOMINO_files($path."/") };
-##print Dumper \%new_domino_files; exit();
+my $hash_parameters = DOMINO::get_parameters($path."/", "markers");
+my %new_domino_files = %{ DOMINO::get_DOMINO_files($path."/", "markers") };
 #################################################################
 
 #################################################################
@@ -104,7 +103,7 @@ foreach my $group (sort {$a <=> $b} keys %hash_array) {
 		my $seq_name;
 		
 		## Check pairwise MSA
-		my $valueReturned = DOMINO::check_marker_pairwise(\%hash, $$hash_parameters{'marker'}{'MCT'}[0], $$hash_parameters{'marker'}{'variable_positions_user_min'}[0], $$hash_parameters{'marker'}{'variable_positions_user_max'}[0], $$hash_parameters{'marker'}{'variable_divergence'}[0], $$hash_parameters{'marker'}{'polymorphism_user'}[0]);
+		my $valueReturned = DOMINO::check_marker_pairwise(\%hash, $$hash_parameters{'marker'}{'MCT'}[0], $$hash_parameters{'marker'}{'variable_positions_user_min'}[0], $$hash_parameters{'marker'}{'variable_positions_user_max'}[0], $$hash_parameters{'marker'}{'variable_divergence'}[0], $$hash_parameters{'marker'}{'polymorphism_user'}[0], $$hash_parameters{'marker'}{'number_sp'}[0]);
 		if ($valueReturned == 1) { ## if it is variable for each pairwise comparison
 			## Get variable positions for the whole marker
 			my $array_ref_returned = DOMINO::check_marker_ALL(\%hash, "Ref", $$hash_parameters{'marker'}{'missing_allowed'}[0], $$hash_parameters{'marker'}{'polymorphism_user'}[0], $$hash_parameters{'marker'}{'dnaSP_flag'}[0]);

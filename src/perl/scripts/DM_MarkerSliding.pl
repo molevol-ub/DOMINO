@@ -26,7 +26,7 @@ my $dna_seq = $seq; my $seqlen = length($seq);
 
 #################################################################
 ## Get general parameters and files
-my $hash_parameters = DOMINO::get_parameters($path."/");
+my $hash_parameters = DOMINO::get_parameters($path."/", "markers");
 #print Dumper $hash_parameters;
 #################################################################
 

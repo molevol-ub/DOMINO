@@ -1,4 +1,6 @@
 #!/usr/bin/perl
+use strict;
+use warnings;
 ####################################################################
 ###	DOMINO: Development of molecular markers in non-model organisms 
 ####################################################################
@@ -231,6 +233,7 @@ sub printDump {
 
 sub printError {
     my $msg = $_[0];
+    my $error_log = $_[1];
 	print "\n\n";&printHeader(" ERROR ","!!"); print "\n";
     print $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n";
 	print "\n\n"; &printHeader("","!!"); &printHeader("","!!"); 
@@ -454,6 +457,8 @@ sub readDir {
 sub get_parameters {
 
 	my $path = $_[0];
+	my $dir_given = $_[1];
+	
 	my %parameters;
 	my $array_files_ref=DOMINO::readDir($path);
 	my @array_files = @$array_files_ref;
@@ -466,23 +471,29 @@ sub get_parameters {
 			my $time_stamp=$1; my $type = $2;
 			$dirs{$type}{$time_stamp} = $path.$array_files[$i];
 	}}
-	#print Dumper \%dirs;  	
+	
+	#print Dumper \%dirs;  
+		
 	my @params; my @info; my %initial_files;
 	foreach my $dir (sort keys %dirs) {
+		next if ($dir ne $dir_given);
 		my $last;
-		foreach my $times (sort {$a<=>$b} keys %{$dirs{$dir}}) {
-			$last = $times;	## Only used the last folder for each process			
-		}
-		if ($dir eq "assembly" || $dir eq "clean_data" || $dir eq "mapping" || $dir eq "markers" ) {
-			my $params = $dirs{$dir}{$last}."/DOMINO_dump_param.txt"; 		push (@params, $params);
+		my @sort_array = sort {$a<=>$b} keys %{ $dirs{$dir} };
+		#print Dumper \@sort_array;
+		if ($dirs{$dir_given}{$sort_array[-1]}) {
+			push (@params, $dirs{$dir_given}{$sort_array[-1]}."/DOMINO_dump_param.txt");
+			#print $dirs{$dir_given}{$sort_array[-1]}."/DOMINO_dump_param.txt\n";
 	}}
 	#print Dumper \@params;
 	my $hash_param = &retrieve_info(\@params, \%parameters);
 	return $hash_param;
+
 }
 
 sub get_DOMINO_files {
 	my $path = $_[0];
+	my $dir_given = $_[1];
+
 	my $array_files_ref=DOMINO::readDir($path);
 	my @array_files = @$array_files_ref;
 	my (%dirs, $earliest);
@@ -494,15 +505,17 @@ sub get_DOMINO_files {
 			my $time_stamp=$1; my $type = $2;
 			$dirs{$type}{$time_stamp} = $path.$array_files[$i];
 	}}
+	#print Dumper \%dirs;  	
+
 	my @params; my @info; my %initial_files;
 	foreach my $dir (sort keys %dirs) {
 		my $last;
 		foreach my $times (sort {$a<=>$b} keys %{$dirs{$dir}}) {
 			$last = $times;	## Only used the last folder for each process			
 		}
-		
-		if ($dir eq "assembly" || $dir eq "clean_data" || $dir eq "mapping" || $dir eq "markers" ) {
-			my $files = $dirs{$dir}{$last}."/DOMINO_dump_information.txt";	push (@info, $files);
+		if ($dirs{$dir_given}{$last}) {
+			push (@info, $dirs{$dir_given}{$last}."/DOMINO_dump_information.txt");
+			#print $dirs{$dir_given}{$last}."/DOMINO_dump_information.txt\n";
 	}}
 	my $hash_info = &retrieve_info(\@info, \%initial_files);
 	return $hash_info;
@@ -991,6 +1004,7 @@ sub check_marker_pairwise {
 	my $variable_positions_user_max = $_[3];
 	my $variable_divergence = $_[4];
 	my $polymorph = $_[5];
+	my $number_sp = $_[6];
 	
 	my @taxa = keys %$hash_ref;
 	my (%seen, %pairwise, %discard);
@@ -1132,7 +1146,7 @@ sub check_marker_ALL {
 			$titleline =~ s/\r//g;
 			#print $titleline."\n".$sequence."\n";
 			my @array = split("", $sequence);
-			if (!$domino_files{$titleline}{'taxa'}) {next;}
+			#if (!$domino_files{$titleline}{'taxa'}) {next;}
 			push (@{ $hash{$titleline}}, @array);
 			$length = scalar @array;
 			push (@length_seqs, $length);

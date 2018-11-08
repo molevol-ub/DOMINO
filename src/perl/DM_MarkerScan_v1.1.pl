@@ -875,13 +875,12 @@ if ($avoid_mapping) {
 
 ## print options to screen
 &print_options();
-
 #######################################
+
 ## Debug print Dumper \%domino_files; print Dumper \%domino_params; exit();
-## dump information
 my ($dump_file, $dump_param);
-$dump_file = $align_dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
-$dump_param = $align_dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
+$dump_file = $align_dirname."/DOMINO_dump_information.txt"; 
+$dump_param = $align_dirname."/DOMINO_dump_param.txt"; 
 
 ####################################################################################
 ## 								START
@@ -891,6 +890,10 @@ if (!$avoid_mapping) {
 	####################################################################################
 	##########	Mapping/Alignment of the contigs 		################################
 	####################################################################################
+
+	## dump information
+	DOMINO::printDump(\%domino_files, $dump_file);
+	DOMINO::printDump(\%domino_params, $dump_param);
 	
 	if ($option ne "msa_alignment") {
 	
@@ -920,7 +923,6 @@ if (!$avoid_mapping) {
 		## to Debug
 		## DM_ParseMSA_files.pl $folder_abs_path
 		#################################################################################################
-
 	}
 	## Dump info up to now to a file if (-r -e -s $dump_file) { remove_tree($dump_file) }; DOMINO::printDump(\%domino_files, $dump_file);	
 	## Dump parameters to a file if (-r -e -s $dump_param) { remove_tree($dump_param) }; DOMINO::printDump(\%domino_params, $dump_param);	
@@ -980,7 +982,7 @@ if ($option eq "msa_alignment") {
 ##########################################################
 my $genome_marker_bool = 0;
 my $all_markers_file = $marker_dirname."/markers.txt";
-my $test=0;
+my $test=0; my $marker_success = 0;
 foreach my $ref_taxa (sort keys %domino_files) {
 
 	## For each taxa specified, obtain putative molecular markers
@@ -1006,13 +1008,28 @@ foreach my $ref_taxa (sort keys %domino_files) {
 	system($command);
 	#################################################################################################
 
-	#$test++; if ($test == 2) { last; }	
+	## Check for marker_discovery.success/failed file
+	if (-r -e -s $marker_dir."/marker_discovery.success") {
+		$marker_success++;
+	}
+	$test++; if ($test == 2) { last; }	
 
 } #each reference taxa
 
 #################################################################################################
 ### LETS FINISH
 #################################################################################################
+
+if ($marker_success > 0) {
+	## continue as there are some markers identified
+} else {
+	print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" No markers identified ", "#"); DOMINO::printHeader("", "#");
+	## Finish and exit
+	print "+ Termination of DOMINO marker identification\n+ No markers were identified using these parameters...\n";
+	DOMINO::finish_time_stamp($start_time); print "\n\n Early termination, exiting the script\n\n\n"; 
+	exit();
+}
+
 chdir $marker_dirname;
 if ($genome_fasta) {
 	## Print excel for clusterized results
@@ -1372,6 +1389,7 @@ sub check_options {
 	push (@{ $domino_params{'marker'}{'subset_offset_user'} }, $subset_offset_user);
 	push (@{ $domino_params{'marker'}{'MCT'} }, $minimum_number_taxa_covered);
 	push (@{ $domino_params{'marker'}{'folder'} }, $marker_dirname);
+	push (@{ $domino_params{'marker'}{'number_sp'} }, $number_sp);
 	
 	&debugger_print("DOMINO Parameters");&debugger_print("Ref", \%domino_params);
 	#############################################################################################################################
@@ -1381,8 +1399,8 @@ sub check_previous {
 	
 	#############################################################################################################################
 	## Check parameters previous run ## retrieve information generated
-	my %domino_files_dump = %{ DOMINO::get_DOMINO_files($folder_abs_path."/") };
-	my %domino_params_dump = %{ DOMINO::get_parameters($folder_abs_path."/") };
+	my %domino_files_dump = %{ DOMINO::get_DOMINO_files($folder_abs_path."/", "mapping") };
+	my %domino_params_dump = %{ DOMINO::get_parameters($folder_abs_path."/", "mapping") };
 		#print Dumper \%domino_files_dump;
 		#print Dumper \%domino_params_dump;
 		
@@ -1396,6 +1414,7 @@ sub check_previous {
 		next if ($keys eq "mapping_markers_errors_details");
 		next if ($keys eq "mapping_parameters"); 
 		next if ($keys eq "dump_file"); next if ($keys eq "cpu");
+		next if ($keys eq "number_sp");
 		
 		my $prev = $domino_params_dump{'mapping'}{$keys}[0];
 		my $curr = $domino_params{'mapping'}{$keys}[0];
@@ -1444,6 +1463,7 @@ sub check_previous {
 		#%domino_files = %domino_files_dump;
 		
 		## Dump info up to now to a file 
+		undef $domino_files_dump{"taxa"};
 		foreach my $keys (keys %domino_files_dump) {
 			foreach my $subkeys (keys %{ $domino_files_dump{$keys} }) {
 			push (@{ $domino_files{$keys}{$subkeys} },  $domino_files_dump{$keys}{$subkeys}[0]);
@@ -1451,14 +1471,16 @@ sub check_previous {
 		%domino_files = %{ DOMINO::get_uniq_hash(\%domino_files) };
 		
 		## Dump info up to now to a file 
-		foreach my $keys (keys %domino_params_dump) {
-			foreach my $subkeys (keys %{ $domino_params_dump{$keys} }) {
-			push (@{ $domino_params{$keys}{$subkeys} },  $domino_params_dump{$keys}{$subkeys}[0]);
-		}}
-		$domino_params{"marker"}{"date"}[0] = $date;
+		undef $domino_params{"mapping"}{"mapping_markers_errors_details"};
+		$domino_params{"mapping"}{"mapping_markers_errors_details"}[0] = $mapping_markers_errors_details;
+		
 		undef $domino_params{"marker"}{"folder"};
 		$domino_params{"marker"}{"folder"}[0] = $marker_dirname;
-		%domino_params = %{ DOMINO::get_uniq_hash(\%domino_params) };
+
+		undef $domino_params{"mapping"}{"folder"};
+		$domino_params{"mapping"}{"folder"}[0] = $domino_params_dump{"mapping"}{"folder"}[0];
+
+		undef %domino_params_dump;
 
 		if (!$number_sp) {
 			$number_sp = $domino_params{'marker'}{'number_taxa'}[0]; 
@@ -1524,7 +1546,7 @@ sub print_options {
 				if ($domino_files{$1}{'taxa'}) {
 					&check_file($user_contig_files[$i], $1);
 					push (@{ $domino_files{$1}{'contigs'} }, $user_contig_files[$i]); ## push the whole file path			
-				} else { DOMINO::printError("Please check the tag for the file $user_contig_files[$i] \n...not matching any taxa name provided..."); DOMINO::dieNicely(); }
+				} else { DOMINO::printError("Please check the tag for the file $user_contig_files[$i] \n...not matching any taxa name provided...\nDOMINO will not die here but take it into account..."); }
 		}}
 		if (!$map_contig_files) { &user_cleanRead_files();  push (@{ $domino_params{'mapping'}{'user_cleanRead_files'}}, 1);}
 	} elsif ($option eq 'DOMINO_files') {
@@ -1621,11 +1643,11 @@ sub print_options {
 	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_files); 
 	unless (!$MID_taxa_names) {
 		DOMINO::printDetails("\n\n+ Taxa to use for the DOMINO development of molecular markers:\n", $mapping_parameters, $param_Detail_file_markers);
-		foreach my $keys (sort keys %domino_files) { 
-			next if $keys eq "taxa";
-			if ($domino_files{$keys}{'taxa'}) {
-				DOMINO::printDetails("\tName: $keys\n", $mapping_parameters, $param_Detail_file_markers);
-	}}}
+		my @split = split(",",$MID_taxa_names);
+		for (my $i=0; $i < scalar @split; $i++) {
+			DOMINO::printDetails("\tName: $split[$i]\n", $mapping_parameters, $param_Detail_file_markers);
+		}
+	}
 	if ($behaviour eq 'selection') {
 		DOMINO::printDetails("\n+ Parameters for the selection of molecular markers:\n", $param_Detail_file_markers);
 		DOMINO::printDetails("\t- Variable Length (VL): All the available length would be used for each region\n", $param_Detail_file_markers); 

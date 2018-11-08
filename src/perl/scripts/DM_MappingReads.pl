@@ -25,10 +25,9 @@ my $step_time = $ARGV[1];
 
 #################################################################
 ## Get general parameters and files
-my $hash_parameters = DOMINO::get_parameters($path."/");
-my %domino_mapping_files = %{ DOMINO::get_DOMINO_files($path."/") };
-#print Dumper $hash_parameters;
-#print Dumper $domino_mapping_files_Ref;
+my $hash_parameters = DOMINO::get_parameters($path."/", "mapping");
+my %domino_mapping_files = %{ DOMINO::get_DOMINO_files($path."/", "mapping") };
+#print Dumper $hash_parameters; #print Dumper \%domino_mapping_files; #exit();
 
 my $align_dirname = $$hash_parameters{'mapping'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'mapping'}{'cpu'}[0];

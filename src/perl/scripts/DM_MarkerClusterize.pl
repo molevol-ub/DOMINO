@@ -25,12 +25,12 @@ my $step_time = $ARGV[1];
 
 #################################################################
 ## Get general parameters and files
-my $hash_parameters = DOMINO::get_parameters($path."/");
-my %domino_cluster_files = %{ DOMINO::get_DOMINO_files($path."/") };
+my $hash_parameters = DOMINO::get_parameters($path."/", "markers");
+my %domino_cluster_files = %{ DOMINO::get_DOMINO_files($path."/","markers") };
 	#print Dumper $hash_parameters;
 	#print Dumper \%domino_cluster_files;
 
-my $marker_dirname = $$hash_parameters{'marker'}{'folder'}[-1];
+my $marker_dirname = $$hash_parameters{'marker'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'marker'}{'cpu'}[0];
 
 my %new_domino_files;
@@ -213,8 +213,10 @@ print "+ Generating an Excel file for DOMINO markers coordinates...\n";
 
 my $domino_Scripts_excel = $domino_Scripts."/DM_PrintExcel.pl";
 my $command = "perl $domino_Scripts_excel $path $coordinates_def_results $definitely_results_dirname";
-print "\n\n[ System Call: ".$command." ]\n";
+print "\n[ System Call: ".$command." ]\n";
 system($command);
+################################################################################################################################################
+
 
 ###########################
 ####### SUBROUTINES #######

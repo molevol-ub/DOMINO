@@ -13,7 +13,7 @@ BEGIN {
 #################################################################
 my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
 my $scripts_path = $FindBin::Bin."/../";
-my $domino_Scripts = $scripts_path."scripts";
+my $domino_Scripts = $FindBin::Bin;
 my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
 #################################################################
 
@@ -26,13 +26,12 @@ my $marker_dir = $ARGV[3];
 
 #################################################################
 ## Get general parameters and files
-my $hash_parameters = DOMINO::get_parameters($path."/");
-my %domino_marker_files = %{ DOMINO::get_DOMINO_files($path."/") };
-	#print Dumper \%domino_marker_files;
-	#print Dumper $hash_parameters;
+my $hash_parameters = DOMINO::get_parameters($path."/", "markers");
+my %domino_marker_files = %{ DOMINO::get_DOMINO_files($path."/", "markers") };
+#print Dumper \%domino_marker_files; print Dumper $hash_parameters; exit();
 
 my $align_dirname = $$hash_parameters{'mapping'}{'folder'}[0];
-my $marker_dirname = $$hash_parameters{'marker'}{'folder'}[-1];
+my $marker_dirname = $$hash_parameters{'marker'}{'folder'}[0];
 
 my $num_proc_user = $$hash_parameters{'marker'}{'cpu'}[0];
 my $msa_dirname = $align_dirname."/MSA_files";
@@ -252,7 +251,7 @@ foreach my $keys (keys %new_domino_files) {
 my $new_dump_file = $marker_dirname."/DOMINO_dump_information.txt";
 if (-r -e -s $new_dump_file) { remove_tree($new_dump_file) }; 
 DOMINO::printDump(\%domino_marker_files, $new_dump_file);
-#print Dumper \%domino_marker_files; print $new_dump_file."\n";
+#print Dumper \%domino_marker_files; print $new_dump_file."\n";exit();
 
 ################################################
 print "+ Checking profiles of variation for each contig and merging information...\n";
@@ -474,7 +473,7 @@ for (my $set=1; $set <= $SETS; $set++) {
 	print "\t+ Validating overlapping markers identified for set $set...\n";
 	my $output_file = $PILEUP_merged_folder_abs_path."/SET_".$set."_markers_retrieved.txt";
 	my $domino_Scripts_MarkerValidate = $domino_Scripts."/DM_MarkerValidate.pl";
-	my $command_validate = "perl $domino_Scripts_MarkerValidate $output_file $dir2print_markers $file_markers_collapse $ref_taxa $path"; #print $command."\n"; 
+	my $command_validate = "perl $domino_Scripts_MarkerValidate $output_file $dir2print_markers $file_markers_collapse $ref_taxa $path"; #print $command_validate."\n"; 
 	system($command_validate);
 
 	push (@{ $pileup_files_threads{"SET_$set"}{'markers'} }, $output_file);
@@ -501,11 +500,13 @@ for (my $i=0; $i < scalar @$dump_files; $i++) {
 my %markers2retrieve;
 for (my $j=0; $j < scalar @{ $dump_files }; $j++) {
 	if ($$dump_files[$j] eq '.' || $$dump_files[$j] eq '..' || $$dump_files[$j] eq '.DS_Store') { next;}
-	open (DUMP_IN, "$$dump_files[$j]");
-	while (<DUMP_IN>) {
-		my $line = $_; chomp $line; my @array = split("\t", $line);
-		push (@{ $markers2retrieve{$array[0]}{$array[1]}}, $array[2]);
-} close (DUMP_IN); }
+	if (-r -e -s $$dump_files[$j]) { ## if exists
+		open (DUMP_IN, "$$dump_files[$j]");
+		while (<DUMP_IN>) {
+			my $line = $_; chomp $line; my @array = split("\t", $line);
+			push (@{ $markers2retrieve{$array[0]}{$array[1]}}, $array[2]);
+		} close (DUMP_IN);
+}}
 
 #################################################################
 ## Get the information ready for the user to visualize contigs ##
@@ -534,7 +535,6 @@ push(@{ $new_domino_files{$ref_taxa}{'CONTIGS'}}, $output_file_putative_contigs)
 push(@{ $new_domino_files{$ref_taxa}{'coordinates'}}, $output_file);
 
 ################################################################################################################################################
-print "+ Copying reference fasta contigs...\n+ Printing reference sequences in $output_file_putative_contigs...\n";
 foreach my $subset (sort keys %markers2retrieve) {		
 	## Move msa markers
 	File::Copy::move($dir2print_markers, $markers_msa_folder);	
@@ -542,6 +542,10 @@ foreach my $subset (sort keys %markers2retrieve) {
 	my @ALL_contigs;
 	# Get all contigs involved
 	my $marker_contigs = $markers2retrieve{$subset}{'markers'}[0];
+
+	## Finish it file is empty
+	unless (-r -e -s $marker_contigs){ next; }
+	
 	open (IN_marker, "<$marker_contigs"); 
 	while (<IN_marker>) { 
 		print OUT_markers $_; ## print coordinates
@@ -576,22 +580,32 @@ foreach my $subset (sort keys %markers2retrieve) {
 	} close (IN_marker);
 
 } close(OUT); close(OUT_markers); close (OUT_coord);
-################################################
-## Dump info up to now to a file 
-foreach my $keys (keys %new_domino_files) {
-	foreach my $subkeys (keys %{ $new_domino_files{$keys} }) {
-		push (@{ $domino_marker_files{$keys}{$subkeys} },  $new_domino_files{$keys}{$subkeys}[0]);
-}}
-if (-r -e -s $new_dump_file) { remove_tree($new_dump_file) }; 
-DOMINO::printDump(\%domino_marker_files, $new_dump_file);
-#print Dumper \%domino_marker_files; print $new_dump_file."\n";
-################################################################################################################################################
 
-print "+ Marker development for $ref_taxa is finished here...\n\n"; &time_log(); print "\n";
+unless (-r -e -s $output_file) {
 
-###########################
-DOMINO::print_success_Step("marker_discovery");
-###########################
+	###########################
+	DOMINO::print_fail_Step("marker_discovery");
+	###########################
+	exit();
+	
+} else {
+	################################################
+	## Dump info up to now to a file 
+	foreach my $keys (keys %new_domino_files) {
+		foreach my $subkeys (keys %{ $new_domino_files{$keys} }) {
+			push (@{ $domino_marker_files{$keys}{$subkeys} },  $new_domino_files{$keys}{$subkeys}[0]);
+	}}
+	if (-r -e -s $new_dump_file) { remove_tree($new_dump_file) }; 
+	DOMINO::printDump(\%domino_marker_files, $new_dump_file);
+	#print Dumper \%domino_marker_files; print $new_dump_file."\n";
+	################################################################################################################################################
+	print "+ Copying reference fasta contigs...\n+ Printing reference sequences in $output_file_putative_contigs...\n";
+	
+	print "+ Marker development for $ref_taxa is finished here...\n\n"; &time_log(); print "\n";
+	###########################
+	DOMINO::print_success_Step("marker_discovery");
+	###########################
+}
 
 ###########################
 ####### SUBROUTINES #######

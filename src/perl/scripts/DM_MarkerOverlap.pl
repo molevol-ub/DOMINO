@@ -15,7 +15,7 @@ my $file2return = $ARGV[2];
 my $path = $ARGV[3];
 
 my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
-my $hash_parameters = DOMINO::get_parameters($path."/");
+my $hash_parameters = DOMINO::get_parameters($path."/", "markers");
 
 #&debugger_print("Checking file $file [DM_MarkerScan: check_overlapping_markers]");
 
@@ -37,8 +37,7 @@ open (FILE, $file); while (<FILE>) {
 } 
 close(FILE);
 
-# Debug 
-#print Dumper \%tmp_hash;
+# Debug print Dumper \%tmp_hash;
 my %coord_seen;
 foreach my $contig (sort keys %tmp_hash) {
 	foreach my $taxa (sort keys %{ $tmp_hash{$contig} }) {		
@@ -77,10 +76,11 @@ if ($range >= 500) {
 	@length = (50, 100, 200, 300, 400, 500);
 }
 
-# Debug print Dumper \%tmp_coord
+# Debug print Dumper \%tmp_coord;
 my $hash_ref = DOMINO::readFASTA_hash($mergeArray_file); 
 open (OUT, ">$file2return"); 
 foreach my $contig (sort keys %tmp_coord) {
+	#print $contig."\n";
 	foreach my $taxa (keys %{ $tmp_coord{$contig} }) {
 		foreach my $keys_markers (keys %{ $tmp_coord{$contig}{$taxa} }) {		
 			my @array_coordinates = @{ $tmp_coord{$contig}{$taxa}{$keys_markers} };
@@ -95,8 +95,7 @@ foreach my $contig (sort keys %tmp_coord) {
 					my $string = join(":", @array2check).":".$taxa;
 					#print $$hash_ref{$contig}."\n";
 					if ($marker_seen{$string}) {next;}
-					my $result = &check_given_marker(\@array2check, $$hash_ref{$contig});						
-				
+					my $result = &check_given_marker(\@array2check, $$hash_ref{$contig}, $contig);						
 					if ($result ne 1) {
 						my $id;
 						for (my $j = 0; $j < scalar @length; $j++) {
@@ -104,9 +103,10 @@ foreach my $contig (sort keys %tmp_coord) {
 							} elsif ($result > $length[-1]) {	$id = "bigger"; last;
 						}}
 						push (@{ $hash2print{$array_coord[0]}{$id}}, $string);
-						# print $keys_markers."\t".$array_coord[0]."\t".$array_coord2[5]."\t".$result."\t".$id."\t".$string."\n"; 
+						#print $contig."\t".$keys_markers."\t".$array_coord[0]."\t".$array_coord2[5]."\t".$result."\t".$id."\t".$string."\n"; 
 						$marker_seen{$string}++;
 			}}}
+			next if (!%hash2print);
 			foreach my $keys (keys %hash2print) {
 				foreach my $lent (sort keys %{ $hash2print{$keys} }) {
 					my @array = @{ $hash2print{$keys}{$lent} };					
@@ -127,6 +127,7 @@ sub check_given_marker {
 	my $array_Coord = $_[0];
 	my $dna_seq = $_[1];
 	my $total_length_sub = length($dna_seq);
+	my $contig_id = $_[2];
 	
 	my @coordinates = @{ $array_Coord };
 	my $coord_P1 = $coordinates[0]; my $coord_P2 = $coordinates[1];
@@ -140,18 +141,18 @@ sub check_given_marker {
 	
 	if ($length_string_P1_P2 < $$hash_parameters{'marker'}{'window_size_CONS_min'}[0]) {return 1;}
 	if ($length_string_P1_P2 > $$hash_parameters{'marker'}{'window_size_CONS_max'}[0]) { 
-		#print Dumper $array_Coord; print "ERROR length_string_P1_P2! $length_string_P1_P2 > $window_size_CONS_max\n"; return 1;
+		#print Dumper $array_Coord; print "ERROR $contig_id length_string_P1_P2! $length_string_P1_P2 > $$hash_parameters{'marker'}{'window_size_CONS_max'}[0]\n"; return 1;
 		if ($$hash_parameters{'marker'}{'window_size_CONS_max'}[0] != $$hash_parameters{'marker'}{'window_size_CONS_min'}[0]) { return 1; } ## If user specifies a range..
 	}
 	if ($count_string_P1_P2 > $$hash_parameters{'marker'}{'window_var_CONS'}[0]) { 
-		#print Dumper $array_Coord; print "ERROR count_string_P1_P2! $count_string_P1_P2 > $window_var_CONS\n";
+		#print Dumper $array_Coord; print "ERROR $contig_id count_string_P1_P2! $count_string_P1_P2 > $$hash_parameters{'marker'}{'window_var_CONS'}[0]\n";
 		return 1;
 	} 
 		
 	# Variable
 	my $length_string_P3_P4 = $coord_P4 - $coord_P3;
 	if ($length_string_P3_P4 > $$hash_parameters{'marker'}{'window_size_VARS_max'}[0]) { 
-		#print Dumper $array_Coord; print "ERROR! length_string_P3_P4 $length_string_P3_P4 > $window_size_VARS_max\n"; 
+		#print Dumper $array_Coord;	print "ERROR $contig_id! length_string_P3_P4 $length_string_P3_P4 > $$hash_parameters{'marker'}{'window_size_VARS_max'}[0]\n"; 
 		return 1;
 	}
 	my $string_P3_P4 = substr($dna_seq, $coord_P3, $length_string_P3_P4);
@@ -167,17 +168,17 @@ sub check_given_marker {
 	my $length_string_P5_P6 = $coord_P6 - $coord_P5;
 	my $string_P5_P6 = substr($dna_seq, $coord_P5, $length_string_P5_P6);
 	if (!$string_P5_P6) {
-		#print Dumper $array_Coord; #print "Length: $length_string_P5_P6\n"; #print $dna_seq;
+		print Dumper $array_Coord; #print "Length: $length_string_P5_P6\n"; #print $dna_seq;
 		return 1;
 	}
 	my $count_string_P5_P6 = $string_P5_P6  =~ tr/1//; ## Conserved
 	if ($length_string_P5_P6 < $$hash_parameters{'marker'}{'window_size_CONS_min'}[0]) { return 1;}
 	if ($length_string_P5_P6 > $$hash_parameters{'marker'}{'window_size_CONS_max'}[0]) { 
-		#print Dumper $array_Coord; print "ERROR! length_string_P5_P6 $length_string_P5_P6 > $window_size_CONS_max\n"; return 1;
+		#print Dumper $array_Coord; print "ERROR $contig_id! length_string_P5_P6 $length_string_P5_P6 > $$hash_parameters{'marker'}{'window_size_CONS_max'}[0]\n"; return 1;
 		if ($$hash_parameters{'marker'}{'window_size_CONS_max'}[0] != $$hash_parameters{'marker'}{'window_size_CONS_min'}[0]) { return 1; } ## If user specifies a range..
 	}
 	if ($count_string_P5_P6 > $$hash_parameters{'marker'}{'window_var_CONS'}[0]) {
-		#print Dumper $array_Coord; print "ERROR! count_string_P5_P6 $count_string_P5_P6 > $window_var_CONS\n";
+		#print Dumper $array_Coord; print "ERROR $contig_id count_string_P5_P6 $count_string_P5_P6 > $$hash_parameters{'marker'}{'window_var_CONS'}[0]\n";
 		return 1;
 	}
 	my $total_length = $coord_P6 - $coord_P1;

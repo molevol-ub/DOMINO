@@ -1012,6 +1012,7 @@ unless ($skipping_BLAST) {
 	for (my $i = 0; $i < @blast_db; $i++) {	
 		my $file = $blast_db[$i];
 		push (@{ $domino_files{'original'}{'db'} }, $file);
+		push (@{ $domino_params{'clean_data'}{'db'} }, $file);
 		open(FILE, $file) || die "Could not open the $file ...\n";
 		$/ = ">"; ## Telling perl where a new line starts
 		while (<FILE>) {		

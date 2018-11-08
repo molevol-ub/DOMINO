@@ -16,8 +16,8 @@ my $step_time = $ARGV[1];
 if(!defined($path)) { print "ERROR: No input files are provided: [$0]\n"; exit; } ## give error message for DOMINO debug
 my $domino_version ="DOMINO v1.1 ## Revised 24-10-2018";
 
-my $hash_parameters = DOMINO::get_parameters($path);
-my $domino_mira_files_Ref = DOMINO::get_DOMINO_files($path);
+my $hash_parameters = DOMINO::get_parameters($path,"assembly");
+my $domino_mira_files_Ref = DOMINO::get_DOMINO_files($path, "assembly");
 my %domino_mira_files = %{$domino_mira_files_Ref};
 
 my $assembly_directory = $$hash_parameters{"assembly"}{"dir"}[0];

@@ -18,8 +18,19 @@ if(!defined($markers_file)) { DOMINO::printError("No marker files are provided i
 
 #################################################################
 my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
-my $hash_parameters = DOMINO::get_parameters($absolute_path."/");
-my $hash_files = DOMINO::get_DOMINO_files($absolute_path."/");
+my $hash_parameters = DOMINO::get_parameters($absolute_path."/", "markers");
+my $hash_files = DOMINO::get_DOMINO_files($absolute_path."/", "markers");
+
+my $hash_parameters2 = DOMINO::get_parameters($absolute_path."/", "assembly");
+my $hash_files2 = DOMINO::get_DOMINO_files($absolute_path."/", "clean_data");
+
+my $hash_parameters3 = DOMINO::get_parameters($absolute_path."/", "clean_data");
+
+#print Dumper $hash_parameters;
+#print Dumper $hash_parameters2;
+#print Dumper $hash_files;
+#print Dumper $hash_files2;
+
 #################################################################
 
 #################################################################
@@ -84,8 +95,8 @@ if ($no_parameters) {
 		$worksheet_parameters->write($row, $col, "RADseq", $format); $row++;
 	} else { $worksheet_parameters->write($row, $col, $$hash_parameters{"markers"}{"option"}, $format); $row++; }
 } else {
-	if ($$hash_parameters{'clean_data'}{'option'}) {
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'option'}, $format); $row++;
+	if ($$hash_parameters3{'clean_data'}{'option'}) {
+		$worksheet_parameters->write($row, $col, $$hash_parameters2{'clean_data'}{'option'}, $format); $row++;
 }} $row++; $row++;
 
 ### Writing markers coordinates
@@ -146,49 +157,50 @@ if ($$hash_parameters{'marker'}{'behaviour'} eq 'selection') {
 }} 
 
 unless ($no_parameters) {
-	if ($$hash_parameters{'clean_data'}) {
+	if ($$hash_parameters3{'clean_data'}) {
 		$worksheet_parameters->write($row, $first_col, "PRE-PROCESSING PHASE:", $format_main_heading); 
 		$col = $first_col; $row++; $row++;
 		$worksheet_parameters->write($row, $col, "DATE:", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'start'}, $format_left); $row++; $row++;
+		$worksheet_parameters->write($row, $col, $$hash_parameters3{'clean_data'}{'start'}, $format_left); $row++; $row++;
 		$col = $first_col; 
 		$worksheet_parameters->write($row, $col, "FOLDER:", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'folder'}, $format); $row++; $row++;
+		$worksheet_parameters->write($row, $col, $$hash_parameters3{'clean_data'}{'folder'}, $format); $row++; $row++;
 		$col = $first_col;
 		$worksheet_parameters->write($row, $col, "INPUT DATA:", $format); $col++;
 		$worksheet_parameters->write($row, $col, "Original Files included", $format_bold); $col++;
 		$worksheet_parameters->write($row, $col, "DOMINO Label", $format_bold); $col++;
-		foreach my $keys (sort keys %{$$hash_parameters{'clean_data'}{'clean_files'}}) {
+		foreach my $keys (sort keys %{$$hash_parameters3{'clean_data'}{'clean_files'}}) {
 			$col = $first_col; $col++; $row++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'clean_files'}{$keys}, $format_left);
+			$worksheet_parameters->write($row, $col, $$hash_parameters3{'clean_data'}{'clean_files'}{$keys}, $format_left);
 			$col++; $worksheet_parameters->write($row, $col, $keys, $format_left);
 		}
 		$row++; $row++; $row++;
 		$col = $first_col;
 		$worksheet_parameters->write($row, $col, "PARAMETERS:", $format); $col++; 
 		$worksheet_parameters->write($row, $col, "Mismatches allowed in the barcode sequence:", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'mismatches'}, $format_right); 
+		$worksheet_parameters->write($row, $col, $$hash_parameters3{'clean_data'}{'mismatches'}, $format_right); 
 		$col = $first_col + 1; $row++;
 		$worksheet_parameters->write($row, $col, "Minimum read length:", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'read_length'}, $format_right); 
+		$worksheet_parameters->write($row, $col, $$hash_parameters3{'clean_data'}{'read_length'}, $format_right); 
 		$col = $first_col + 1; $row++;
 		$worksheet_parameters->write($row, $col, "Minimum QUAL:", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'QUAL'}, $format_right); 
+		$worksheet_parameters->write($row, $col, $$hash_parameters3{'clean_data'}{'QUAL'}, $format_right); 
 		$col = $first_col + 1; $row++;
 		$worksheet_parameters->write($row, $col, "Minimum length of a read satisfying QUAL cutoff:", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'QUAL_cutoff'}, $format_right); 
+		$worksheet_parameters->write($row, $col, $$hash_parameters3{'clean_data'}{'QUAL_cutoff'}, $format_right); 
 		$col = $first_col + 1; $row++;
 		$worksheet_parameters->write($row, $col, "Threshold for complexity/entropy of a read:", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'clean_data'}{'entropy'}, $format_right); 
+		$worksheet_parameters->write($row, $col, $$hash_parameters3{'clean_data'}{'entropy'}, $format_right); 
 		$col = $first_col + 1; $row++; $row++;
 		$worksheet_parameters->write($row, $col, "Database(s)", $format_bold); $row++;
-		my @array_db = @{$$hash_files{'original'}{'db'}};
+		my @array_db = @{ $$hash_parameters3{'clean_data'}{'db'}};
 		for (my $i=0; $i < scalar @array_db; $i++) {
 			$worksheet_parameters->write($row, $col, $array_db[$i], $format_left); $row++;
 		} $row++; $row++;
 	
-		if ($$hash_files{'clean_data'}{"QC_analysis"}) {
-			my %QC_hash = %{$$hash_parameters{'clean_data'}{'QC_analysis'}};
+		### Fix this
+		if ($$hash_files2{'clean_data'}{"QC_analysis"}) {
+			my %QC_hash = %{$$hash_parameters2{'clean_data'}{'QC_analysis'}};
 			foreach my $taxa (sort keys %QC_hash) {
 				my $worksheet_name = "Quality Filtering Stats $taxa";
 				if (length($worksheet_name) >= 31) {
@@ -222,16 +234,19 @@ unless ($no_parameters) {
 							$col_stats_QC++;
 					}} $row_stats_QC++;
 					} close (FILE); 
-	}}}
+		}}
+		## up to here
+	
+	}
 
-	if ($$hash_parameters{'assembly'}) {
+	if ($$hash_parameters2{'assembly'}) {
 		$worksheet_parameters->write($row, $first_col, "ASSEMBLY PHASE:", $format_main_heading); 
 		$row++; $row++;	$col = $first_col; 
 		$worksheet_parameters->write($row, $col, "DATE:", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'start'}, $format_left); 
+		$worksheet_parameters->write($row, $col, $$hash_parameters2{'assembly'}{'start'}, $format_left); 
 		$row++; $row++; $col = $first_col; 
 		$worksheet_parameters->write($row, $col, "FOLDER:", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'folder'}, $format_left); 
+		$worksheet_parameters->write($row, $col, $$hash_parameters2{'assembly'}{'folder'}, $format_left); 
 		$row++; $row++; $col = $first_col;
 		
 		#if ($$hash_parameters{'assembly'}{'files'} eq "Default DOMINO cleaning files") {
@@ -242,7 +257,7 @@ unless ($no_parameters) {
 		$row++; $row++; $col = $first_col;
 		$worksheet_parameters->write($row, $col, "PARAMETERS:", $format); $col = $first_col + 1; 
 		$worksheet_parameters->write($row, $col, "Minimum read score (MIRA):", $format); $col++;
-		$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'mrs'}, $format_left); $col++;
+		$worksheet_parameters->write($row, $col, $$hash_parameters2{'assembly'}{'mrs'}, $format_left); $col++;
 		
 		if ($$hash_parameters{'assembly'}{'CAP3'}) {
 			$col = $second_col; $row++;
@@ -250,17 +265,18 @@ unless ($no_parameters) {
 			$worksheet_parameters->write($row, $col, "Enabled", $format_left); $col++;			
 			$col = $second_col; $row++;
 			$worksheet_parameters->write($row, $col, "Similarity:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'simCAP3'}, $format_left); $col++;
+			$worksheet_parameters->write($row, $col, $$hash_parameters2{'assembly'}{'simCAP3'}, $format_left); $col++;
 			$col = $second_col; $row++;
 			$worksheet_parameters->write($row, $col, "Overlapping:", $format); $col++;
-			$worksheet_parameters->write($row, $col, $$hash_parameters{'assembly'}{'overCAP3'}, $format_left); $col++;
+			$worksheet_parameters->write($row, $col, $$hash_parameters2{'assembly'}{'overCAP3'}, $format_left); $col++;
 		} else {
 			$col = $second_col; $row++;
 			$worksheet_parameters->write($row, $col, "CAP3: Disabled", $format);
 		} $row++; $row++; $row++; 
 		
-		if ($$hash_files{'assembly'}{'stats'}) {
-			my %hash = %{$$hash_parameters{'assembly'}{'stats'}};
+		## Fix
+		if ($$hash_files2{'assembly'}{'stats'}) {
+			my %hash = %{$$hash_parameters2{'assembly'}{'stats'}};
 			foreach my $taxa (sort keys %hash) {
 				my $worksheet_name = "Assembly Stats $taxa";
 				if (length($worksheet_name) >= 31) {
@@ -290,7 +306,9 @@ unless ($no_parameters) {
 						} $col_stats++;
 					} $row_stats++;
 				} close (STATS);
-}}}}
+		}}
+		## Fix up to here
+}}
 
 $worksheet_parameters->write($row, $first_col, "ALIGNMENT/MAPPING PHASE:", $format_main_heading);
 $col = $first_col; $row++; $row++;
@@ -331,15 +349,15 @@ if ($$hash_parameters{"marker"}{"option"} eq "msa_alignment") {
 	$worksheet_parameters->write($row, $col, "PARAMETERS:", $format); $col++; 
 	my $tmp_col = $col;
 	$worksheet_parameters->write($row, $tmp_col, "Read Gap Open penalty ", $format);
-	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"marker"}{"rdgopen"}[0], $format_right); $row++;
+	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"mapping"}{"rdgopen"}[0], $format_right); $row++;
 	$worksheet_parameters->write($row, $tmp_col, "Read Gap Extension penalty ", $format);
-	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"marker"}{"rdgexten"}[0], $format_right); $row++;
+	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"mapping"}{"rdgexten"}[0], $format_right); $row++;
 	$worksheet_parameters->write($row, $tmp_col, "Reference Gap Open penalty ", $format);
-	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"marker"}{"rfgopen"}[0], $format_right); $row++;
+	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"mapping"}{"rfgopen"}[0], $format_right); $row++;
 	$worksheet_parameters->write($row, $tmp_col, "Reference Gap Extension penalty ", $format);
-	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"marker"}{"rfgexten"}[0], $format_right); $row++;
+	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"mapping"}{"rfgexten"}[0], $format_right); $row++;
 	$worksheet_parameters->write($row, $tmp_col, "Mismath penalty ", $format);
-	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"marker"}{"mis_penalty"}[0], $format_right); $row++;
+	$worksheet_parameters->write($row, ($tmp_col + 1), $$hash_parameters{"mapping"}{"mis_penalty"}[0], $format_right); $row++;
 }
 
 $row++; $row++;
@@ -426,7 +444,7 @@ open (MARKER, "<$markers_file"); while (<MARKER>) { if ($_ =~ /.*\_\#.*/) {$mark
 ## Print results and instructions
 print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" RESULTS ","#"); DOMINO::printHeader("", "#");
 print "\n+ DOMINO has retrieved $markers_count markers\n";
-my $marker_dirname = $$hash_parameters{"marker"}{"folder"}[-1];
+my $marker_dirname = $$hash_parameters{"marker"}{"folder"}[0];
 my $instructions_txt = $marker_dirname."/Instructions.txt";
 my $MSA = $path."/MSA_markers";
 open (OUT, ">$instructions_txt");
@@ -437,5 +455,5 @@ my $string2print = "+ Several files and folders has been generated:
 \t+ $MSA folder contains a single file for each marker identified.\n\n";	
 print OUT $string2print; print $string2print."\n"; close(OUT);
 
-
-DOMINO::print_success_Step("excel");
+chdir $path; DOMINO::print_success_Step("excel");
+exit();
