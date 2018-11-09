@@ -587,17 +587,17 @@ push (@{ $domino_params{'assembly'}{'dir'} }, $assembly_directory);
 ####################
 if ($input_options{$file_type}) {
 	if ($file_type == 1 || $file_type == 2 || $file_type == 4|| $file_type == 6) {
-		DOMINO::printError("Input file type provided not supported, please read the documentation..."); 
+		DOMINO::printError("Input file type provided not supported, please read the documentation...", $error_log); 
 		DOMINO::printInput_type(); DOMINO::dieNicely();	
 	}
 } else {
-	DOMINO::printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n");
+	DOMINO::printError("\n\nERROR: Wrong type of file provided\nPlease provide a valid type of file:\n", $error_log);
 	DOMINO::printInput_type(); DOMINO::dieNicely();
 }
 
 if ($user_files) { ## If users provides files for the assembly either than the DOMINO_clean_data
 	if (scalar (@user_files) == 0 || !$file_type) {
-		DOMINO::printError("No input files provided"); DOMINO::printInput_type(); DOMINO::dieNicely();		
+		DOMINO::printError("No input files provided", $error_log); DOMINO::printInput_type(); DOMINO::dieNicely();		
 	} else {
 		## Checking files
 		DOMINO::printDetails("+ Type of file(s): Option $file_type : $input_options{$file_type} ...OK\n", $param_Detail_file);
@@ -609,11 +609,11 @@ if ($user_files) { ## If users provides files for the assembly either than the D
 		my @file_abs_path_user = @{$domino_files{"USER_FILES"}};
 		if (scalar (@file_abs_path_user) == 1) {
 			if ($file_type == 3) { 
-				DOMINO::printError("Please provide multiple 454 Roche FASTQ file containing each of the taxa reads");
+				DOMINO::printError("Please provide multiple 454 Roche FASTQ file containing each of the taxa reads", $error_log);
 			} elsif ($file_type == 5) { 
-				DOMINO::printError("Please provide multiple Illumina FASTQ files containing containing each of the taxa reads");
+				DOMINO::printError("Please provide multiple Illumina FASTQ files containing containing each of the taxa reads", $error_log);
 			} elsif ($file_type == 7) {  ## Specify user to input left-right for each taxa: -input sp1_left.fastq -input sp1_right.fastq -input sp2_left.fastq -input sp2_right.fastq
-				DOMINO::printError("Please provide multiple Illumina Paired-End FASTQ files for each taxa (type_file 7) (2 files for specie)");
+				DOMINO::printError("Please provide multiple Illumina Paired-End FASTQ files for each taxa (type_file 7) (2 files for specie)", $error_log);
 			}
 			DOMINO::printInput_type(); DOMINO::dieNicely();	
 		} else {
@@ -625,7 +625,7 @@ if ($user_files) { ## If users provides files for the assembly either than the D
 	## Go to DOMINO_clean_data and get the files
 	DOMINO::printDetails("+ Type of file(s): Option $file_type : $input_options{$file_type} ...OK\n+ No user files provided: Default DOMINO cleaning files ...OK\n+ Get the clean FASTQ files generated in the cleaning step ...OK\n", $param_Detail_file);
 	my $clean_folder = DOMINO::get_earliest("clean_data", $path_abs_folder);
-	if ($clean_folder eq 'NO') { DOMINO::printError("No Clean Data folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory..."); DOMINO::dieNicely(); }
+	if ($clean_folder eq 'NO') { DOMINO::printError("No Clean Data folder was found. Please Re-Run DOMINO mapping step or make sure you use the correct output directory...", $error_log); DOMINO::dieNicely(); }
 	my $files_ref = DOMINO::readDir($clean_folder);
 	my $flag=0;
 	if (grep /preRepeatScanner_DOMINO_clean_data/, @$files_ref) {
@@ -654,7 +654,7 @@ if ($file_type eq 7) {
 	foreach my $keys (keys %domino_files) {
 		my @species_files = @{$domino_files{$keys}{'original'}};
 		if (scalar @species_files != 2) {
-			DOMINO::printError("Wrong pair of FASTQ files provided. Please check pair of files corresponding to $keys:\n"); DOMINO::dieNicely();
+			DOMINO::printError("Wrong pair of FASTQ files provided. Please check pair of files corresponding to $keys:\n", $error_log); DOMINO::dieNicely();
 		} else { &debugger_print("OK: $keys\n\n"); }
 }}
 
@@ -720,8 +720,8 @@ if ($flagSpades) {
 	if ($succesul_run) {
 		print "SPADes finished successfully...\n";
 	} elsif ($failed_run) {
-		DOMINO::printError("SPADes failed...\n"); DOMINO::dieNicely();
-	} else { DOMINO::printError("SPADes failed...\n"); DOMINO::dieNicely(); }
+		DOMINO::printError("SPADes failed...\n", $error_log); DOMINO::dieNicely();
+	} else { DOMINO::printError("SPADes failed...\n", $error_log); DOMINO::dieNicely(); }
 } else {
 	#############################################################
 	# 	MIRA ASSEMBLY STEP OF THE READS OF EACH TAXA			#
@@ -741,9 +741,9 @@ if ($flagSpades) {
 	if (-e -r -s $succesul_run) {
 		print "MIRA finished successfully...\n";
 	} elsif (-e -r -s $failed_run) {
-		DOMINO::printError("MIRA failed...\n"); DOMINO::dieNicely();
+		DOMINO::printError("MIRA failed...\n", $error_log); DOMINO::dieNicely();
 	} else {
-		DOMINO::printError("MIRA was interrupted...\n"); DOMINO::dieNicely();
+		DOMINO::printError("MIRA was interrupted...\n", $error_log); DOMINO::dieNicely();
 	}
 } print "\n"; &time_log();
 
@@ -804,10 +804,10 @@ sub check_file {
 				DOMINO::printDetails("\t\tPaired end file = ".$pair_int." ...OK\n", $param_Detail_file);	
 			}
 		} else { 
-			DOMINO::printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n"); DOMINO::printFormat_message(); DOMINO::dieNicely();
+			DOMINO::printError("Wrong FASTQ file provided. Please provide a valid FASTQ file: $file_to_check...\nFormat: $format_returned\n", $error_log); DOMINO::printFormat_message(); DOMINO::dieNicely();
 		}
 	} else { 
-		DOMINO::printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. "); DOMINO::printFormat_message(); DOMINO::dieNicely();
+		DOMINO::printError("Please provide a valid FASTQ file: $file_to_check...It is not readable or writable or it does not exist. ", $error_log); DOMINO::printFormat_message(); DOMINO::dieNicely();
 	}
 	DOMINO::printDetails("\n", $param_Detail_file);
 }

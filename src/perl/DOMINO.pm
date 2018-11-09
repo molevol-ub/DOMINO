@@ -237,6 +237,7 @@ sub printError {
 	print "\n\n";&printHeader(" ERROR ","!!"); print "\n";
     print $msg."\n\nTry \'perl $0 -h|--help or -man\' for more information.\nExit program.\n";
 	print "\n\n"; &printHeader("","!!"); &printHeader("","!!"); 
+	if (!$error_log) { return(); }
     &printError_log($msg, $error_log);
 }
 

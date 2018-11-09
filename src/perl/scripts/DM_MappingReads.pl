@@ -31,6 +31,7 @@ my %domino_mapping_files = %{ DOMINO::get_DOMINO_files($path."/", "mapping") };
 
 my $align_dirname = $$hash_parameters{'mapping'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'mapping'}{'cpu'}[0];
+my $noDiscard = $$hash_parameters{'mapping'}{'noDiscard'}[0];
 my %new_domino_files;
 #################################################################
 
@@ -443,8 +444,15 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 				if ($line =~ /^@.*/ ) { print SAM_OUT $line."\n";	
 				} else {
 					my @array = split (/\s+/,$line);
-					if (!$discard_contigs{$array[2]}) { print SAM_OUT $line."\n";	
-			}}}
+					if ($noDiscard) {
+						print SAM_OUT $line."\n";	
+					} else {
+						if (!$discard_contigs{$array[2]}) { 
+							print SAM_OUT $line."\n";	
+						}
+					}
+				}
+			}
 			close(SAM_OUT); close(SAM); undef %discard_contigs;
 			#print LOG "- File checked: Contigs and Reads discarded...\n";
 			push (@{ $domino_mapping_files_SAM_PILEUP{$reads}{"FILTERED_SAM_Parts::Ref:".$reference_identifier} }, $sam_filter);
@@ -518,7 +526,7 @@ DOMINO::print_success_Step("mapping");
 ###########################
 
 sub time_log {	
-	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
+	my $step_time_tmp = DOMINO::time_log($step_time, $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); print "\n"; 
 	$step_time = $$step_time_tmp;
 }
 

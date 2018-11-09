@@ -89,7 +89,7 @@ $debugger, $helpAsked1, $VAR_inc, $CONS_inc, $option_all, $totalContigs2use4mark
 
 ## others
 %domino_files, %domino_params, %domino_success_steps, $step_time, %discard_contigs, $pyRAD_file, $stacks_file, $radseq_like_data, 
-$number_sp, $genome_fasta, $scripts_path, $dnaSP_flag, $SLIDING_user, %mapping_contigs, $file2dump_param
+$number_sp, $genome_fasta, $scripts_path, $dnaSP_flag, $SLIDING_user, %mapping_contigs, $file2dump_param, $noDiscard
 );
 
 
@@ -151,6 +151,8 @@ GetOptions(
 	"low_coverage_data" => \$DOMINO_simulations,
 	"map_contig_files" => \$map_contig_files,
 	"max_SoftClipping=i" => \$cigar_pct,
+	"noDiscard" => \$noDiscard, ## no discard contigs no matter coverage
+
 	##########################
 
  	"Debug" => \$debugger,
@@ -1177,7 +1179,7 @@ sub get_clean_files {
 }
 
 sub time_log {	
-	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
+	my $step_time_tmp = DOMINO::time_log($step_time, $domino_params{'mapping'}{'mapping_markers_errors_details'}[0]); print "\n"; 
 	$step_time = $$step_time_tmp;
 }
 
@@ -1291,6 +1293,7 @@ sub check_options {
 	my $BowtieLocal = 0; if ($bowtie_local) { $BowtieLocal++; } 
 	my $mapContigFiles = 0; if ($map_contig_files) { $mapContigFiles++; }
 	my $LowCoverageData = 0; if ($DOMINO_simulations) { $LowCoverageData++; }
+	my $noDiscard_answer = 0; if ($noDiscard) { $noDiscard_answer++;}
 	
 	my ($variable_positions_user_min, $variable_positions_user_max);
 	my ($window_size_CONS_min, $window_size_CONS_max);
@@ -1371,7 +1374,8 @@ sub check_options {
 	push (@{ $domino_params{'mapping'}{'bowtie_local'} }, $BowtieLocal);
 	push (@{ $domino_params{'mapping'}{'map_contig_files'} }, $mapContigFiles);
 	push (@{ $domino_params{'mapping'}{'low_coverage_data'} }, $LowCoverageData);
-
+	push (@{ $domino_params{'mapping'}{'noDiscard'} }, $noDiscard_answer);
+	
 	push (@{ $domino_params{'marker'}{'cpu'} }, $num_proc_user);
 	push (@{ $domino_params{'marker'}{'variable_divergence'} }, $variable_divergence);
 	push (@{ $domino_params{'marker'}{'behaviour'} }, $behaviour);
