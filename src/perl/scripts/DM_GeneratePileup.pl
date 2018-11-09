@@ -27,7 +27,8 @@ if (!@ARGV) {print "Missing arguments\n"; exit();}
 
 ## get general parameters
 my $hash_parameters = DOMINO::get_parameters($path."/", "mapping");
-my $noDiscard = $$hash_parameters{'mapping'}{'noDiscard'}[0];
+
+print Dumper \$hash_parameters;
 my @temp_name = split ("\.sorted.bam", $sorted_bam);
 my ($ID, @sam);
 my $input_pileup = $temp_name[0].".profile";
@@ -291,7 +292,7 @@ sub check_array {
 	}}		
 	
 	if ($highest_value >= 170) {
-	 	if ($noDiscard) { # no discard contigs by coverage
+	 	if ($$hash_parameters{'mapping'}{'noDiscard'}[0]) { # no discard contigs by coverage
 	 		$highest_value = 169;
 	 	} else { return ("N","N"); }
 	}
