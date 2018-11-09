@@ -27,8 +27,8 @@ my $step_time = $ARGV[1];
 ## Get general parameters and files
 my $hash_parameters = DOMINO::get_parameters($path."/", "markers");
 my %domino_cluster_files = %{ DOMINO::get_DOMINO_files($path."/","markers") };
-	#print Dumper $hash_parameters;
-	#print Dumper \%domino_cluster_files;
+	print Dumper $hash_parameters;
+	print Dumper \%domino_cluster_files;
 
 my $marker_dirname = $$hash_parameters{'marker'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'marker'}{'cpu'}[0];
@@ -77,7 +77,7 @@ print "+ Generate a BLAST database...\n";
 my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($all_coordinates_file, $BLAST, $$hash_parameters{"mapping"}{"mapping_markers_errors_details"}[0]);
 #&debugger_print($blast_DB_message);
 if ($blast_DB eq "1") {
-	my $msg="Early termination of the DOMINO Marker Scan...\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"); 
+	my $msg="Early termination of the DOMINO Marker Scan...\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"; 
 	print $msg; DOMINO::printError($msg, $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); exit();
 } 
 
