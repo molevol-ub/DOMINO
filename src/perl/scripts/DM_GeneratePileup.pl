@@ -73,10 +73,9 @@ sub read_pileup {
 	@array_positions = @$array_positions_ref;
 	@fasta_positions = @array_positions;			
 
-	open (PILEUP,"<$file"); while (<PILEUP>){
-
-		print $_."\n";
-
+	open (PILEUP,"<$file"); 
+	while (<PILEUP>){
+		#print $_."\n";
 		my $line = $_; chomp $line;
 		next if $line=~ m/^\s*$/o;
 		next if $line=~ /^\#/o;
@@ -217,13 +216,12 @@ sub read_pileup {
 			$fasta_positions[$num_pos_array] = 'N';
 		}
 		# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
-		
 	}
 	close(PILEUP);
-
-	&print_coordinates(\@array_positions, \$contig, $reference_id, $returned_outfolder);
-	&print_fasta_coordinates(\@fasta_positions, \$contig, $reference_id, $returned_outfolder); ## Print array into file $previous_contig
-	sleep(2);
+	my $ref = \@array_positions;
+	my $ref2 = \@fasta_positions;
+	&print_coordinates($ref, $contig, $reference_id, $returned_outfolder);
+	&print_fasta_coordinates($ref2, $contig, $reference_id, $returned_outfolder); ## Print array into file $previous_contig
 }
 
 sub initilize_contig {		
@@ -246,26 +244,24 @@ sub print_coordinates {
 	my $ref_id = $_[2];
 	my $dir_tmp = $_[3];
 
-	my @coord_array = @$coord_array_ref;
-	my $seq_contig = join "", @coord_array;
+	my $seq_contig = join "", @{ $coord_array_ref };
 	my $var_sites = $seq_contig =~ tr/1/1/;
 
 	if ($var_sites != 0) {
-		my $array_file = $dir_tmp."/".$$contig_name."_ARRAY.txt";
+		my $array_file = $dir_tmp."/".$contig_name."_ARRAY.txt";
 		open (FH, ">$array_file"); print FH ">$$contig_name\n$seq_contig\n"; close(FH);	
 	}
 }
 
 sub print_fasta_coordinates {
 	## Print array into file $previous_contig
-	my $coord_array_ref = $_[0];
+	my $coord_array_sub = $_[0];
 	my $contig_name = $_[1];
 	my $ref_id = $_[2];
 	my $dir_tmp = $_[3];
 	
-	my @coord_array_sub = @$coord_array_ref;
-	my $seq_contig = join "", @coord_array_sub;
-	my $array_file = $dir_tmp."/".$$contig_name."_sequence.fasta";
+	my $seq_contig = join "", @{ $coord_array_sub };
+	my $array_file = $dir_tmp."/".$contig_name."_sequence.fasta";
 	open (FH, ">$array_file"); print FH ">$$contig_name\n$seq_contig\n"; close(FH);	
 }
 
@@ -297,10 +293,10 @@ sub check_array {
 	if ($total > 170) { ## will be out of range
 	 	if ($$hash_parameters{'mapping'}{'noDiscard'}[0]) { # no discard contigs by coverage
 			## make it equivalent to max:169
-			my $new_highest_value = int(($highest_value/$total)*100);
-			print "Total = $total\t$highest_value\t$new_highest_value\t169\n";
-			$highest_value = $new_highest_value;
+			my $tmp = $highest_value/$total;
 	 		$total = 169;
+			$highest_value = int($tmp*$total);
+			print "Total = $total\t$highest_value\t$tmp\t169\n";
 	 	} else { return ("N","N"); }
 	}
 	## Check wether there are more than 8 positions mapping
