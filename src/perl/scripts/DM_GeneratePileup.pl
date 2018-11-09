@@ -131,7 +131,7 @@ open (PILEUP,"<$input_pileup"); while (<PILEUP>){
 			if (scalar @array_keys == 1) { ## a unique base is mapping
 				$position = $array_keys[0];
 			} else { ## get ambiguous code
-				$position = &get_amb_code(\%polymorphism);
+				$position = DOMINO::get_ambget_amb_code(\%polymorphism);
 			}
 			$fasta_positions[$num_pos_array] = $position; 
 			# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
@@ -316,7 +316,7 @@ sub check_array {
 					## Contig1	12	R	10	AAAAACCCCC
 					## Contig1	12	R	10	AACC
 					## Contig1	12	R	10	AC
-					my $pos = &get_amb_code(\%polymorphism);
+					my $pos = DOMINO::get_amb_code(\%polymorphism);
 					if ($polymorphism_user) {							
 						return ('1', $pos);
 					} else {
@@ -328,7 +328,7 @@ sub check_array {
 					## Contig1	13	R	10	TTTTTTCCCCC
 					## Contig1	13	R	10	TTCC
 					## Contig1	13	R	10	TC
-					my $pos = &get_amb_code(\%polymorphism);
+					my $pos = DOMINO::get_amb_code(\%polymorphism);
 					return ('1', $pos);
 	}}}} else { 
 		## There is no ambiguity code in the reference base
@@ -342,7 +342,7 @@ sub check_array {
 						return ('1', $last_key); ## Contig1	7	T	10	ccccccccc.
 				}} else { 
 					## Contig1	8	T	10	....cc..cc
-					my $pos = &get_amb_code(\%polymorphism);
+					my $pos = DOMINO::get_amb_code(\%polymorphism);
 					if ($polymorphism_user) {
 						return ('1', $pos);
 					} else {
@@ -350,7 +350,7 @@ sub check_array {
 			}}} else { ## less than 8 reads mapping here
 				if ($smallest_value >= 2) {
 					## Contig1	8	T	5	...cc
-					my $pos = &get_amb_code(\%polymorphism);
+					my $pos = DOMINO::get_amb_code(\%polymorphism);
 					if ($polymorphism_user) {
 						return ('1', $pos);
 					} else {
@@ -368,11 +368,11 @@ sub check_array {
 				if ($prob < $significance_level) { 	
 					return ('1', $last_key); ## Contig1	15	T	10	ccccccccccca
 				} else { 
-					my $pos = &get_amb_code(\%polymorphism);
+					my $pos = DOMINO::get_amb_code(\%polymorphism);
 					return ('1', $pos); ## Contig1	15	T	10	ccccccgggggg
 			}} else {
 				if ($smallest_value >= 2) {
-					my $pos = &get_amb_code(\%polymorphism);
+					my $pos = DOMINO::get_amb_code(\%polymorphism);
 					return ('1', $pos); ## Contig1	8	T	5	GGGcc
 				} else {
 					if ($highest_value == $smallest_value) {
