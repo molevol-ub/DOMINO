@@ -290,10 +290,13 @@ sub check_array {
 		} elsif ($polymorphism{$keys} < $smallest_value) {
 			$smallest_value = $polymorphism{$keys};
 	}}		
-	
-	if ($highest_value > 170) {
+
+	if ($total > 170) {	
 	 	if ($$hash_parameters{'mapping'}{'noDiscard'}[0]) { # no discard contigs by coverage
-	 		$highest_value = 169;
+			my $new_highest_value = int(($highest_value/$total)*100);
+			print "Total = $total\t$highest_value\t$new_highest_value\t169\n";
+			$highest_value = $new_highest_value;
+	 		$total = 169;
 	 	} else { return ("N","N"); }
 	}
 	## Check wether there are more than 8 positions mapping
