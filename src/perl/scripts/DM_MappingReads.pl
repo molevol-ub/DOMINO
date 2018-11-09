@@ -538,7 +538,8 @@ sub generate_filter_PILEUP {
 	my $tmp = $dir_path."/ARRAY_files_".$taxa."_PROFILE"; 
 
 	my $domino_Scripts_GeneratePileup = $domino_Scripts."/DM_GeneratePileup.pl";
-	my $command = "perl $domino_Scripts_GeneratePileup $sorted_bam $contig_file $reference_id $taxa $tmp $path";  #print $command."\n"; 
+	my $command = "perl $domino_Scripts_GeneratePileup $sorted_bam $contig_file $reference_id $taxa $tmp $path";  
+	#print $command."\n"; 
 	system($command);	
 	chdir $dir_path; #&debugger_print("Changing dir to $dir_path");
 	return($tmp);	

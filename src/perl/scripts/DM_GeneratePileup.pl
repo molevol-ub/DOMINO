@@ -23,6 +23,8 @@ my $returned_outfolder = $ARGV[4];
 my $path = $ARGV[5];
 ##########################################################################################
 
+if (!@ARGV) {print "Missing arguments\n"; exit();}
+
 ## get general parameters
 my $hash_parameters = DOMINO::get_parameters($path."/", "mapping");
 my $noDiscard = $$hash_parameters{'mapping'}{'noDiscard'}[0];
@@ -45,185 +47,195 @@ my $reference_hash_fasta = DOMINO::readFASTA_hash($contig_file);
 my %ambiguity_DNA_codes = %{ DOMINO::ambiguity_DNA_codes() };
 ##########################################################################################
 
-#print "\t- Filtering the PILEUP generated\n";
-my ($previous_contig, $previous_fasta_contig, @array_positions, @fasta_positions);
-open (PILEUP,"<$input_pileup"); while (<PILEUP>){
+## get ids
+my $tmp = $input_pileup."_tmp_dir";
+unless (-d $tmp) { mkdir $tmp, 0755 };
+my $uniq_ids = $tmp."/uniq_ids.txt";
+my $command = "awk \'{print \$1}\' $input_pileup \| sort \| uniq > $uniq_ids"; #print $command."\n";
+system($command);
+#print "\t\t- Filtering the PILEUPs generated for $reference_id vs. $taxa\n";
+open ("IN", "<$uniq_ids");
+while (<IN>) {
 	my $line = $_; chomp $line;
-	next if $line=~ m/^\s*$/o;
-	next if $line=~ /^\#/o;
-	next if $line=~ m/\[REDUCE RESULT\]/;
-	$line =~ s/\s/\t/g;
-	my @pileup = split(/\t/,$line); ##	HKU61D301.clean.MID4_Nem_098_c8679	161	t	3	,,.	FA=
-	my $contig = $pileup[0];
-	my $pos_base; my $num_pos_base = $pileup[1]; my $num_pos_array = $num_pos_base -1;
+	my $output = $tmp."/".$line.".profile";
+	system("grep $line $input_pileup > $output");
+	&read_pileup($output, $line);
+}
+close (IN);
 
-	if (!$previous_contig) {
-		my $array_positions_ref;
-		($previous_contig, $array_positions_ref) = &initilize_contig($contig, $reference_hash_fasta);
-		@array_positions = @$array_positions_ref;
-		@fasta_positions = @array_positions;			
-	} else {			
-		if ($previous_contig ne $contig) {
-			# Debug print Dumper \@array_positions;
-			&print_coordinates(\@array_positions, \$previous_contig, $reference_id, $returned_outfolder); ## Print array into file $previous_contig
-			# Debug	print Dumper \@fasta_positions;
-			&print_fasta_coordinates(\@fasta_positions, \$previous_contig, $reference_id, $returned_outfolder); ## Print array into file $previous_contig
-			my $array_positions_ref;
-			($previous_contig, $array_positions_ref) = &initilize_contig($contig, $reference_hash_fasta);
-			@array_positions = @$array_positions_ref;
-			@fasta_positions = @array_positions;
-	}}
+sub read_pileup {
+
+	my $file = $_[0];
+	my $contig = $_[1];
+	my @array_positions; my @fasta_positions;
+	my $array_positions_ref = &initilize_contig($contig, $reference_hash_fasta);
+	@array_positions = @$array_positions_ref;
+	@fasta_positions = @array_positions;			
+
+	open (PILEUP,"<$file"); while (<PILEUP>){
+
+		#print $_."\n";
+
+		my $line = $_; chomp $line;
+		next if $line=~ m/^\s*$/o;
+		next if $line=~ /^\#/o;
+		next if $line=~ m/\[REDUCE RESULT\]/;
+		$line =~ s/\s/\t/g;
+		my @pileup = split(/\t/,$line); ##	HKU61D301.clean.MID4_Nem_098_c8679	161	t	3	,,.	FA=
+		my $contig = $pileup[0];
 	
-	## Get array for each position
-	if ($pileup[3] != 0) {
-		my $read_base = $pileup[4]; my $ref_base = $pileup[2];
-		my @base_record = split(//, $read_base);
-		my (%posibilities, %polymorphism);
-		my @base_parse;
-		my $base_counter=0;
-		for (my $i = 0; $i < scalar @base_record; $i++) {  
-			if ($base_record[$i] =~ m/\^/) { $i++; next; } ## Starting to map a new read
-			$base_record[$i]= uc($base_record[$i]);
-
-			if ($base_record[$i] =~ m/A|G|C|T|a|g|c|t/) {
-				$polymorphism{$base_record[$i]}++;
-				$base_counter++;
-				push (@base_parse, $base_record[$i]);
-			} elsif ($base_record[$i] eq "." || $base_record[$i] eq ",") {
-				$polymorphism{$ref_base}++;
-				$base_counter++;
-				push (@base_parse, $ref_base);
-			} elsif ($base_record[$i] =~ m/(\+|\-)/) {# INDEL
-				##	Example of INDEL: 
-				##	HKU61D301.clean.MID4_Nem_098_c8679	280	g	2	,.+1T	I? 
-				##  Contig_47_MID1	4	T	1	a+47cggatcgatcaaagtaagatatcatacttggaaggcaacatgcacgt	1	1	Position: 1
-				my $length_base_record = length($read_base);
-				my $indel;
-				my $out_of_range = 0;
-				my $indel_2 = $i+2;
-				my $indel_3 = $i+3;
-				if ($indel_2 >= $length_base_record) { $out_of_range = 1; }
-				if ($indel_3 >= $length_base_record) { $out_of_range = 1; }
-				if ($out_of_range == 0) {
-					if ($base_record[$i+2] =~ /\d+/) { ## +/-12ATGAGACGATCC
-						$indel = $base_record[$i+1].$base_record[$i+2];
-						$i++; $i++;
-					} elsif ($base_record[$i+3] =~ /\d+/) { ## +/-121ATGAGACGATCC...ATGAGACGATCC
-						$indel = $base_record[$i+1].$base_record[$i+2].$base_record[$i+2];
-						$i++; $i++;	$i++;
-					} else { ## +/-1A
+		my $pos_base; my $num_pos_base = $pileup[1]; my $num_pos_array = $num_pos_base -1;
+	
+		## Get array for each position
+		if ($pileup[3] != 0) {
+			my $read_base = $pileup[4]; my $ref_base = $pileup[2];
+			my @base_record = split(//, $read_base);
+			my (%posibilities, %polymorphism);
+			my @base_parse;
+			my $base_counter=0;
+			for (my $i = 0; $i < scalar @base_record; $i++) {  
+				if ($base_record[$i] =~ m/\^/) { $i++; next; } ## Starting to map a new read
+				$base_record[$i]= uc($base_record[$i]);
+	
+				if ($base_record[$i] =~ m/A|G|C|T|a|g|c|t/) {
+					$polymorphism{$base_record[$i]}++;
+					$base_counter++;
+					push (@base_parse, $base_record[$i]);
+				} elsif ($base_record[$i] eq "." || $base_record[$i] eq ",") {
+					$polymorphism{$ref_base}++;
+					$base_counter++;
+					push (@base_parse, $ref_base);
+				} elsif ($base_record[$i] =~ m/(\+|\-)/) {# INDEL
+					##	Example of INDEL: 
+					##	HKU61D301.clean.MID4_Nem_098_c8679	280	g	2	,.+1T	I? 
+					##  Contig_47_MID1	4	T	1	a+47cggatcgatcaaagtaagatatcatacttggaaggcaacatgcacgt	1	1	Position: 1
+					my $length_base_record = length($read_base);
+					my $indel;
+					my $out_of_range = 0;
+					my $indel_2 = $i+2;
+					my $indel_3 = $i+3;
+					if ($indel_2 >= $length_base_record) { $out_of_range = 1; }
+					if ($indel_3 >= $length_base_record) { $out_of_range = 1; }
+					if ($out_of_range == 0) {
+						if ($base_record[$i+2] =~ /\d+/) { ## +/-12ATGAGACGATCC
+							$indel = $base_record[$i+1].$base_record[$i+2];
+							$i++; $i++;
+						} elsif ($base_record[$i+3] =~ /\d+/) { ## +/-121ATGAGACGATCC...ATGAGACGATCC
+							$indel = $base_record[$i+1].$base_record[$i+2].$base_record[$i+2];
+							$i++; $i++;	$i++;
+						} else { ## +/-1A
+							$indel = $base_record[$i+1];
+							$i++;
+					}} else { ## +/-1A
 						$indel = $base_record[$i+1];
 						$i++;
-				}} else { ## +/-1A
-					$indel = $base_record[$i+1];
-					$i++;
+					}
+					$i = $i+$indel;
+					next;
+				} else { next; }
+			}
+			# Debug			
+			#print Dumper @base_record; #print Dumper @base_parse; print Dumper %polymorphism;
+			
+			if ($ref_base eq "N") {
+				$array_positions[$num_pos_array] = 'N'; ## Not informative enough  
+				my @array_keys = keys %polymorphism;
+				my $position;
+				if (scalar @array_keys == 1) { ## a unique base is mapping
+					$position = $array_keys[0];
+				} else { ## get ambiguous code
+					$position = DOMINO::get_amb_code(\%polymorphism);
 				}
-				$i = $i+$indel;
-				next;
-			} else { next; }
-		}
-		# Debug			
-		#print Dumper @base_record; #print Dumper @base_parse; print Dumper %polymorphism;
-		
-		if ($ref_base eq "N") {
-			$array_positions[$num_pos_array] = 'N'; ## Not informative enough  
-			my @array_keys = keys %polymorphism;
-			my $position;
-			if (scalar @array_keys == 1) { ## a unique base is mapping
-				$position = $array_keys[0];
-			} else { ## get ambiguous code
-				$position = DOMINO::get_amb_code(\%polymorphism);
-			}
-			$fasta_positions[$num_pos_array] = $position; 
-			# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
-			next;	
-		}
-		
-		if ($base_counter == 1) { ## There is only base mapping...
-			unless ($$hash_parameters{'mapping'}{'map_contig_files'}[0] || $$hash_parameters{'mapping'}{'LowCoverageData'}[0]) {
-				$array_positions[$num_pos_array] = 'N'; ## Not informative enough
-				$fasta_positions[$num_pos_array] = 'N'; ## Not informative enough
+				$fasta_positions[$num_pos_array] = $position; 
 				# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
-				next;
-		}} ## Let it be informative if DOMINO simulations or mapping contig files				
-		
-		my @array_keys = keys %polymorphism;
-		if (scalar @array_keys == 1) { ## a unique base is mapping
-			if ($ambiguity_DNA_codes{$ref_base}) {
-				my $flag = 0; my @bases;
-				for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$ref_base}}; $j++) {
-					foreach my $keys (sort keys %polymorphism) {
-						if ($keys eq $ambiguity_DNA_codes{$ref_base}[$j]) { $flag = 1; }
-				}}
-				if ($flag == 1) { 
-					## Contig1	4	M	10	cccccccccc	## type 4
-					$array_positions[$num_pos_array] = '0'; 
-					$fasta_positions[$num_pos_array] = $ref_base;
-				} else { 
-					## Contig1	5	R	10	cccccccccc	## type 5
-					$array_positions[$num_pos_array] = '1';
-					$fasta_positions[$num_pos_array] = $array_keys[0];											
-			}} else {
-				if ($base_parse[0] eq $ref_base) {  
-					##Contig1	2	T	10	..........	## type 2
-					$array_positions[$num_pos_array] = '0';
-					$fasta_positions[$num_pos_array] = $ref_base;						
-				} else {  
-					## Contig1	3	T	10	cccccccccc	## type 3
-					$array_positions[$num_pos_array] = '1';
-					$fasta_positions[$num_pos_array] = $base_parse[0];
-		}}} elsif (scalar @array_keys == 2) { ## Maybe true polymorphism or NGS error
-			my ($value_return, $base_return) = &check_array($ref_base, \%polymorphism);
-			$array_positions[$num_pos_array] = $value_return; 
-			$fasta_positions[$num_pos_array] = $base_return;
-		} elsif (scalar @array_keys == 3) { ## Something odd...
-			my ($last_key, $small_key, $highest_value, $smallest_value);
-			my $flag=0;				
-			my @array = sort values %polymorphism;
-			for (my $i=1; $i < scalar @array; $i++) {
-				if ($array[0] == $array[$i]) { $flag++; }
+				next;	
 			}
-			if ($flag != 0) { ## There are two with the same frequence! DISCARD!
-				$array_positions[$num_pos_array] = 'N';
-				$fasta_positions[$num_pos_array] = 'N';
-			} else {
-				## Get lowest value, discard it and check the rest.
-				foreach my $keys (sort keys %polymorphism) {
-					if ($polymorphism{$keys} eq $array[0]) {
-						delete $polymorphism{$keys}; last;
-				}}
+			
+			if ($base_counter == 1) { ## There is only base mapping...
+				unless ($$hash_parameters{'mapping'}{'map_contig_files'}[0] || $$hash_parameters{'mapping'}{'LowCoverageData'}[0]) {
+					$array_positions[$num_pos_array] = 'N'; ## Not informative enough
+					$fasta_positions[$num_pos_array] = 'N'; ## Not informative enough
+					# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
+					next;
+			}} ## Let it be informative if DOMINO simulations or mapping contig files				
+			
+			my @array_keys = keys %polymorphism;
+			if (scalar @array_keys == 1) { ## a unique base is mapping
+				if ($ambiguity_DNA_codes{$ref_base}) {
+					my $flag = 0; my @bases;
+					for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$ref_base}}; $j++) {
+						foreach my $keys (sort keys %polymorphism) {
+							if ($keys eq $ambiguity_DNA_codes{$ref_base}[$j]) { $flag = 1; }
+					}}
+					if ($flag == 1) { 
+						## Contig1	4	M	10	cccccccccc	## type 4
+						$array_positions[$num_pos_array] = '0'; 
+						$fasta_positions[$num_pos_array] = $ref_base;
+					} else { 
+						## Contig1	5	R	10	cccccccccc	## type 5
+						$array_positions[$num_pos_array] = '1';
+						$fasta_positions[$num_pos_array] = $array_keys[0];											
+				}} else {
+					if ($base_parse[0] eq $ref_base) {  
+						##Contig1	2	T	10	..........	## type 2
+						$array_positions[$num_pos_array] = '0';
+						$fasta_positions[$num_pos_array] = $ref_base;						
+					} else {  
+						## Contig1	3	T	10	cccccccccc	## type 3
+						$array_positions[$num_pos_array] = '1';
+						$fasta_positions[$num_pos_array] = $base_parse[0];
+			}}} elsif (scalar @array_keys == 2) { ## Maybe true polymorphism or NGS error
 				my ($value_return, $base_return) = &check_array($ref_base, \%polymorphism);
 				$array_positions[$num_pos_array] = $value_return; 
 				$fasta_positions[$num_pos_array] = $base_return;
-		}} elsif (scalar @array_keys > 3) { 
+			} elsif (scalar @array_keys == 3) { ## Something odd...
+				my ($last_key, $small_key, $highest_value, $smallest_value);
+				my $flag=0;				
+				my @array = sort values %polymorphism;
+				for (my $i=1; $i < scalar @array; $i++) {
+					if ($array[0] == $array[$i]) { $flag++; }
+				}
+				if ($flag != 0) { ## There are two with the same frequence! DISCARD!
+					$array_positions[$num_pos_array] = 'N';
+					$fasta_positions[$num_pos_array] = 'N';
+				} else {
+					## Get lowest value, discard it and check the rest.
+					foreach my $keys (sort keys %polymorphism) {
+						if ($polymorphism{$keys} eq $array[0]) {
+							delete $polymorphism{$keys}; last;
+					}}
+					my ($value_return, $base_return) = &check_array($ref_base, \%polymorphism);
+					$array_positions[$num_pos_array] = $value_return; 
+					$fasta_positions[$num_pos_array] = $base_return;
+			}} elsif (scalar @array_keys > 3) { 
+				$array_positions[$num_pos_array] = 'N';
+				$fasta_positions[$num_pos_array] = 'N';
+		}} else { ## No base is mapping this reference
+			##Contig1	1	A	0	## type 1
 			$array_positions[$num_pos_array] = 'N';
 			$fasta_positions[$num_pos_array] = 'N';
-	}} else { ## No base is mapping this reference
-		##Contig1	1	A	0	## type 1
-		$array_positions[$num_pos_array] = 'N';
-		$fasta_positions[$num_pos_array] = 'N';
+		}
+		# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
+		
 	}
-	# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
+	close(PILEUP);
+
+	&print_coordinates(\@array_positions, \$contig, $reference_id, $returned_outfolder);
+	&print_fasta_coordinates(\@fasta_positions, \$contig, $reference_id, $returned_outfolder); ## Print array into file $previous_contig
+	sleep(2);
 }
-close(PILEUP);
-&print_coordinates(\@array_positions, \$previous_contig, $reference_id, $returned_outfolder);
-&print_fasta_coordinates(\@fasta_positions, \$previous_contig, $reference_id, $returned_outfolder); ## Print array into file $previous_contig
-
-exit();
-
 
 sub initilize_contig {		
-	my $current_contig = $_[0];
+	my $name_contig = $_[0];
 	my $reference_hash_fasta = $_[1];
 	
 	## Initialize new contig
 	my @array_positions_sub;
-	if (${$reference_hash_fasta}{$current_contig}) {
-		my $tmp_size = length(${$reference_hash_fasta}{$current_contig});
+	if (${$reference_hash_fasta}{$name_contig}) {
+		my $tmp_size = length(${$reference_hash_fasta}{$name_contig});
 		@array_positions_sub = ("-") x $tmp_size;
 	}
-	my $ref = \@array_positions_sub;		
-	return ($current_contig, $ref);
+	return \@array_positions_sub;		
 }
 
 sub print_coordinates {
