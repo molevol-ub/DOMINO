@@ -289,10 +289,14 @@ sub check_array {
 			$last_key = $keys;							
 		} elsif ($polymorphism{$keys} < $smallest_value) {
 			$smallest_value = $polymorphism{$keys};
-	}}		
+	}}
+	
+	print $ref_base."\t".$total."\t".$smallest_value."\t".$highest_value."\n";
+	print Dumper $ref_poly_hash;	
 
-	if ($total > 170) {	
+	if ($total > 170) { ## will be out of range
 	 	if ($$hash_parameters{'mapping'}{'noDiscard'}[0]) { # no discard contigs by coverage
+			## make it equivalent to max:169
 			my $new_highest_value = int(($highest_value/$total)*100);
 			print "Total = $total\t$highest_value\t$new_highest_value\t169\n";
 			$highest_value = $new_highest_value;
