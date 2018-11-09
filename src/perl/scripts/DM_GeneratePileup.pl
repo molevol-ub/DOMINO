@@ -25,6 +25,7 @@ my $path = $ARGV[5];
 
 ## get general parameters
 my $hash_parameters = DOMINO::get_parameters($path."/", "mapping");
+my $noDiscard = $$hash_parameters{'mapping'}{'noDiscard'}[0];
 my @temp_name = split ("\.sorted.bam", $sorted_bam);
 my ($ID, @sam);
 my $input_pileup = $temp_name[0].".profile";
@@ -32,7 +33,7 @@ my $pileup_command = $samtools_path." mpileup -f ".$contig_file." -o ".$input_pi
 #&debugger_print("SAMTOOLS command: ".$pileup_command);
 my $sytem_command_pileup = system ($pileup_command);
 if ($sytem_command_pileup != 0) {
-	DOMINO::printError("Exiting the script. Some error happened when calling SAMtools for generating the PILEUP for the file $contig_file...\n"); DOMINO::dieNicely();
+	DOMINO::printError("Exiting the script. Some error happened when calling SAMtools for generating the PILEUP for the file $contig_file...\n", $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); DOMINO::dieNicely();
 }
 unless (-d $returned_outfolder) { mkdir $returned_outfolder, 0755; } 
 #&debugger_print("Changing dir to $returned_outfolder");
@@ -131,7 +132,7 @@ open (PILEUP,"<$input_pileup"); while (<PILEUP>){
 			if (scalar @array_keys == 1) { ## a unique base is mapping
 				$position = $array_keys[0];
 			} else { ## get ambiguous code
-				$position = DOMINO::get_ambget_amb_code(\%polymorphism);
+				$position = DOMINO::get_amb_code(\%polymorphism);
 			}
 			$fasta_positions[$num_pos_array] = $position; 
 			# Debug	print $array_positions[$num_pos_array]."\n"; print $fasta_positions[$num_pos_array]."\n";
@@ -277,7 +278,11 @@ sub check_array {
 			$smallest_value = $polymorphism{$keys};
 	}}		
 	
-	if ($highest_value >= 170) { return ("N","N");}
+	if ($highest_value >= 170) {
+	 	if ($noDiscard) { # no discard contigs by coverage
+	 		$highest_value = 169;
+	 	} else { return ("N","N"); }
+	}
 	## Check wether there are more than 8 positions mapping
 	## and if not if there at least for the smallest two
 	## bases.

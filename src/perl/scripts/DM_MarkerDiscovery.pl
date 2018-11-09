@@ -612,7 +612,7 @@ unless (-r -e -s $output_file) {
 ###########################
 
 sub time_log {	
-	my $step_time_tmp = DOMINO::time_log($step_time, $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); print "\n"; 
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
 	$step_time = $$step_time_tmp;
 }
 

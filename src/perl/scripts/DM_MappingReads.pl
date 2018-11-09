@@ -76,7 +76,7 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 	#&debugger_print("BOWTIE2 command: ".$bowtie_index_call);
 	my $index_result = system ($bowtie_index_call);
 	if ($index_result != 0) {
-		DOMINO::printError("Exiting the script. Some error happened when calling bowtie for indexing the file...\n"); 
+		DOMINO::printError("Exiting the script. Some error happened when calling bowtie for indexing the file...\n", $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); 
 		DOMINO::print_fail_Step("index_genome_$reference_tag");
 		DOMINO::dieNicely();
 	} else { DOMINO::print_success_Step("index_genome_$reference_tag"); #$domino_success_steps{$reference_tag}{"index_genome"}++;
@@ -165,7 +165,7 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 		$botwie_system .= " 2> ".$error_bowtie;
 		my $system_bowtie_call = system ($botwie_system);
 		if ($system_bowtie_call != 0) {
-			DOMINO::printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n"); 
+			DOMINO::printError("Exiting the script. Some error happened when calling bowtie for mapping the file $mapping_file...\n", $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); 
 			DOMINO::print_fail_Step("mapping_$reads");
 			DOMINO::dieNicely(); 
 		} else { DOMINO::print_success_Step("mapping_$reads"); #$domino_success_steps{$reference_tag}{"map_$reads"}++
@@ -314,7 +314,7 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 			my $system_coverage_call = system ($coverage_samtools_command); 
 			#&debugger_print("SAMTOOLS command: $coverage_samtools_command");
 			if ($system_coverage_call != 0) {
-				DOMINO::printError("Exiting the script. Some error happened when calling SAMtools for obtaining coverage of file $sorted_bam[$i]...\n"); DOMINO::dieNicely();
+				DOMINO::printError("Exiting the script. Some error happened when calling SAMtools for obtaining coverage of file $sorted_bam[$i]...\n", $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); DOMINO::dieNicely();
 			}
 			
 			unless (-z $coverage_file) {
@@ -526,7 +526,7 @@ DOMINO::print_success_Step("mapping");
 ###########################
 
 sub time_log {	
-	my $step_time_tmp = DOMINO::time_log($step_time, $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); print "\n"; 
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
 	$step_time = $$step_time_tmp;
 }
 

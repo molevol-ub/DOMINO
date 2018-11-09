@@ -239,7 +239,7 @@ perl DM_MarkerScan_1.1.pl
 
 ## Others
 
-[-No_Profile_Generation|NPG] [-TempFiles] [-keep_bam_file]
+[-No_Profile_Generation|NPG] [-TempFiles] [-keep_bam_file] [-noDiscard]
 
 =item B<>
 
@@ -1179,7 +1179,7 @@ sub get_clean_files {
 }
 
 sub time_log {	
-	my $step_time_tmp = DOMINO::time_log($step_time, $domino_params{'mapping'}{'mapping_markers_errors_details'}[0]); print "\n"; 
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
 	$step_time = $$step_time_tmp;
 }
 

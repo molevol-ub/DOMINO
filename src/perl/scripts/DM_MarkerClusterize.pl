@@ -77,9 +77,8 @@ print "+ Generate a BLAST database...\n";
 my ($blast_DB, $blast_DB_message) = DOMINO::makeblastdb($all_coordinates_file, $BLAST, $$hash_parameters{"mapping"}{"mapping_markers_errors_details"}[0]);
 #&debugger_print($blast_DB_message);
 if ($blast_DB eq "1") {
-	DOMINO::printError("Early termination of the DOMINO Marker Scan...");
-	my $msg= "\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"; 
-	print $msg; DOMINO::printError_log($msg); exit();
+	my $msg="Early termination of the DOMINO Marker Scan...\n\nPlease note that DOMINO could not find any markers for the parameters provided. Please Re-Run DOMINO using other parameters\n\n\n"); 
+	print $msg; DOMINO::printError($msg, $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); exit();
 } 
 
 ## Parallelize BLAST
@@ -223,6 +222,6 @@ system($command);
 ###########################
 
 sub time_log {	
-	my $step_time_tmp = DOMINO::time_log($step_time, $$hash_parameters{'mapping'}{'mapping_markers_errors_details'}[0]); print "\n"; 
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
 	$step_time = $$step_time_tmp;
 }
