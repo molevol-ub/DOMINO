@@ -371,7 +371,7 @@ sub functional_factorial {
 
     my $n = shift(@_);
     my $fact = 1;
-    if (($n < 0) or (170 < $n)) { die "Factorial out of range [DM_MarkerScan: functional_factorial]"; }
+    if (($n < 0) or (170 < $n)) { die "Factorial out of range (n=$n) [DM_MarkerScan: functional_factorial]"; }
     for (my $i = 1; $i <= $n; $i++) { $fact *= $i; }
     return $fact;
 }
