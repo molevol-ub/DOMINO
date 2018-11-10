@@ -43,7 +43,8 @@ unless (-d $returned_outfolder) { mkdir $returned_outfolder, 0755; }
 ##########################################################################################
 
 ## Get reference fasta information
-my $reference_hash_fasta = DOMINO::readFASTA_hash($contig_file);
+my ($reference_hash_fasta, $message) = DOMINO::readFASTA_hashLength($contig_file);
+
 ## Get DNA code
 my %ambiguity_DNA_codes = %{ DOMINO::ambiguity_DNA_codes() };
 ##########################################################################################
@@ -60,6 +61,7 @@ while (<IN>) {
 	my $line = $_; chomp $line;
 	my $output = $tmp."/".$line.".profile";
 	system("grep $line $input_pileup > $output");
+	#print "$line\t$output\n"; #sleep(3);
 	&read_pileup($output, $line);
 }
 close (IN);
@@ -69,13 +71,18 @@ sub read_pileup {
 	my $file = $_[0];
 	my $contig = $_[1];
 	my @array_positions; my @fasta_positions;
-	my $array_positions_ref = &initilize_contig($contig, $reference_hash_fasta);
+	my $size = $$reference_hash_fasta{$contig};
+	#print "Size $size\n"; sleep(2);
+
+	my $array_positions_ref = &initilize_contig($contig, $size);
 	@array_positions = @$array_positions_ref;
 	@fasta_positions = @array_positions;			
 
 	open (PILEUP,"<$file"); 
 	while (<PILEUP>){
-		#print $_."\n";
+		
+		print $_."\n";
+		
 		my $line = $_; chomp $line;
 		next if $line=~ m/^\s*$/o;
 		next if $line=~ /^\#/o;
@@ -220,20 +227,22 @@ sub read_pileup {
 	close(PILEUP);
 	my $ref = \@array_positions;
 	my $ref2 = \@fasta_positions;
+	#sleep(1);
+	#print Dumper $ref; sleep(1);
+	#print Dumper $ref2; sleep(3);
+	#
 	&print_coordinates($ref, $contig, $reference_id, $returned_outfolder);
 	&print_fasta_coordinates($ref2, $contig, $reference_id, $returned_outfolder); ## Print array into file $previous_contig
+	return();
 }
 
 sub initilize_contig {		
 	my $name_contig = $_[0];
-	my $reference_hash_fasta = $_[1];
+	my $size = $_[1];
 	
 	## Initialize new contig
 	my @array_positions_sub;
-	if (${$reference_hash_fasta}{$name_contig}) {
-		my $tmp_size = length(${$reference_hash_fasta}{$name_contig});
-		@array_positions_sub = ("-") x $tmp_size;
-	}
+ 	@array_positions_sub = ("-") x $size;
 	return \@array_positions_sub;		
 }
 
@@ -249,7 +258,7 @@ sub print_coordinates {
 
 	if ($var_sites != 0) {
 		my $array_file = $dir_tmp."/".$contig_name."_ARRAY.txt";
-		open (FH, ">$array_file"); print FH ">$$contig_name\n$seq_contig\n"; close(FH);	
+		open (FH, ">$array_file"); print FH ">$contig_name\n$seq_contig\n"; close(FH);	
 	}
 }
 
@@ -262,7 +271,7 @@ sub print_fasta_coordinates {
 	
 	my $seq_contig = join "", @{ $coord_array_sub };
 	my $array_file = $dir_tmp."/".$contig_name."_sequence.fasta";
-	open (FH, ">$array_file"); print FH ">$$contig_name\n$seq_contig\n"; close(FH);	
+	open (FH, ">$array_file"); print FH ">$contig_name\n$seq_contig\n"; close(FH);	
 }
 
 sub check_array {
