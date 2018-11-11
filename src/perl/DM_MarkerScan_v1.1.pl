@@ -1250,6 +1250,9 @@ sub check_options {
 		push (@{$domino_params{"mapping"}{'number_sp'}}, $number_sp);
 	}
 	if ($option eq "genome") {$number_sp++;} ## when reference genome provided, the ref taxa also counts
+	if (scalar @user_cleanRead_files > 1) { push (@{$domino_params{"mapping"}{'user_cleanRead_files'}}, 1); }
+  
+
 	
 	## Start the Analysis
 	print "\n"; DOMINO::printHeader("","#"); DOMINO::printHeader(" DOMINO Molecular Marker Development Stage ","#"); DOMINO::printHeader("","#"); print "\n"; DOMINO::printHeader("","+");  DOMINO::printHeader(" Analysis Started ","+");  DOMINO::printHeader("","+"); 

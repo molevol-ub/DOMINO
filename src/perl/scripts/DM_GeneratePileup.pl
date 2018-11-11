@@ -81,7 +81,7 @@ sub read_pileup {
 	open (PILEUP,"<$file"); 
 	while (<PILEUP>){
 		
-		print $_."\n";
+		#print $_."\n";
 		
 		my $line = $_; chomp $line;
 		next if $line=~ m/^\s*$/o;

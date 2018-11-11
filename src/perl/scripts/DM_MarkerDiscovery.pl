@@ -274,6 +274,10 @@ if ($totalContigs2use4markers < $subset_offset) {
 	$subset_offset = $SETS;
 } else { 
 	$SETS = int($totalContigs2use4markers/$subset_offset);
+	if ($SETS < $num_proc_user) {
+	        $subset_offset = int($totalContigs2use4markers/$num_proc_user);
+		$SETS = $num_proc_user;
+	}
 }
 if ($totalContigs2use4markers % 2) { $subset_offset++; }
 print "+ Dataset would be splitted for speeding computation into $SETS subsets...\n";
@@ -362,22 +366,26 @@ for (my $set=1; $set <= $SETS; $set++) {
 			} else { $tmp_string .= $flag; }
 			undef @tmp;
 		}
-		
+                my $tmp_dir = $PILEUP_merged_folder_abs_path."/SET_".$set."_tmp_dir";
+                unless (-d $tmp_dir) { mkdir $tmp_dir;}
+		my $prof_file = $tmp_dir."/$seqs.merged_profile";	
+	
 		my $var_sites = $tmp_string =~ tr/1/1/; ## count variable sites
 		my $cons_sites = $tmp_string =~ tr/0/0/; ## count conserved sites
 		if ($var_sites != 0 && $cons_sites != 0) { 
 			open (FH, ">>$mergeProfile"); print FH ">$seqs\n$tmp_string\n"; close(FH);
+                        open (MP, ">$prof_file"); print MP ">$seqs\n$tmp_string\n"; close(MP);
 		} else { next; } 
 
 		## Sliding window
-		my $tmp_dir = $PILEUP_merged_folder_abs_path."/SET_".$set."_tmp_dir";
-		unless (-d $tmp_dir) { mkdir $tmp_dir;}
+		#my $tmp_dir = $PILEUP_merged_folder_abs_path."/SET_".$set."_tmp_dir";
+		#unless (-d $tmp_dir) { mkdir $tmp_dir;}
 		my $file_infoReturned = $tmp_dir."/$seqs.txt";
 		my $domino_Scripts_MarkerSliding = $domino_Scripts."/DM_MarkerSliding.pl";
-		my $sliding_command = "perl $domino_Scripts_MarkerSliding $path $seqs $tmp_string $file_infoReturned"; #print "{ Call: $sliding_command }\n";
+		my $sliding_command = "perl $domino_Scripts_MarkerSliding $path $seqs $prof_file $file_infoReturned"; #print "{ Call: $sliding_command }\n";
 		system($sliding_command);
 		
-		if ($file_infoReturned) { 				
+		if (-r -e -s $file_infoReturned) { 				
 			open (TMP_COORD, ">$SLIDING_file");
 			open (IN, "<$file_infoReturned");
 			while (<IN>) {
