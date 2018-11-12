@@ -296,8 +296,8 @@ sub check_array {
 			$smallest_value = $polymorphism{$keys};
 	}}
 	
-	print $ref_base."\t".$total."\t".$smallest_value."\t".$highest_value."\n";
-	print Dumper $ref_poly_hash;	
+	#print $ref_base."\t".$total."\t".$smallest_value."\t".$highest_value."\n";
+	#print Dumper $ref_poly_hash;	
 
 	if ($total > 170) { ## will be out of range
 	 	if ($$hash_parameters{'mapping'}{'noDiscard'}[0]) { # no discard contigs by coverage

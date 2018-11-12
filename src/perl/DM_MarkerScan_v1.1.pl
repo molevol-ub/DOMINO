@@ -1035,13 +1035,19 @@ if ($marker_success > 0) {
 chdir $marker_dirname;
 if ($genome_fasta) {
 	## Print excel for clusterized results
+	## retrieve information generated
+	my @array = ($dump_file); %domino_files = %{ DOMINO::retrieve_info(\@array, \%domino_files) };
+	#print Dumper \%domino_files;
+
 	print "+ Generating an Excel file for DOMINO markers coordinates...\n"; 
-	my $coordinates;
-	foreach my $ref_taxa (sort keys %domino_files) { ## For each taxa specified, obtain putative molecular markers
-		unless ($domino_files{$ref_taxa}{'contigs'}) {next; }
-		$coordinates = $domino_files{$ref_taxa}{'coordinates'}[0];
-	}
-	my $excelbook = DOMINO::print_Excel(\$coordinates, \$marker_dirname);
+	my $ref_genome_id; if ($genome_fasta =~/.*id-(.*)\.fasta/) {$ref_genome_id=$1;} else {$ref_genome_id="genome";}		
+	my $coordinates = $domino_files{$ref_genome_id}{'coordinates'}[0];
+
+	my $domino_Scripts_excel = $domino_Scripts."/DM_PrintExcel.pl";
+	my $command = "perl $domino_Scripts_excel $folder_abs_path $coordinates $marker_dirname";
+	print "\n[ System Call: ".$command." ]\n";
+	system($command);
+	
 	#################################################################################################
 
 } else { ## multiple references
@@ -1252,8 +1258,6 @@ sub check_options {
 	if ($option eq "genome") {$number_sp++;} ## when reference genome provided, the ref taxa also counts
 	if (scalar @user_cleanRead_files > 1) { push (@{$domino_params{"mapping"}{'user_cleanRead_files'}}, 1); }
   
-
-	
 	## Start the Analysis
 	print "\n"; DOMINO::printHeader("","#"); DOMINO::printHeader(" DOMINO Molecular Marker Development Stage ","#"); DOMINO::printHeader("","#"); print "\n"; DOMINO::printHeader("","+");  DOMINO::printHeader(" Analysis Started ","+");  DOMINO::printHeader("","+"); 
 	DOMINO::printDetails("Starting the process: [ ".(localtime)." ]\n\n", $mapping_parameters, $param_Detail_file_markers);
@@ -1433,8 +1437,7 @@ sub check_previous {
 	
 	## Check files generated
 	if ($genome_fasta) {		
-		my $ref_genome_id;
-		if ($genome_fasta =~/.*id-(.*)\.fasta/) {$ref_genome_id=$1;} else {$ref_genome_id="genome";}		
+		my $ref_genome_id; if ($genome_fasta =~/.*id-(.*)\.fasta/) {$ref_genome_id=$1;} else {$ref_genome_id="genome";}		
 		my $profile = "PROFILE::Ref:$ref_genome_id";		
 		foreach my $ref_taxa ( keys %domino_files ) {
 			next if $ref_taxa eq 'taxa';
@@ -1444,8 +1447,8 @@ sub check_previous {
 					next if $ref_taxa eq $taxa; 
 					next if $taxa eq 'taxa';
 					unless ( $domino_files_dump{$ref_taxa}{$profile} ) {
-						$undef_mapping++; &printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-		}}} else {$undef_mapping++; &printError("There is not a taxa name $ref_taxa in the previous run ...\n");
+						$undef_mapping++; DOMINO::printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
+		}}} else {$undef_mapping++; DOMINO::printError("There is not a taxa name $ref_taxa in the previous run ...\n");
 	}}} else {
 		foreach my $ref_taxa ( keys %domino_files ) {
 			next if $ref_taxa eq 'taxa';

@@ -27,8 +27,8 @@ my $step_time = $ARGV[1];
 ## Get general parameters and files
 my $hash_parameters = DOMINO::get_parameters($path."/", "markers");
 my %domino_cluster_files = %{ DOMINO::get_DOMINO_files($path."/","markers") };
-	print Dumper $hash_parameters;
-	print Dumper \%domino_cluster_files;
+	#print Dumper $hash_parameters;
+	#print Dumper \%domino_cluster_files;
 
 my $marker_dirname = $$hash_parameters{'marker'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'marker'}{'cpu'}[0];

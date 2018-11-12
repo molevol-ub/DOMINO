@@ -157,7 +157,7 @@ if ($$hash_parameters{'marker'}{'behaviour'} eq 'selection') {
 }} 
 
 unless ($no_parameters) {
-	if ($$hash_parameters3{'clean_data'}) {
+	if (exists $$hash_parameters3{'clean_data'}{'start'}) {
 		$worksheet_parameters->write($row, $first_col, "PRE-PROCESSING PHASE:", $format_main_heading); 
 		$col = $first_col; $row++; $row++;
 		$worksheet_parameters->write($row, $col, "DATE:", $format); $col++;
@@ -239,7 +239,7 @@ unless ($no_parameters) {
 	
 	}
 
-	if ($$hash_parameters2{'assembly'}) {
+	if (exists $$hash_parameters2{'assembly'}{"date"}) {
 		$worksheet_parameters->write($row, $first_col, "ASSEMBLY PHASE:", $format_main_heading); 
 		$row++; $row++;	$col = $first_col; 
 		$worksheet_parameters->write($row, $col, "DATE:", $format); $col++;

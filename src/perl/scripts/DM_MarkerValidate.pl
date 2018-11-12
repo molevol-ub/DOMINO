@@ -82,6 +82,7 @@ foreach my $group (sort {$a <=> $b} keys %hash_array) {
 		foreach my $keys (sort keys %fasta_msa_sub ) {			
 			if ($fasta_msa_sub{$keys} =~ /missing/) {next;}
 			if ($fasta_msa_sub{$keys} =~ /.*fasta/) {
+				next unless (-e -r -s $fasta_msa_sub{$keys});
 				open (FILE, $fasta_msa_sub{$keys});
 				my ($titleline, $sequence);
 				$/ = ">"; ## Telling perl where a new line starts

@@ -23,8 +23,6 @@ my $step_time = $ARGV[1];
 my $ref_taxa = $ARGV[2];
 my $marker_dir = $ARGV[3];
 #################################################################
-
-#################################################################
 ## Get general parameters and files
 my $hash_parameters = DOMINO::get_parameters($path."/", "markers");
 my %domino_marker_files = %{ DOMINO::get_DOMINO_files($path."/", "markers") };
