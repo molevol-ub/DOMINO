@@ -516,6 +516,7 @@ sub get_DOMINO_files {
 		}
 		if ($dirs{$dir_given}{$last}) {
 			push (@info, $dirs{$dir_given}{$last}."/DOMINO_dump_information.txt");
+			last;
 			#print $dirs{$dir_given}{$last}."/DOMINO_dump_information.txt\n";
 	}}
 	my $hash_info = &retrieve_info(\@info, \%initial_files);
@@ -1007,7 +1008,7 @@ sub check_marker_pairwise {
 	my $polymorph = $_[5];
 	my $number_sp = $_[6];
 	
-	my @taxa = keys %$hash_ref;
+	my @taxa = keys %{ $hash_ref };
 	my (%seen, %pairwise, %discard);
 	for (my $j=0; $j < scalar @taxa; $j++) {
 		my $reference = $taxa[$j];
@@ -1026,13 +1027,16 @@ sub check_marker_pairwise {
 			for (my $i=0; $i < scalar @array_reference; $i++) {
 				my $reference_nuc = $array_reference[$i];
 				my $base2check = $array2check[$i];
-				push(@array, &check_reference_bp($reference_nuc, $base2check, ));
+				my $valueReturn = &check_reference_bp($reference_nuc, $base2check, $polymorph);
+				push(@array, $valueReturn);
+				#print "Ref: $reference_nuc vs. $base2check; $valueReturn\n";
 			}
 			
 			my $string = join "", @array;
 			my $var_sites_sub = $string =~ tr/1/1/;
 			my $con_sites_sub = $string =~ tr/0/0/;
-			my $total_sub = $con_sites_sub + $var_sites_sub;			
+			my $total_sub = $con_sites_sub + $var_sites_sub;
+			#print $string."\n";			
 			
 			if ($var_sites_sub == 0) { ## If does not fit the necessary divergence
 				$seen{$reference}++; $discard{$keys}++; $pairwise{$reference}{$keys} = "NO!";
@@ -1074,9 +1078,7 @@ sub check_marker_pairwise {
 					#&debugger_print("NO");
 					$pairwise{$reference}{$keys} = "NO!";
 					$seen{$reference}++; $discard{$keys}++; ## avoid checking if it is not variable
-				}
-			}
-		}
+		}}}
 		$seen{$reference}++; ## avoid checking again the same pair
 	}
 	my $flag_fitting = 0;
@@ -1087,7 +1089,6 @@ sub check_marker_pairwise {
 			if ($pairwise{$keys}{$k} eq 'YES!') {
 				$flag_fitting++;
 	}}}
-
 	#print Dumper \%pairwise;
 	if ($number_sp == 2) {
 		if ($flag_fitting == 1) {
@@ -1120,6 +1121,14 @@ sub check_marker_ALL {
 	my $missing_allowed = $_[2];
 	my $polymorphism_user = $_[3];
 	my $dnaSP_flag = $_[4];
+	my $taxa_string_comma = $_[5]; #print $taxa_string_comma."\n";
+	
+	my %taxa;
+	if ($taxa_string_comma) {
+		my @array = split(",", $taxa_string_comma);
+		for (my $j=0; $j < scalar @array; $j++) {
+			$taxa{$array[$j]}++;
+	}} else { $taxa{"any"}++; }
 	
 	#print "check_marker_ALL $file\n";
 	my (%hash, $length, @taxa, @length_seqs);
@@ -1127,7 +1136,10 @@ sub check_marker_ALL {
 		## get alignment from hash
 		foreach my $seqs (sort keys %{ $file }) {
 			my @array = split("", $$file{$seqs});
-			#if (!$domino_files{$seqs}{'taxa'}) {next;}
+			if (!$taxa{$seqs}) {
+				if ($taxa{"any"}) {
+				} else { next; }
+			}
 			push (@{ $hash{$seqs}}, @array);
 			$length = scalar @array;
 			push (@length_seqs, $length);
@@ -1146,8 +1158,11 @@ sub check_marker_ALL {
 			$sequence =~ s/\s+//g; $sequence =~ s/\r//g;
 			$titleline =~ s/\r//g;
 			#print $titleline."\n".$sequence."\n";
+			if (!$taxa{$titleline}) {
+				if ($taxa{"any"}) {
+				} else { next; }
+			}
 			my @array = split("", $sequence);
-			#if (!$domino_files{$titleline}{'taxa'}) {next;}
 			push (@{ $hash{$titleline}}, @array);
 			$length = scalar @array;
 			push (@length_seqs, $length);
@@ -1155,6 +1170,7 @@ sub check_marker_ALL {
 		}
 		close(FILE); $/ = "\n";	
 	}
+	#print Dumper \%hash;
 
 	## Get DNA code
 	my %ambiguity_DNA_codes = %{ &ambiguity_DNA_codes() };
@@ -1163,7 +1179,8 @@ sub check_marker_ALL {
 	my @tmp_length_uniq = do { my %seen; grep { !$seen{$_}++ } @length_seqs };
 	if (scalar @tmp_length_uniq > 1) {
 		&printError("There is problem: length of the markers do not match for $file..."); return "";
-	} else { $length_seqs[0] = $length; }	
+	} else { $length_seqs[0] = $length; }
+	#print Dumper \@length_seqs;	print "LEN: ".$length."\n";	
 	
 	my @profile;
 	for (my $i=0; $i < $length; $i++) {
@@ -1245,9 +1262,6 @@ sub check_reference_bp {
 	my $base2check = $_[1];
 	my $polymorphism_user = $_[2];
 	
-	## Get DNA code
-	my %ambiguity_DNA_codes = %{ &ambiguity_DNA_codes() };
-
 	## For this taxa
 	if ($base2check eq "-" || $reference_nuc eq "-") { 
 		return '-';
@@ -1257,10 +1271,14 @@ sub check_reference_bp {
 		## Check wether there is an ambiguity code or not
 		## and also if user would like some polymorphism
 		## and decide whether it is a variable or conserved position
+		
+		## Get DNA code
+		my %ambiguity_DNA_codes = %{ &ambiguity_DNA_codes() };
+		#print Dumper \%ambiguity_DNA_codes; print "Poly: $polymorphism_user\n";
 		my $flag = 1;
 		if ($ambiguity_DNA_codes{$reference_nuc} || $ambiguity_DNA_codes{$base2check}) { ## one or the other or both
 			if ($ambiguity_DNA_codes{$reference_nuc} and $ambiguity_DNA_codes{$base2check}) {
-				## Both bases are ambiguous
+				#print "Both bases are ambiguous\n";
 				for (my $h = 0; $h < scalar @{ $ambiguity_DNA_codes{$base2check}}; $h++) {
 					for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$reference_nuc}}; $j++) {
 						if ($ambiguity_DNA_codes{$reference_nuc}[$j] eq $ambiguity_DNA_codes{$base2check}[$h]) {
@@ -1270,22 +1288,22 @@ sub check_reference_bp {
 								$flag = 1;	last;
 			}}}}
 			} elsif ($ambiguity_DNA_codes{$reference_nuc}) {
+				#print "Ref: $reference_nuc\n";
 				for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$reference_nuc}}; $j++) {
 					if ($ambiguity_DNA_codes{$reference_nuc}[$j] eq $base2check) {
 						$flag = 0;								
 					} else {
 						if ($polymorphism_user) {
-							$flag = 1;	last;
-				}}}
-			} elsif ($ambiguity_DNA_codes{$base2check}) {
+							$flag = 1; last;
+			}}}} elsif ($ambiguity_DNA_codes{$base2check}) {
+				#print "Bas: $base2check\n";
 				for (my $j = 0; $j < scalar @{ $ambiguity_DNA_codes{$base2check}}; $j++) {
 					if ($ambiguity_DNA_codes{$base2check}[$j] eq $reference_nuc) {
 						$flag = 0;								
 					} else {
 						if ($polymorphism_user) {
 							$flag = 1;	last;
-				}}}}
-		} else { 
+		}}}}} else { 
 			## If neither the reference or the base to check are ambiguous
 			## and they are different, this would be a variable site
 			$flag = 1;

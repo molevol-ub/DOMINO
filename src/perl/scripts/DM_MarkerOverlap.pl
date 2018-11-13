@@ -7,18 +7,21 @@ use lib $FindBin::Bin."/../lib";
 BEGIN {
 	require DOMINO;
 }
-
+################################################################
 ## Overlaps and maximizes domino markers obtained
 my $file = $ARGV[0]; 				## markers_shared 
 my $mergeArray_file = $ARGV[1];
 my $file2return = $ARGV[2];
 my $path = $ARGV[3];
+################################################################
 
 my $domino_version ="DOMINO v1.1 ## Revised 07-11-2018";
 my $hash_parameters = DOMINO::get_parameters($path."/", "markers");
+################################################################
 
 #&debugger_print("Checking file $file [DM_MarkerScan: check_overlapping_markers]");
 
+################################################################
 my $contig_id; my %tmp_hash; my $marker_counter_tmp = 0; my @sequences;
 open (FILE, $file); while (<FILE>) {
 	my $line = $_; chomp $line; 
@@ -37,6 +40,7 @@ open (FILE, $file); while (<FILE>) {
 } 
 close(FILE);
 
+################################################################
 # Debug print Dumper \%tmp_hash;
 my %coord_seen;
 foreach my $contig (sort keys %tmp_hash) {
@@ -67,6 +71,7 @@ foreach my $contig (sort keys %tmp_hash) {
 			push (@{ $tmp_coord{$contig}{$taxa}{$marker} }, @sort_uniq);
 }}}
 undef %coord_seen; undef %tmp_hash; ## release RAM
+################################################################
 
 ## Set range values
 my $range = $$hash_parameters{'marker'}{'window_size_VARS_max'}[0] - $$hash_parameters{'marker'}{'window_size_VARS_min'}[0]; my @length;
@@ -75,6 +80,7 @@ if ($range >= 500) {
 } elsif ($range < 500) { 
 	@length = (50, 100, 200, 300, 400, 500);
 }
+################################################################
 
 # Debug print Dumper \%tmp_coord;
 my $hash_ref = DOMINO::readFASTA_hash($mergeArray_file); 

@@ -22,20 +22,21 @@ my $step_time = $ARGV[1];
 #################################################################
 
 #################################################################
-## Get general parameters and files
-my $hash_parameters = DOMINO::get_parameters($path."/");
-my $domino_align_files_Ref = DOMINO::get_DOMINO_files($path."/");
-my %domino_align_files = %{$domino_align_files_Ref};
+my %new_domino_files;
+my %new_dowmino_param;
 
-#print Dumper $hash_parameters;
-#print Dumper $domino_align_files_Ref;
+## Get general parameters and files
+my $hash_parameters = DOMINO::get_parameters($path."/", "mapping");
+my %domino_align_files = %{ DOMINO::get_DOMINO_files($path."/", "mapping") };
+#print Dumper $hash_parameters; print Dumper \%domino_align_files; #exit();
 
 my $align_dirname = $$hash_parameters{'mapping'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'mapping'}{'cpu'}[0];
-my $msa_dirname = $align_dirname."/MSA_files";
+my $MID_taxa_names; my $minimum_number_taxa_covered;
 
-my %new_domino_files;
-my %new_dowmino_param;
+my $msa_dirname = $align_dirname."/MSA_files";
+my $number_sp;
+
 #################################################################
 
 #####################################
@@ -44,6 +45,10 @@ my %new_dowmino_param;
 mkdir $msa_dirname, 0755; chdir $align_dirname;
 push (@{ $domino_align_files{'MSA_files'}{'folder'} }, $msa_dirname); 
 #&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_align_files);
+
+##########################################
+# RADSEQ
+##########################################
 if ($$hash_parameters{"marker"}{"RADseq"}) {
 	my @file_name = split("/", $domino_align_files{'RADseq'}{'file'}[0]);
 	my $file_path = $align_dirname."/".$file_name[-1];
@@ -55,14 +60,17 @@ if ($$hash_parameters{"marker"}{"RADseq"}) {
 	print "+ Splitting file into multiple files to speed the computation...\n";
 	my $size = DOMINO::get_size($file_path);
 	my $chars = int($size/$num_proc_user);
-	#	&debugger_print("Total Size: $size\nCharacters to split: $chars");
-	#	&debugger_print("File: $file_path");		
+		#&debugger_print("Total Size: $size\nCharacters to split: $chars");
+		#&debugger_print("File: $file_path");		
 
 	my $files_ref;
-	if ($$hash_parameters{'marker'}{'pyRAD'}) { $files_ref = &loci_file_splitter($file_path, $chars,'loci');
-	} else { $files_ref = DOMINO::fasta_file_splitter($file_path, $chars, 'fa'); }		
+	if ($$hash_parameters{'marker'}{'pyRAD'}) { 
+		$files_ref = &loci_file_splitter($file_path, $chars,'loci');
+	} else { 
+		$files_ref = DOMINO::fasta_file_splitter($file_path, $chars, 'fa');
+	}		
 	push (@{ $domino_align_files{'RADseq'}{'parts'}}, @$files_ref);		
-	#&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_align_files);
+		#&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_align_files);
 
 	for (my $i=0; $i < scalar @$files_ref; $i++) {
 		my $file2dump = $align_dirname."/dump_file_split_Part_".$i.".txt";
@@ -108,7 +116,8 @@ if ($$hash_parameters{"marker"}{"RADseq"}) {
 				$array[0] =~ s/\>//;
 				$hash{$array[0]} = $array[1];
 				if ($domino_align_files{'taxa'}{'user_Taxa'}[0] eq 'all') {
-					$domino_align_files_pyRAD_split{$array[0]}{'taxa'}[0]++;
+					#$domino_align_files_pyRAD_split{$array[0]}{'taxa'}[0]++;
+					$domino_align_files_pyRAD_split{'taxa2use'}{$array[0]}[0]++;
 				}
 			} close (FILE); undef %hash;
 			#print Dumper \%domino_align_files_pyRAD_split;
@@ -120,7 +129,7 @@ if ($$hash_parameters{"marker"}{"RADseq"}) {
 		print "***************************************************\n";
 		print "**** All pyRAD parsing processes have finished ****\n";
 		print "***************************************************\n\n";		
-	
+
 	##############	
 	## STACKS
 	##############	
@@ -149,7 +158,7 @@ if ($$hash_parameters{"marker"}{"RADseq"}) {
 				#&debugger_print($titleline."\t".$sequence);
 				if ($titleline =~ /(CLocus\_\d+)\_(.*)\_Locus\_(\d+)\_Allele\_(\d+).*/){
 					my $CLocus = $1; my $sample = $2;
-					if ($domino_align_files{'taxa'}{'user_Taxa'}[0] eq 'all') { $domino_align_files_STACKS_split{$sample}{'taxa'}[0]++; }
+					if ($domino_align_files{'taxa'}{'user_Taxa'}[0] eq 'all') { $domino_align_files_STACKS_split{'taxa2use'}{$sample}[0]++; }
 					if ($first == 0) { 
 						push (@{ $hash{$CLocus}{$sample} }, $titleline.":::".$sequence); $first++;  
 						$previous = $CLocus; next;
@@ -192,27 +201,33 @@ if ($$hash_parameters{"marker"}{"RADseq"}) {
 		print "\n\n";
 		print "****************************************************\n";
 		print "**** All STACKS parsing processes have finished ****\n";
-		print "****************************************************\n\n";		
+		print "****************************************************\n\n";
 	} 
 	print "\n"; &time_log(); print "\n";
 
 } else {
 
+	##########################################
+	## MSA
+	##########################################
+	print "\n\n"; DOMINO::printHeader(" Checking Alignments provided ", "%");
+	
 	### MSA file or folder provided
 	#mkdir $msa_dirname, 0755;
 	if ($$hash_parameters{'MSA'}{'file'}) {
 		## Check the alignment format provided...
-		print "\n\n"; DOMINO::printHeader(" Checking Alignment file provided ", "%");
-	#	&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_align_files);
+		#&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_align_files);
 		my $species_alignment_ref = &read_phylip_aln($domino_align_files{'MSA'}{'file'}[0]);
 		if ($domino_align_files{'taxa'}{'user_Taxa'}[0] eq 'all') {
 			undef $domino_align_files{'taxa'}{'user_Taxa'};		
 			for (my $i=0; $i < scalar @$species_alignment_ref; $i++) {
 				push (@{ $domino_align_files{$$species_alignment_ref[$i]}{'taxa'}}, 1);
 				push (@{ $domino_align_files{'taxa'}{'user_Taxa'} }, $$species_alignment_ref[$i]);
+				$domino_align_files{'taxa2use'}{$$species_alignment_ref[$i]}++ ;
 		}}
-		print "\n"; &time_log(); print "\n";		
-	} elsif ($$hash_parameters{'MSA_folder'}{'folder'}) {				
+		print "\n"; &time_log(); print "\n";
+				
+	} elsif ($$hash_parameters{'marker'}{'MSA_folder'}) {				
 		chdir $msa_dirname;
 		print "\n\n"; DOMINO::printHeader(" Checking Alignment folder provided ", "%");
 		my @array_files = @{ $domino_align_files{'MSA_folder'}{'files'} };
@@ -246,8 +261,7 @@ if ($$hash_parameters{"marker"}{"RADseq"}) {
 					$titleline =~ s/\r//g;						
 					if ($domino_align_files{'taxa'}{'user_Taxa'}[0] eq 'all') {
 						unless (grep /$titleline/, @{ $domino_align_files_MSA_folder{'taxa'}{'user_Taxa'} }) { 
-							$domino_align_files_MSA_folder{$titleline}{'taxa'}[0]++;
-							push (@{ $domino_align_files_MSA_folder{'taxa'}{'user_Taxa'} }, $titleline);
+							push (@{ $domino_align_files_MSA_folder{'taxa2use'}{$titleline} }, 1);
 						}
 						$alignment{$titleline} = $sequence;
 					} elsif ($domino_align_files{$titleline}{'taxa'}) { $alignment{$titleline} = $sequence; }
@@ -262,7 +276,6 @@ if ($$hash_parameters{"marker"}{"RADseq"}) {
 						print OUT ">".$seqs."\n".$alignment{$seqs}."\n";
 					} close (OUT);
 			}}
-
 			DOMINO::printDump(\%domino_align_files_MSA_folder, $domino_align_files{'all'}{'dump_file_split'}[$i]);
 			$pm_MSA_folder->finish($i); # pass an exit code to finish
 		}
@@ -280,44 +293,57 @@ if ($domino_align_files{'all'}{'dump_file_split'}) {
 	my @dump_files = @{ $domino_align_files{'all'}{'dump_file_split'} };
 	for (my $j=0; $j < scalar @dump_files; $j++) {
 		if ($dump_files[$j] eq '.' || $dump_files[$j] eq '..' || $dump_files[$j] eq '.DS_Store') { next;}
-		open (DUMP_IN, "$dump_files[$j]");
+		next unless (-e -r -s $dump_files[$j]);
+		open (DUMP_IN, "<$dump_files[$j]");
 		while (<DUMP_IN>) {
 			my $line = $_; chomp $line;
 			my @array = split("\t", $line);
 			push (@{ $domino_align_files{$array[0]}{$array[1]}}, $array[2]);
 } close (DUMP_IN); }}
-	
-unless ($$hash_parameters{'marker'}{'taxa_string'}) {
+#print Dumper \%domino_align_files;
+
+if (!$$hash_parameters{'marker'}{'taxa_string'}) {
 	print "\n\n"; DOMINO::printHeader("","#"); print "NOTE:\n\n";
 	print "\t+ No taxa names were provided so DOMINO have parsed and checked for the names...\n";	
 	print "\t+ DOMINO would use all the taxa available...\n\n";
 	my @taxa_sp;
-	foreach my $keys (sort keys %domino_align_files) { 
-		if ($domino_align_files{$keys}{'taxa'}) {
-			DOMINO::printDetails("\tName: $keys\n", $$hash_parameters{'mapping'}{'mapping_parameters'}, $$hash_parameters{'mapping'}{'mapping_markers_errors_details'};
-			$number_sp++;
-			push (@taxa_sp, $keys);
-	}}
-	print "\n\n"; DOMINO::printHeader("","#"); print "\n\n";
-	if (!$minimum_number_taxa_covered) { 
-		$minimum_number_taxa_covered = 0;  ## Force to be any taxa
+	my $taxa_string;
+	if ($domino_align_files{'taxa2use'}) {
+		my @taxa_sp = keys %{ $domino_align_files{'taxa2use'} }; 
+		for (my $k=0; $k < scalar @taxa_sp; $k++){
+			$taxa_string .= $taxa_sp[$k].",";
+			DOMINO::printDetails("\tName: $taxa_sp[$k]\n", $$hash_parameters{'mapping'}{'mapping_parameters'}, $$hash_parameters{'mapping'}{'mapping_markers_errors_details'});
+		}
+		$number_sp = scalar @taxa_sp;
 	}
-	push (@{ $new_dowmino_param{'marker'}{'number_taxa'}}, $number_sp);
-	push (@{ $new_dowmino_param{'marker'}{'MCT'}}, $minimum_number_taxa_covered);
-	$MID_taxa_names = join(",", @taxa_sp);
+	print "\n\n"; DOMINO::printHeader("","#"); print "\n\n";
+	if (!$$hash_parameters{'marker'}{'MCT'}) { 
+		if ($$hash_parameters{'marker'}{'behaviour'}[0] eq "selection") {
+			$minimum_number_taxa_covered = 0;  ## Force to be any taxa
+		} else {
+			$minimum_number_taxa_covered = $number_sp;  ## Force to be any taxa
+		}
+		push (@{ $$hash_parameters{'marker'}{'MCT'} }, $minimum_number_taxa_covered);
+		
+	}
+	undef $$hash_parameters{'marker'}{'number_sp'};
+	push (@{ $$hash_parameters{'marker'}{'number_sp'} }, int($number_sp));
+	push (@{ $$hash_parameters{'marker'}{'taxa_string'} }, $taxa_string);
+	
 }
 #&debugger_print("DOMINO Files"); &debugger_print("Ref", \%domino_align_files);	
 
 ### dump info
 my $dump_file = $align_dirname."/DOMINO_dump_information.txt";
-if (-r -e -s $dump_file) { remove_tree($dump_file); DOMINO::printDump(\%new_domino_files, $dump_file);}
+if (-r -e -s $dump_file) { remove_tree($dump_file); } 
+DOMINO::printDump(\%domino_align_files, $dump_file);
 
 ### dump parameters
-my $dump_param = $align_dirname."/DOMINO_dump_information.txt";
-if (-r -e -s $dump_param) { remove_tree($dump_file); DOMINO::printDump(\%new_dowmino_param, $dump_param);}
-
+my $dump_param = $align_dirname."/DOMINO_dump_param.txt";
+if (-r -e -s $dump_param) { remove_tree($dump_param); }
+DOMINO::printDump($hash_parameters, $dump_param);
+#print Dumper $hash_parameters;
 DOMINO::print_success_Step("parseAlign");
-
 
 ###########################
 ####### SUBROUTINES #######
@@ -329,13 +355,18 @@ sub loci_file_splitter {
 	my $block = $_[1];
 	my $ext = $_[2]; # fasta, fastq, loci, fa
 
-	open (FH, "<$file") or die "Could not open file $file [DOMINO.pm:loci_file_splitter]";
+	open (FH, "<$file") or die "Could not open file $file [&loci_file_splitter]";
 	print "\t- Blocks of $block characters would be generated...\n";
 	my $j = 0; my @files;
 	while (1) {
 		my $chunk;
-	   	my @tmp = split (".".$ext, $file);
-		my $file_name = $tmp[0];
+		my $file_name;		
+		my @path_name = split("/", $file);
+	   	my @tmp = split ("\.".$ext, $path_name[-1]);
+		for (my $j=0; $j < $#path_name; $j++) {
+			$file_name .= $path_name[$j]."/";
+		}
+		$file_name .= $tmp[0];
 		my $block_file = $file_name."_part-".$j."_tmp.".$ext;
 		print "\t- Printing file $block_file\n";
 		push (@files, $block_file);
@@ -395,7 +426,7 @@ sub read_phylip_aln {
 				my $next_line= <INPUT>;
 				chomp $next_line;
 				if ($next_line =~ /(\S+)\s+(.*)/) {
-					my $id = $i+1;
+					my $id = "taxa_".($i+1);
 					$aln{$region}{$id}{"name"} = $1;
 					my $seq = $2;
 					$seq =~ s/\s//g;
@@ -410,7 +441,7 @@ sub read_phylip_aln {
 			for (my $i=0; $i < $left_species; $i++) {
 				my $next_line= <INPUT>;
 				chomp $next_line;
-				my $id = $i+1;
+				my $id = "taxa_".($i+1);
 				my @array = split("\t", $next_line);
 				my $sequence = $aln{$region}{$id}{"seq"};
 				$sequence .= $array[0];
@@ -419,6 +450,7 @@ sub read_phylip_aln {
 	}}}
 	close(INPUT);
 	my @array_taxa;
+	#print Dumper \%aln;
 	foreach my $keys (sort keys %aln) {
 		my %alignment;
 		if (!$region_provided) { $region_provided = $keys; }
@@ -436,3 +468,9 @@ sub read_phylip_aln {
 	}
 	return \@array_taxa;
 }
+
+sub time_log {	
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
+	$step_time = $$step_time_tmp;
+}
+

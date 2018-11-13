@@ -119,10 +119,9 @@ for (my $j=0; $j < scalar @all_perl; $j++) {
 	
 	my $command = "perl -c $all_perl[$j]";
 	my $call = system($command);
-	#print $command."\t"; print $call."\n";
 }
-
-print "\n\nEverything seems OK.\nFinish\n"
+#print "\n\nEverything seems OK.\nFinish\n"
+print "\n\n\n";
 
 
 

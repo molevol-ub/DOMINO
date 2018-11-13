@@ -829,10 +829,14 @@ doi:10.1093/bioinformatics/btw534
 #############################################################################################################################
 ## Check mandatory options
 if (!$folder) { DOMINO::printError("No folder provided...\n"); DOMINO::dieNicely(); }
-my %type_input = ("single_end" => 1, "pair_end" => 1,);
-if (!$type_input{$input_type}) {
-	DOMINO::printError("Input type provided ($input_type) does not match single_end or pair_end\n");
-	DOMINO::dieNicely();}
+if ($input_type) {
+	my %type_input = ("single_end" => 1, "pair_end" => 1,);
+	if (!$type_input{$input_type}) {
+		DOMINO::printError("Input type provided ($input_type) does not match single_end or pair_end\n");
+		DOMINO::dieNicely();}
+} else {
+	$input_type = "other";
+}
 #############################################################################################################################
 
 #######################################
@@ -883,6 +887,7 @@ if ($avoid_mapping) {
 my ($dump_file, $dump_param);
 $dump_file = $align_dirname."/DOMINO_dump_information.txt"; 
 $dump_param = $align_dirname."/DOMINO_dump_param.txt"; 
+#print Dumper \%domino_files; print Dumper \%domino_params; exit();
 
 ####################################################################################
 ## 								START
@@ -892,10 +897,11 @@ if (!$avoid_mapping) {
 	####################################################################################
 	##########	Mapping/Alignment of the contigs 		################################
 	####################################################################################
+	
+	#print Dumper \%domino_files; print Dumper \%domino_params; exit();
 
 	## dump information
-	DOMINO::printDump(\%domino_files, $dump_file);
-	DOMINO::printDump(\%domino_params, $dump_param);
+	DOMINO::printDump(\%domino_files, $dump_file); DOMINO::printDump(\%domino_params, $dump_param);
 	
 	if ($option ne "msa_alignment") {
 	
@@ -912,9 +918,6 @@ if (!$avoid_mapping) {
 		system($command);
 		#################################################################################################
 		
-		## retrieve information generated
-		my @array = ($dump_file); %domino_files = %{ DOMINO::retrieve_info(\@array, \%domino_files) };
-		
 	} elsif ($option eq "msa_alignment") {
 
 		#################################################################################################
@@ -922,12 +925,17 @@ if (!$avoid_mapping) {
 		####		Parse alignment
 		####
 		DOMINO::printHeader("", "#"); DOMINO::printHeader(" Parsing Alignment Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
-		## to Debug
 		## DM_ParseMSA_files.pl $folder_abs_path
+		my $domino_Scripts_ParseMSA_files = $domino_Scripts."/DM_ParseMSA_files.pl";
+		my $command = "perl $domino_Scripts_ParseMSA_files ".$folder_abs_path." $step_time";
+		print "\n[ System Call: ".$command." ]\n\n";
+		system($command);
 		#################################################################################################
 	}
-	## Dump info up to now to a file if (-r -e -s $dump_file) { remove_tree($dump_file) }; DOMINO::printDump(\%domino_files, $dump_file);	
-	## Dump parameters to a file if (-r -e -s $dump_param) { remove_tree($dump_param) }; DOMINO::printDump(\%domino_params, $dump_param);	
+	## retrieve information generated
+	my %tmp; my %tmp2;
+	my @array = ($dump_file); %domino_files = %{ DOMINO::retrieve_info(\@array, \%tmp) };
+	my @array_param = ($dump_param); %domino_params = %{ DOMINO::retrieve_info(\@array_param, \%tmp2) };
 
 	## Move parameters and error file to folder
 	File::Copy::move($mapping_parameters, $align_dirname."/");
@@ -939,6 +947,7 @@ if (!$avoid_mapping) {
 	my @array_param = ($dump_param); %domino_params = %{ DOMINO::retrieve_info(\@array_param, \%domino_params) };
 	## %domino_params
 }
+#print Dumper \%domino_files; print Dumper \%domino_params; exit();
 
 ##########################################################################################
 ###################### MARKER DEVELOPMENT ################################################
@@ -959,24 +968,22 @@ if ($avoid_mapping) {
 $dump_file = $marker_dirname."/DOMINO_dump_information.txt"; DOMINO::printDump(\%domino_files, $dump_file);
 $dump_param = $marker_dirname."/DOMINO_dump_param.txt"; DOMINO::printDump(\%domino_params, $dump_param);
 
+## Debug print Dumper \%domino_files; print Dumper \%domino_params; exit();
+
 ##########################################################
 ############# MARKER SELECTION ###########################
 ##########################################################
 ### MSA alignment
 if ($option eq "msa_alignment") {
 	#################################################################################################
-	DOMINO::printHeader("", "#"); DOMINO::printHeader(" Parsing Alignment Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
-	## to Debug
-	## to Debug	## DM_MarkerSelection.pl $folder_abs_path
-	## to Debug
-	## to Debug	my $domino_Scripts_MarkerSelection = $domino_Scripts."/DM_MarkerSelection.pl";
-	## to Debug	my $command = "perl $domino_Scripts_MarkerSelection ".$folder_abs_path." $step_time";
-	## to Debug	print "\n[ System Call: ".$command." ]\n\n";
-	## to Debug	system($command);
+	DOMINO::printHeader("", "#"); DOMINO::printHeader(" Selection Alignment Process started ", "#"); DOMINO::printHeader("", "#"); print "\n";
+	my $domino_Scripts_MarkerSelection = $domino_Scripts."/DM_MarkerSelection.pl";
+	my $command = "perl $domino_Scripts_MarkerSelection ".$folder_abs_path." $step_time $start_time";
+	print "\n[ System Call: ".$command." ]\n\n";
+	system($command);
 	#################################################################################################
 }
 &time_log(); print "\n";
-## Debug print Dumper \%domino_files; print Dumper \%domino_params; exit();
 
 ## Other types of data
 ##########################################################
@@ -1273,10 +1280,16 @@ sub check_options {
 	if (!$variable_positions_user_range and !$variable_divergence) {
 		DOMINO::printError("Exiting the script. A range for variable positions or a minimum divergence is missing.\n Use the option -VP|--variable_positions [min::max] or -VD|--variable_divergence [float number]..\n"); DOMINO::dieNicely();
 	}
-	unless (!$variable_divergence) { 
-		if ($variable_divergence =~ /.*\,.*/) { $variable_divergence =~ s/\,/\./; }
-		if ($variable_divergence < 0) {$variable_divergence = 0.000000000000000000000000000000001;} ## Set a very small value if -VD 0 
-	}
+	if (!$variable_divergence) { 
+		$variable_divergence = 0;
+	} else {
+		if ($variable_divergence =~ /.*\,.*/) { 
+			$variable_divergence =~ s/\,/\./; 
+		} elsif ($variable_divergence < 0) { 
+			$variable_divergence = 0.000000000000000000000000000000001;## Set a very small value if -VD 0 
+		} else {
+			##?
+	}}
 	
 	#############################################################################################################################
 	## checking if any option is missing and using default
@@ -1356,7 +1369,13 @@ sub check_options {
 			# Set step for CONS range
 			my $difference_CONS = $window_size_CONS_max - $window_size_CONS_min;
 			if ( $difference_CONS >= 20) { $CONS_inc = 2; } else { $CONS_inc = 1; }
-	}}
+	}} elsif ($behaviour eq 'selection') {
+		$VAR_inc = 1; $CONS_inc = 1;
+	}
+	
+	## no names provided
+	if (!$number_sp) { $number_sp = 0; }
+	if (!$minimum_number_taxa_covered){ $minimum_number_taxa_covered = $number_sp; }
 	
 	# MCT
 	if (!$minimum_number_taxa_covered) { $minimum_number_taxa_covered = $number_sp;  ## Force to be all the taxa
@@ -1448,7 +1467,12 @@ sub check_previous {
 					next if $taxa eq 'taxa';
 					unless ( $domino_files_dump{$ref_taxa}{$profile} ) {
 						$undef_mapping++; DOMINO::printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-		}}} else {$undef_mapping++; DOMINO::printError("There is not a taxa name $ref_taxa in the previous run ...\n");
+			}}} else { 	$undef_mapping++; DOMINO::printError("There is not a taxa name $ref_taxa in the previous run ...\n");
+	}}} elsif ($option eq "msa_alignment") {
+		foreach my $ref_taxa ( keys %domino_files ) {
+			next if ($ref_taxa eq "taxa"); next if ($ref_taxa eq "MSA_files"); next if ($ref_taxa eq "all");
+			if ($domino_files_dump{"taxa2use"}{$ref_taxa}) {
+			} else { DOMINO::printError("There is not a profile file for $ref_taxa ...\n"); $undef_mapping++;
 	}}} else {
 		foreach my $ref_taxa ( keys %domino_files ) {
 			next if $ref_taxa eq 'taxa';
@@ -1461,7 +1485,7 @@ sub check_previous {
 					next if $ref_taxa eq $taxa; next if $taxa eq 'taxa';
 					unless ( $domino_files_dump{$ref_taxa}{'PROFILE::Ref:'.$taxa} ) {
 						$undef_mapping++; DOMINO::printError("There is not a profile folder for $ref_taxa vs $taxa ...\n");
-		}}} else {$undef_mapping++; DOMINO::printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
+	}}} else {$undef_mapping++; DOMINO::printError("There is not a taxa name $ref_taxa in the previous run ...\n"); 
 	}}}}
 
 	if ($undef_mapping > 0) {
@@ -1614,6 +1638,7 @@ sub print_options {
 			} else { DOMINO::printError("File provided is not valid...\nPlease provide a valid file as specified in the DOMINO manual...."); DOMINO::dieNicely();
 		}} elsif ($msa_file) {
 			my $msa_file_abs_path = abs_path($msa_file);
+			push (@{$domino_params{'MSA'}{'file'}}, 1);
 			push (@{$domino_files{'MSA'}{'file'}}, $msa_file_abs_path);
 			print "+ Multipe sequence alignment file provided: $msa_file_abs_path\n";		
 			print "+ Checking file:\n";
@@ -1625,6 +1650,7 @@ sub print_options {
 		}} elsif ($msa_fasta_folder) {
 			my $msa_folder_abs_path = abs_path($msa_fasta_folder);
 			my @name_msa_folder = split("/",$msa_fasta_folder);
+			push (@{$domino_params{'marker'}{'MSA_folder'}}, 1);
 			push (@{$domino_files{'MSA_folder'}{'folder'}}, $msa_folder_abs_path);
 			print "+ Multipe sequence alignment fasta folder provided: $msa_folder_abs_path\n+ Checking file(s):\n";
 			if (-d $msa_folder_abs_path) {

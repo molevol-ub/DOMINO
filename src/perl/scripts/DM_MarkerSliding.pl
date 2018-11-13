@@ -18,9 +18,8 @@ my $mothur_path = $scripts_path."MOTHUR_v1.32.0/mothur";
 
 ## Arguments
 my $path = $ARGV[0];
-my $file_sequence = $ARGV[2];
 my $id = $ARGV[1]; 
-	#my $seq = $ARGV[2]; 
+my $file_sequence = $ARGV[2];
 my $output_file = $ARGV[3];
 my $hash_file = DOMINO::readFASTA_hash($file_sequence);
 

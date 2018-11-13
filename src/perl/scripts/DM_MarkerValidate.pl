@@ -107,7 +107,7 @@ foreach my $group (sort {$a <=> $b} keys %hash_array) {
 		my $valueReturned = DOMINO::check_marker_pairwise(\%hash, $$hash_parameters{'marker'}{'MCT'}[0], $$hash_parameters{'marker'}{'variable_positions_user_min'}[0], $$hash_parameters{'marker'}{'variable_positions_user_max'}[0], $$hash_parameters{'marker'}{'variable_divergence'}[0], $$hash_parameters{'marker'}{'polymorphism_user'}[0], $$hash_parameters{'marker'}{'number_sp'}[0]);
 		if ($valueReturned == 1) { ## if it is variable for each pairwise comparison
 			## Get variable positions for the whole marker
-			my $array_ref_returned = DOMINO::check_marker_ALL(\%hash, "Ref", $$hash_parameters{'marker'}{'missing_allowed'}[0], $$hash_parameters{'marker'}{'polymorphism_user'}[0], $$hash_parameters{'marker'}{'dnaSP_flag'}[0]);
+			my $array_ref_returned = DOMINO::check_marker_ALL(\%hash, "Ref", $$hash_parameters{'marker'}{'missing_allowed'}[0], $$hash_parameters{'marker'}{'polymorphism_user'}[0], $$hash_parameters{'marker'}{'dnaSP_flag'}[0], $$hash_parameters{'marker'}{'taxa_string'}[0]);
 			if ($array_ref_returned eq 'NO') { 
 			} else {
 				$marker_number++;

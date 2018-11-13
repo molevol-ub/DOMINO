@@ -428,13 +428,15 @@ $worksheet_parameters->write($row, $col, "Taxa used for marker discovery:", $for
 $worksheet_parameters->write($row, $col, "ID", $format_bold); $row++;
 my $counter = 1;
 my $string = $$hash_parameters{'marker'}{'taxa_string'}[0];
-my @array = split(",",$string);
-for (my $i=0; $i < scalar @array; $i++) {
-	$col = $first_col + 1; 
-	$worksheet_parameters->write($row, $col, $array[$i], $format_left); $col++;	
-	my $j=$i+1;
-	$worksheet_parameters->write($row, $col, $j, $format_right); $counter++;	$row++;
-} 
+if ($string) {
+	my @array = split(",",$string);
+	for (my $i=0; $i < scalar @array; $i++) {
+		$col = $first_col + 1; 
+		$worksheet_parameters->write($row, $col, $array[$i], $format_left); $col++;	
+		my $j=$i+1;
+		$worksheet_parameters->write($row, $col, $j, $format_right); $counter++;	$row++;
+	} 
+}
 $workbook->close();
 
 ######
@@ -443,7 +445,8 @@ open (MARKER, "<$markers_file"); while (<MARKER>) { if ($_ =~ /.*\_\#.*/) {$mark
 	
 ## Print results and instructions
 print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" RESULTS ","#"); DOMINO::printHeader("", "#");
-print "\n+ DOMINO has retrieved $markers_count markers\n";
+if ($markers_count) { print "\n+ DOMINO has retrieved $markers_count markers\n"; }
+
 my $marker_dirname = $$hash_parameters{"marker"}{"folder"}[0];
 my $instructions_txt = $marker_dirname."/Instructions.txt";
 my $MSA = $path."/MSA_markers";

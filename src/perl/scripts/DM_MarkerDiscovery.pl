@@ -367,7 +367,6 @@ for (my $set=1; $set <= $SETS; $set++) {
                 my $tmp_dir = $PILEUP_merged_folder_abs_path."/SET_".$set."_tmp_dir";
                 unless (-d $tmp_dir) { mkdir $tmp_dir;}
 		my $prof_file = $tmp_dir."/$seqs.merged_profile";	
-	
 		my $var_sites = $tmp_string =~ tr/1/1/; ## count variable sites
 		my $cons_sites = $tmp_string =~ tr/0/0/; ## count conserved sites
 		if ($var_sites != 0 && $cons_sites != 0) { 
@@ -375,9 +374,9 @@ for (my $set=1; $set <= $SETS; $set++) {
                         open (MP, ">$prof_file"); print MP ">$seqs\n$tmp_string\n"; close(MP);
 		} else { next; } 
 
+		################################################
 		## Sliding window
-		#my $tmp_dir = $PILEUP_merged_folder_abs_path."/SET_".$set."_tmp_dir";
-		#unless (-d $tmp_dir) { mkdir $tmp_dir;}
+		################################################
 		my $file_infoReturned = $tmp_dir."/$seqs.txt";
 		my $domino_Scripts_MarkerSliding = $domino_Scripts."/DM_MarkerSliding.pl";
 		my $sliding_command = "perl $domino_Scripts_MarkerSliding $path $seqs $prof_file $file_infoReturned"; #print "{ Call: $sliding_command }\n";
@@ -392,7 +391,7 @@ for (my $set=1; $set <= $SETS; $set++) {
 				print TMP_COORD $_."\n";
 				print SHARED $_."\t".$ref_taxa."\n";
 			}
-			close (TMP_COORD);
+			close (TMP_COORD); close (IN)
 		} else { delete $contigs_pileup_fasta{$seqs}; next; ## if empty next
 		}
 		
@@ -588,7 +587,6 @@ foreach my $subset (sort keys %markers2retrieve) {
 } close(OUT); close(OUT_markers); close (OUT_coord);
 
 unless (-r -e -s $output_file) {
-
 	###########################
 	DOMINO::print_fail_Step("marker_discovery");
 	###########################
@@ -605,8 +603,7 @@ unless (-r -e -s $output_file) {
 	DOMINO::printDump(\%domino_marker_files, $new_dump_file);
 	#print Dumper \%domino_marker_files; print $new_dump_file."\n";
 	################################################################################################################################################
-	print "+ Copying reference fasta contigs...\n+ Printing reference sequences in $output_file_putative_contigs...\n";
-	
+	print "+ Copying reference fasta contigs...\n+ Printing reference sequences in $output_file_putative_contigs...\n";	
 	print "+ Marker development for $ref_taxa is finished here...\n\n"; &time_log(); print "\n";
 	###########################
 	DOMINO::print_success_Step("marker_discovery");

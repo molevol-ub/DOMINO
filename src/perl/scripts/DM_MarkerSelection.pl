@@ -12,24 +12,26 @@ BEGIN {
 #################################################################
 my $domino_version ="DOMINO v1.1 ## Revised 30-10-2018";
 my $scripts_path = $FindBin::Bin."/../";
-my $domino_Scripts = $scripts_path."scripts";
+my $domino_Scripts = $FindBin::Bin;
 #################################################################
 
 ## Arguments
 my $path = $ARGV[0];
 my $step_time = $ARGV[1];
+my $start_time = $ARGV[2];
 #################################################################
 
 #################################################################
 ## Get general parameters and files
-my $hash_parameters = DOMINO::get_parameters($path."/");
-my %domino_align_files = %{ DOMINO::get_DOMINO_files($path."/") };
-#print Dumper $hash_parameters;
-#print Dumper $domino_align_files_Ref;
+my $hash_parameters = DOMINO::get_parameters($path."/", "mapping");
+my %domino_align_files = %{ DOMINO::get_DOMINO_files($path."/", "mapping") };
+#print Dumper $hash_parameters; print Dumper \%domino_align_files; exit();
 
 my $align_dirname = $$hash_parameters{'mapping'}{'folder'}[0];
 my $num_proc_user = $$hash_parameters{'mapping'}{'cpu'}[0];
-my $msa_dirname = $align_dirname."/MSA_files";
+my $msa_dirname = $domino_align_files{'MSA_files'}{'folder'}[0];
+my $marker_dirname = $$hash_parameters{'marker'}{'folder'}[0];
+
 my $profile_dir = $marker_dirname."/PROFILES";	mkdir $profile_dir, 0755;
 my $msa_dir_tmp = $marker_dirname."/MSA_markers_tmp"; mkdir $msa_dir_tmp, 0755;
 my $dir_Dump_file = $marker_dirname."/DUMP_files"; mkdir $dir_Dump_file, 0755;
@@ -38,7 +40,7 @@ my $msa_dir = $marker_dirname."/MSA_markers"; mkdir $msa_dir, 0755;
 my %new_domino_files;
 #################################################################
 
-my $array_files_fasta_msa_ref = DOMINO::readDir($domino_files{'MSA_files'}{'folder'}[0]);
+my $array_files_fasta_msa_ref = DOMINO::readDir($domino_align_files{'MSA_files'}{'folder'}[0]);
 my @array_files_fasta_msa = @$array_files_fasta_msa_ref;
 my $total_files = scalar @array_files_fasta_msa;
 print "+ Checking files in folder generated...\n";
@@ -48,6 +50,8 @@ $pm_MARKER_MSA_files->run_on_finish( sub { my ($pid, $exit_code, $ident) = @_; }
 $pm_MARKER_MSA_files->run_on_start( sub { my ($pid,$ident)=@_; } );
 for (my $i=0; $i < scalar @array_files_fasta_msa; $i++) {
 	if ($array_files_fasta_msa[$i] eq "." || $array_files_fasta_msa[$i] eq ".." || $array_files_fasta_msa[$i] eq ".DS_Store"  ) {next;}
+	if ($array_files_fasta_msa[$i] =~ /.*\.fa.*$/) {
+		
 	$counter++; 
 	if ($total_files > 100) {
 		my $perc = sprintf( "%.3f", ( $counter/$total_files )*100 );
@@ -56,14 +60,18 @@ for (my $i=0; $i < scalar @array_files_fasta_msa; $i++) {
 
 	my $pid = $pm_MARKER_MSA_files->start($i) and next;
 	my %domino_files_msa;
-	my $file_path = $domino_files{'MSA_files'}{'folder'}[0]."/".$array_files_fasta_msa[$i];
+	my $file_path = $domino_align_files{'MSA_files'}{'folder'}[0]."/".$array_files_fasta_msa[$i];
 	unless (-f -e -r -s $file_path) {
 		DOMINO::printError("File $file_path is not readable or empty. It would be skipped....\nPlease discarded from the folder...\n");
 	} else {
+		
+		#print Dumper $hash_parameters;
 		#print "\nChecking now: $array_files_fasta_msa[$i]\n";
 		my ($region_id, $string2print_ref, $hash_ref_msa);
-		if ($stacks_file) {
-			#### STACKS
+
+		#################################################################
+		#### STACKS
+		if ($$hash_parameters{'marker'}{'STACKS'}) {
 			$hash_ref_msa = DOMINO::readFASTA_hash($file_path);
 			my $filename = $array_files_fasta_msa[$i];	
 			my %hash = %$hash_ref_msa; my ( %hash2fill, %hash2return);
@@ -94,7 +102,7 @@ for (my $i=0; $i < scalar @array_files_fasta_msa; $i++) {
 						}} else {
 							my $hash;
 							$$hash{$allele1[$i]}++; $$hash{$allele2[$i]}++;
-							push (@string, &get_amb_code($hash));
+							push (@string, DOMINO::get_amb_code($hash));
 					}}
 					my $tmp = join ("", @string);
 					$hash2return{$keys} = $tmp;
@@ -104,42 +112,53 @@ for (my $i=0; $i < scalar @array_files_fasta_msa; $i++) {
 					$pm_MARKER_MSA_files->finish;
 			}}
 			#print "\n\n"; print Dumper \%hash2return;
-
 			undef %hash2fill;
-			unless ($dnaSP_flag) {
-				my $valueReturned = &check_marker_pairwise(\%hash2return);
+			unless ($$hash_parameters{'marker'}{'dnaSP_flag'}) {
+				my $valueReturned = DOMINO::check_marker_pairwise(\%hash2return, $$hash_parameters{'marker'}{'MCT'}[0], $$hash_parameters{'marker'}{'variable_positions_user_min'}[0], $$hash_parameters{'marker'}{'variable_positions_user_max'}[0], $$hash_parameters{'marker'}{'variable_divergence'}[0], $$hash_parameters{'mapping'}{'polymorphism'}[0], $$hash_parameters{'marker'}{'number_sp'}[0]);
 				if ($valueReturned != 1) { $pm_MARKER_MSA_files->finish; }
 			}
-			$string2print_ref = &check_marker_ALL(\%hash2return, "Ref"); # Check there is a minimun variation
+			$string2print_ref = DOMINO::check_marker_ALL(\%hash2return, "Ref", $$hash_parameters{'marker'}{'missing_allowed'}[0], $$hash_parameters{'mapping'}{'polymorphism'}[0], $$hash_parameters{'marker'}{'dnaSP_flag'}[0], $$hash_parameters{'marker'}{'taxa_string'}[0]); # Check there is a minimun variation
+			#print Dumper $string2print_ref;
 			if ($string2print_ref eq 'NO' ) { $pm_MARKER_MSA_files->finish;}
+
 		} else {
+		
+			#################################################################
 			#### OTHER MSAs
 			my @path_file = split("\.fasta", $array_files_fasta_msa[$i]);
 			$region_id = $path_file[0];
-			$hash_ref_msa = DOMINO::readFASTA_hash($file_path);				
+			$hash_ref_msa = DOMINO::readFASTA_hash($file_path);
+			#print Dumper $hash_ref_msa; print $region_id."\n";
+			
 			my $taxa4marker = scalar keys %{ $hash_ref_msa };
-			if ($taxa4marker < $minimum_number_taxa_covered) { $pm_MARKER_MSA_files->finish; }
-			unless ($dnaSP_flag) {
-				my $valueReturned = DOMINO::check_marker_pairwise($hash_ref_msa, $$hash_parameters{'marker'}{'MCT'}[0], $$hash_parameters{'marker'}{'variable_positions_user_min'}[0], $$hash_parameters{'marker'}{'variable_positions_user_max'}[0], $$hash_parameters{'marker'}{'variable_divergence'}[0]);
+				#print Dumper $hash_ref_msa;
+				#print $taxa4marker."\t".$$hash_parameters{'marker'}{'MCT'}[0]."\n";
+			if ($taxa4marker < $$hash_parameters{'marker'}{'MCT'}[0]) { $pm_MARKER_MSA_files->finish; }
+			unless ($$hash_parameters{'marker'}{'dnaSP_flag'}) {
+				my $valueReturned = DOMINO::check_marker_pairwise($hash_ref_msa, $$hash_parameters{'marker'}{'MCT'}[0], $$hash_parameters{'marker'}{'variable_positions_user_min'}[0], $$hash_parameters{'marker'}{'variable_positions_user_max'}[0], $$hash_parameters{'marker'}{'variable_divergence'}[0], $$hash_parameters{'mapping'}{'polymorphism'}[0], $$hash_parameters{'marker'}{'number_sp'}[0]);
 				if ($valueReturned != 1) { $pm_MARKER_MSA_files->finish; }
 			}
-			$string2print_ref = &check_marker_ALL($file_path); # Check there is a minimun variation
+			$string2print_ref = DOMINO::check_marker_ALL($file_path, "", $$hash_parameters{'marker'}{'missing_allowed'}[0], $$hash_parameters{'mapping'}{'polymorphism'}[0], $$hash_parameters{'marker'}{'dnaSP_flag'}[0], $$hash_parameters{'marker'}{'taxa_string'}[0]); # Check there is a minimun variation
 			if ($string2print_ref eq 'NO' ) { $pm_MARKER_MSA_files->finish;}
 		}
 		
 		#print Dumper $string2print_ref;
 		## taxa_included	var_sites	length	profile	effective_length
 		##	0					1		2		3		4			
-		
+		######################################################################
 		my ($taxa, $var_sites, $length_string, $string_profile, $effective_length) = @{ $string2print_ref };
 		my @array_taxa_split = split(",", $taxa);
 		## Control steps
-		unless ($variable_divergence) { 
+		unless ($$hash_parameters{'marker'}{'variable_divergence'}) { 
 			if ($var_sites > $$hash_parameters{'marker'}{'variable_positions_user_max'}[0]) {$pm_MARKER_MSA_files->finish;} 
 			if ($var_sites < $$hash_parameters{'marker'}{'variable_positions_user_min'}[0]) {$pm_MARKER_MSA_files->finish;} 
 		}
 		
-		if ($select_markers) {
+		#################################################################
+
+		if ($$hash_parameters{'marker'}{'behaviour'}[0] eq "selection") {
+	
+			#################################################################
 			#### SELECTION MODE
 			
 			## Check marker
@@ -164,50 +183,72 @@ for (my $i=0; $i < scalar @array_files_fasta_msa; $i++) {
 			my $dump_folder_files = $dir_Dump_file."/dump_markers_".$region_id.".txt";
 			# Dump into file # print Dumper \%domino_files_msa;
 			DOMINO::printDump(\%domino_files_msa, $dump_folder_files);	
-		} elsif ($identify_markers) { ## Identify markers in MSA alignments
+		
+		} elsif ($$hash_parameters{'marker'}{'behaviour'}[0] eq "discovery") { ## Identify markers in MSA alignments
+
+			#################################################################
 			#### DISCOVERY MODE
 
-			my $profile_dir_file = $profile_dir."/".$region_id.".txt";
-			open (OUT, ">$profile_dir_file"); print OUT ">".$region_id."\n".$string_profile."\n"; close(OUT);
-			push (@{ $domino_files_msa{$region_id}{'profile'} }, $profile_dir_file);
-	
-
 			my $mergeProfile = $profile_dir."/".$region_id."_merged_ARRAY.txt";
-			my $string = $window_size_VARS_range;$string =~ s/\:\:/-/; my $string2 = $window_size_CONS_range; $string2 =~ s/\:\:/-/;	
-			my $mergeCoord;
-
-			if ($variable_divergence) { $mergeCoord = $profile_dir."/".$region_id."-VD_".$variable_divergence."-CL_".$string2."-CD_".$window_var_CONS."-VL_".$string.".tab";
-			} else { 					$mergeCoord = $profile_dir."/".$region_id."-VPmin_".$domino_params{'marker'}{'variable_positions_user_min'}[0]."-VPmax_".$domino_params{'marker'}{'variable_positions_user_max'}[0]."-CL_".$string2."-CD_".$domino_params{'marker'}{'window_var_CONS'}[0]."-VL_".$string.".tab";
-			}
+			open (OUT, ">$mergeProfile"); print OUT ">".$region_id."\n".$string_profile."\n"; close(OUT);
 			push (@{ $domino_files_msa{$region_id}{'mergeProfile'} }, $mergeProfile);
+	
+			my $string = $$hash_parameters{'marker'}{'window_size_VARS_range'}[0];$string =~ s/\:\:/-/; 
+			my $string2 = $$hash_parameters{'marker'}{'window_size_CONS_range'}[0]; $string2 =~ s/\:\:/-/;	
+			my $mergeCoord;
+			my $variable_divergence = $$hash_parameters{'marker'}{'variable_divergence'}[0];
+			if ($variable_divergence) { $mergeCoord = $profile_dir."/".$region_id."-VD_".$variable_divergence."-CL_".$string2."-CD_".$$hash_parameters{'marker'}{'window_var_CONS'}[0]."-VL_".$string.".tab";
+			} else { 					$mergeCoord = $profile_dir."/".$region_id."-VPmin_".$$hash_parameters{'marker'}{'variable_positions_user_min'}[0]."-VPmax_".$$hash_parameters{'marker'}{'variable_positions_user_max'}[0]."-CL_".$string2."-CD_".$$hash_parameters{'marker'}{'window_var_CONS'}[0]."-VL_".$string.".tab";
+			}
 			push (@{ $domino_files_msa{$region_id}{'mergeCoord'} }, $mergeCoord);
-			open (OUT_COORD, ">$mergeCoord");
 
 			## Identify markers in MSA alignments
-			my $infoReturned = DOMINO::sliding_window_conserve_variable(\$region_id, \$string_profile); 
-			#print $$fileReturned."\n";
-			if (!$infoReturned) { $pm_MARKER_MSA_files->finish;
-			} else { 
-				my @array = @$infoReturned;
-				for (my $j=0; $j < scalar @array; $j++) {
-					print OUT_COORD $array[$j]."\n";
-			}}
-			close (OUT_COORD);
 			
-			my $file_markers_collapse = DOMINO::check_overlapping_markers($mergeCoord, \$profile_dir_file);
-			push (@{ $domino_files_msa{$region_id}{'markers_Merge'} }, $file_markers_collapse);
+			################################################
+			## Sliding window
+			################################################
+			my $file_infoReturned = $profile_dir."/$region_id.txt";
+			my $domino_Scripts_MarkerSliding = $domino_Scripts."/DM_MarkerSliding.pl";
+			my $sliding_command = "perl $domino_Scripts_MarkerSliding $path $region_id $mergeProfile $file_infoReturned"; #print "{ Call: $sliding_command }\n";
+			system($sliding_command);
+			if (-r -e -s $file_infoReturned) { 				
+				open (OUT_COORD, ">$mergeCoord");
+				open (IN, "<$file_infoReturned");
+				while (<IN>) { print OUT_COORD $_; }
+				close (IN); close (OUT_COORD);
+			} else { $pm_MARKER_MSA_files->finish; }
 			
-			# Retrieve fasta sequences...
-			my $output_file = $msa_dir_tmp."/".$region_id."_markers_retrieved.txt";				
-			my $array_Ref = DOMINO::check_DOMINO_marker($output_file, $msa_dir_tmp, $file_markers_collapse, $file_path);
-			unless (scalar @$array_Ref == 0) { 
-				push (@{ $domino_files_msa{$region_id}{'markers_files'} }, @$array_Ref);
-				my $dump_folder_files = $dir_Dump_file."/dump_markers_".$region_id.".txt";
-				push (@{ $domino_files_msa{$region_id}{'markers'} }, $output_file);
-				# Dump into file # print Dumper \%domino_files_msa;
-				DOMINO::printDump(\%domino_files_msa, $dump_folder_files);	
-}}} $pm_MARKER_MSA_files->finish();}
+			################################################
+			## Overlap markers
+			################################################
+			my $file_markers_collapse = $msa_dir_tmp."/".$region_id."_overlapped_Markers.txt";
+			print "\t+ Checking overlapping markers identified for $region_id...\n";
+			my $domino_Scripts_MarkerOverlap = $domino_Scripts."/DM_MarkerOverlap.pl";
+			my $command_overlap = "perl $domino_Scripts_MarkerOverlap $mergeCoord $mergeProfile $file_markers_collapse $path"; #print $command."\n"; 
+			system($command_overlap); push (@{ $domino_files_msa{$region_id}{'markers_Merge'} }, $file_markers_collapse);
+			
+			################################################
+			## Validate markers
+			################################################
+			print "\t+ Validating overlapping markers identified for $region_id...\n";
+			my $output_file = $msa_dir_tmp."/".$region_id."_markers_retrieved.txt";
+			my $domino_Scripts_MarkerValidate = $domino_Scripts."/DM_MarkerValidate.pl";
+			my $command_validate = "perl $domino_Scripts_MarkerValidate $output_file $msa_dir_tmp $file_markers_collapse $file_path $path"; #print $command_validate."\n"; 
+			system($command_validate); push (@{ $domino_files_msa{$region_id}{'markers'} }, $output_file);
+
+			#push (@{ $domino_files_msa{$region_id}{'markers_files'} }, @$array_Ref);
+			my $dump_folder_files = $dir_Dump_file."/dump_markers_".$region_id.".txt";
+
+			# Dump into file # print Dumper \%domino_files_msa;
+			DOMINO::printDump(\%domino_files_msa, $dump_folder_files);	
+				
+	}	}
+} else { 
+	next; #DOMINO::printError("File $file_path is not a fasta file. It would be skipped....\nPlease discarded from the folder...\n"); 
+} $pm_MARKER_MSA_files->finish(); }
 $pm_MARKER_MSA_files->wait_all_children;
+################################################################
+
 print "\n\n";
 print "**********************************************\n";
 print "**** All checking processes have finished ****\n";
@@ -221,11 +262,12 @@ print "\n"; &time_log(); print "\n"; chdir $marker_dirname;
 my $output_file_coord = "DM_markers-summary.txt"; open (OUT_coord,">$output_file_coord")or die "Cannot write the file $output_file_coord [DM_MarkerScan: Write OUT_coord]";
 print OUT_coord "Region\t\tTaxa_included\tVariable_Positions\tEffective_length\tVariation(%)\n";
 my $out_file = "DM_markers";
-if ($pyRAD_file) { $out_file .= ".loci"; } elsif ($stacks_file) {$out_file .= ".fa";} else {$out_file .= ".fasta";}
+if ($$hash_parameters{'marker'}{'pyRAD'}) { $out_file .= ".loci"; 
+} elsif ($$hash_parameters{'marker'}{'STACKS'}) {$out_file .= ".fa";} else {$out_file .= ".fasta";}
 open (OUT, ">$out_file");
 print "+ Printing selected markers in $output_file_coord and $out_file...\n";
 
-if ($identify_markers) {
+if ($$hash_parameters{'marker'}{'behaviour'}[0] eq "discovery") {
 	my %hashRetrieve;
 	my $array_files = DOMINO::readDir($dir_Dump_file);
 	my @dump_files = @{ $array_files };
@@ -244,11 +286,12 @@ if ($identify_markers) {
 			for (my $i=0; $i < scalar @array_coord; $i++) {
 				open (FILE, $array_coord[$i]); while (<FILE>) { print OUT_coord $_; } close(FILE);					
 		}}
-		if ($hashRetrieve{$regions}{'markers_files'}) {
-			my @array_markers = @{$hashRetrieve{$regions}{'markers_files'}};
-			for (my $j=0; $j < scalar @array_markers; $j++) {
-				File::Copy::move($array_markers[$j], $msa_dir);
-}}}} else {		
+		#if ($hashRetrieve{$regions}{'markers_files'}) {
+		#	my @array_markers = @{$hashRetrieve{$regions}{'markers_files'}};
+		#	for (my $j=0; $j < scalar @array_markers; $j++) {
+		#		File::Copy::move($array_markers[$j], $msa_dir);
+		#}}
+}} else {		
 	my %hashRetrieve;
 	my $array_files_dump = DOMINO::readDir($dir_Dump_file);
 	my @dump_files = @{ $array_files_dump };
@@ -260,31 +303,37 @@ if ($identify_markers) {
 	my @msa_files = @{ $array_files_msa };
 	for (my $j=0; $j < scalar @msa_files; $j++) {			
 		if ($msa_files[$j] eq '.' || $msa_files[$j] eq '..' || $msa_files[$j] eq '.DS_Store') { next;}			
-		if ($pyRAD_file) { ## print Loci
+		if ($$hash_parameters{'marker'}{'pyRAD'}) { ## print Loci
 			my ($msa_hash_fasta_ref) = DOMINO::readFASTA_hash("$msa_dir/$msa_files[$j]"); ## Obtain reference of a hash
 			foreach my $keys (sort keys %{$msa_hash_fasta_ref}) { print OUT ">".$keys."\t".$$msa_hash_fasta_ref{$keys}."\n"; } print OUT "//\n";			
-		} elsif ($stacks_file) { ## print stacks file
+		} elsif ($$hash_parameters{'marker'}{'STACKS'}) { ## print stacks file
 			open (MSA, "$msa_dir/$msa_files[$j]"); while (<MSA>) { print OUT $_; } close (MSA);
 		} else { open (MSA, "$msa_dir/$msa_files[$j]"); while (<MSA>) { print OUT $_; } close (MSA); print OUT "//\n";			
 }}} close(OUT_coord); close (OUT);
+print "\n"; &time_log();
 
+#################################################################################	
 ## USE THE SUBROUTINE print_Excel and control if radseq_like_data
 print "+ Done...\n+ Retrieving informative locus has been done...\n+ Generating an Excel file for DOMINO markers identified...\n";
-my $excelBook = DOMINO::print_Excel(\$output_file_coord, \$marker_dirname);
+my $domino_Scripts_excel = $domino_Scripts."/DM_PrintExcel.pl";
+my $command = "perl $domino_Scripts_excel $path $output_file_coord $marker_dirname";
+print "\n[ System Call: ".$command." ]\n";
+system($command);
 
-unless ($avoidDelete_tmp_files) { 
-	###########################
-	## Delete temporary file ##
-	###########################
-	print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" Deleting temporary files ", "#"); DOMINO::printHeader("", "#");
-	remove_tree($msa_dir_tmp);
-	remove_tree($dir_Dump_file);
-}	
-File::Copy::move($param_Detail_file_markers, $marker_dirname."/");
-if (-z $mapping_markers_errors_details) { remove_tree($mapping_markers_errors_details); 
-} else { File::Copy::move($mapping_markers_errors_details, $marker_dirname."/"); }	## Finish and exit
+print "\n\n"; DOMINO::printHeader("", "#"); DOMINO::printHeader(" Deleting temporary files ", "#"); DOMINO::printHeader("", "#");
+#remove_tree($msa_dir_tmp); remove_tree($dir_Dump_file);
+
+#File::Copy::move($param_Detail_file_markers, $marker_dirname."/");
+#if (-z $mapping_markers_errors_details) { remove_tree($mapping_markers_errors_details); 
+#} else { File::Copy::move($mapping_markers_errors_details, $marker_dirname."/"); }	## Finish and exit
+
 DOMINO::finish_time_stamp($start_time); print "\n\n Job done succesfully, exiting the script\n\n\n"; exit();
 
 ###########################
 ####### SUBROUTINES #######
 ###########################
+
+sub time_log {	
+	my $step_time_tmp = DOMINO::time_log($step_time); print "\n"; 
+	$step_time = $$step_time_tmp;
+}
