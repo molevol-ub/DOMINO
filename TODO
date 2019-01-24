@@ -7,4 +7,5 @@
 	
 - Check every time you run any DOMINO script a small script that checks every module/dependency is OK: 
 	Update: DM_dependencies.pl
-	
+
+- Check if any new update in DOMINO src code to update bin directory generated
