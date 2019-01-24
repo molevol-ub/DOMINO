@@ -44,7 +44,6 @@ use lib $FindBin::Bin."/lib";
 
 BEGIN {
 	require DOMINO;
-	require List::Uniq; use List::Uniq qw(uniq);
 	require File::Copy; 
 	require File::Find; use File::Find qw(find);			
 	require File::Path; use File::Path qw(remove_tree);

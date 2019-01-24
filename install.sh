@@ -224,6 +224,7 @@ ls "$current_dir/src/perl/" | while read files
 do
 	cp "$current_dir/src/perl/$files" $install_dir"/bin"
 done
+cp -r "$current_dir/src/perl/scripts" $install_dir"/bin"
 
 mv "$install_dir/bin/DOMINO.pm" $install_dir"/bin/lib"
 
