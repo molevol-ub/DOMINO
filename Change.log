@@ -1,3 +1,375 @@
+commit 3f78ad5617e0e7b8f5f8aba585f0de8d65406536
+Author: jfsanchez <jfbioinformatics@gmail.com>
+Date:   Thu Jan 24 13:07:38 2019 +0100
+
+    Discard List:uniq module
+
+commit a2b948a01d6083fdd55229033a2e8b66c5457cda
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Nov 13 13:24:47 2018 +0100
+
+    Update and fixed MSA
+
+commit c3f6afd82a80ad10465943f9a3cdadd4d7356a83
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 12 10:16:12 2018 +0100
+
+    Updates
+
+commit 120dde8bebf5728aee69bec1a2d491a666aeb812
+Author: jfsanchezherrero <jfsanchezherrero@ub.edu>
+Date:   Sun Nov 11 02:40:14 2018 +0100
+
+    Bug fixes in situ
+
+commit 740fcb3bfbcc5d995370de7d01f3a20f20aeb2bc
+Author: jfsanchezherrero <jfsanchezherrero@ub.edu>
+Date:   Sat Nov 10 17:20:00 2018 +0100
+
+    Fixed important bug GeneratePileup
+
+commit cb02f3086d8d93ae9fd85fb543dfaae2bc940f3c
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 15:48:24 2018 +0100
+
+    Fixed
+
+commit e831b76c3e46ccfc30fb8f961f38069d0877f86c
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 15:32:43 2018 +0100
+
+    Factorial
+
+commit ba0dacb30f3eb2697a8484639b89edf38fb42ff6
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 15:27:41 2018 +0100
+
+    Factorial
+
+commit 60eefef29afcf8bf3e9f507378a82fd89aa00508
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 15:21:28 2018 +0100
+
+    Factorial
+
+commit 289f0818d159f237029219cfaad8ad8c00719524
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 15:15:39 2018 +0100
+
+    Factorial
+
+commit e1f5013bdb3fd1fe629fae5130b04a52afbc1e8e
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 15:12:46 2018 +0100
+
+    Factorial
+
+commit 993a4894276b56573d8dca12eab9724ce3f6388a
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 15:06:27 2018 +0100
+
+    Factorial binomial
+
+commit 1cf3c063eb109e59f18ef25941684092b81393a2
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 14:53:59 2018 +0100
+
+    Fix pileup
+
+commit 569bcb1f1cf7f2eec07789fb2b517f8af7bfe264
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 12:46:20 2018 +0100
+
+    Fix bug message errorLog
+
+commit 92275e86be66e5e45c743a3777a9bd229f2369f6
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 12:23:12 2018 +0100
+
+    update, fixed
+
+commit e65b081459b8ca76b04b30dc05cff3477322a14a
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 12:03:07 2018 +0100
+
+    noDiscard option
+
+commit a2ea6009a96f72c2a115ffba6557b95d80177498
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Nov 9 09:22:30 2018 +0100
+
+    Update DOMINO module
+
+commit 1737ec35797358954da886920aad42f723f5669b
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Thu Nov 8 15:14:17 2018 +0100
+
+    Fix some bugs
+
+commit 39e7cabb2702c313b3a55fc6125fba51bbec4bb7
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 7 13:06:42 2018 +0100
+
+    Update version
+
+commit 94fee84be6d1dd5470f89660fc410e6943591a0c
+Merge: 36d0197 7e9b44c
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 7 13:00:16 2018 +0100
+
+    Merge pull request #11 from molevol-ub/developer
+    
+    v1.1 Implementation
+
+commit 7e9b44c51bb5c71b1f1fe5159b6cd7456852fa90
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Nov 7 12:58:19 2018 +0100
+
+    version v1.1 implemented
+
+commit a61855f89ab9069fa04c0e9653a683cbb0f75742
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Nov 6 12:07:00 2018 +0100
+
+    updates, fixes
+
+commit f8b93b44aa9df3c2749e094d405455274a664378
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 5 17:11:05 2018 +0100
+
+    Multi modular implementation
+
+commit 72f1448b066c91bd3f0b0b0285e11e4f31b3d29d
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Nov 5 10:01:34 2018 +0100
+
+    make code clearer
+
+commit bcdb71e24fed8daaa142d5f23fa261bf5f0d769b
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 31 12:56:10 2018 +0100
+
+    Mapping reads implemented
+
+commit bd7ac9e5d0ba8ae65557e47821a0246dca9dfd0e
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 31 11:06:08 2018 +0100
+
+    small changes
+
+commit d8f3dd486e7c5345f83b8b1731f6d6f08a04e366
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Oct 30 17:48:32 2018 +0100
+
+    Working on mappingReads file
+
+commit a306d5f233074d568199c1288ca48dc67b6dcb69
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Oct 30 17:08:02 2018 +0100
+
+    Change script names
+
+commit 525230c29d5ed0fba8dad4ee36236052cc162ad3
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Oct 30 16:49:45 2018 +0100
+
+    Pileup generation and filtered implemented in diferent file
+
+commit cad55dbfa50aa9e2a60e0297a060c21f7997d056
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Oct 30 11:17:05 2018 +0100
+
+    Added MarkerOverlap into separate file
+
+commit 339aa94a9b19d6e098d6e3c1df67976e43a88b93
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Oct 30 10:24:14 2018 +0100
+
+    Added MIRA in separate script
+
+commit a1335b20591d3d2db6a057a2df19d9fe598e49bb
+Merge: df4c333 36d0197
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Oct 29 16:12:00 2018 +0100
+
+    merging
+
+commit 36d0197f3ebdcaabc4b42bc8a0354f47d49c1126
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Oct 29 16:03:32 2018 +0100
+
+    MCT modification
+
+commit 58c6929eb9237dbd9aeff782d08d9120b330b246
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Oct 29 13:54:53 2018 +0100
+
+    Add absolute path for user read files provided
+
+commit df4c333a28bc59500287d3300470596c531b706a
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 24 15:09:57 2018 +0200
+
+    Add control step
+
+commit 74be71483b656598becaa5033f31ad2ce75c94c5
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 24 15:07:22 2018 +0200
+
+    Added SPAdes run script
+
+commit 2928c6aa6840d9eb0c6f77ad70dffba79c7ffc53
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 24 13:29:22 2018 +0200
+
+    Added print_Excel
+
+commit f42832ce2f3f313ae5b177535ab200a23acf02b2
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Tue Oct 23 17:47:17 2018 +0200
+
+    domino_params and files implemented
+
+commit 7e220a07f21a60d8efc106c23cd765f417ae0226
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Oct 19 13:00:28 2018 +0200
+
+    Update and fix
+
+commit bc75088a9ee8abe4211082cd435ecbb3afdea34b
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Fri Oct 19 12:48:37 2018 +0200
+
+    Updating changes in developer branch
+
+commit d9e2e1d056d8572295c93dc8e4c09ea5e4394078
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 17 12:20:17 2018 +0200
+
+    Update and unify finish timestamp
+
+commit f52ec218b763a96239bc2e64fac2af60c1111c3d
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 17 12:09:35 2018 +0200
+
+    Added contig stats
+
+commit fef31af968f20ef597d7334411bc40123290b9d4
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 17 08:55:21 2018 +0200
+
+    Add dependencies script
+
+commit 48ef3fca22349b05b45481dd8b3a3cc46d921efd
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 17 08:54:54 2018 +0200
+
+    update TODOs
+
+commit fe3ae3b5637c273040d6bfd55080adc959043fff
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Oct 15 16:57:05 2018 +0200
+
+    time_log added to DOMINO.pm successfully
+
+commit 36a41a8f2b561f80ded7e807c222dde0030b5542
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Mon Oct 15 13:03:10 2018 +0200
+
+    Close STATS file for DOMINO mapping
+
+commit d7bbe15e5b3d5f6e9e80eb5a6217c3d715b6a003
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 18:01:11 2018 +0200
+
+    add some control steps
+
+commit b5bbd68d2c714d89401fc5e1258c0d832a225f8d
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 17:40:17 2018 +0200
+
+    Fix missing folder
+
+commit b09cdf9f1bb5ad47442951d415497b78d11710d6
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 17:29:22 2018 +0200
+
+    testing0
+
+commit 0ca239c9ab3dc9b4040f33c2aea1a65f545ccd48
+Merge: 7d26f1b 7e84467
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 17:10:48 2018 +0200
+
+    merge
+
+commit 7e8446757527037e642061b49e489d470f6536e4
+Merge: c9ac2a3 7d26f1b
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 17:09:47 2018 +0200
+
+    Fix merging...
+
+commit c9ac2a39cfd250c2699a94c1560ee780122eb925
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 16:55:56 2018 +0200
+
+    Fix avoid mapping
+
+commit c38b4320d1aa252954fe36b7481d129d69f00492
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 14:41:29 2018 +0200
+
+    Fixed excel for genome
+
+commit 7d26f1b3f857f239e1f367cccf365e1c7874d9ef
+Merge: 63e7295 9c3efb8
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 12:57:53 2018 +0200
+
+    Merge pull request #9 from molevol-ub/developer
+    
+    fix bug
+
+commit 9c3efb87bcaa1ac5722167b4b26a438fa32dc97b
+Author: Jose F. Sanchez <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 12:51:23 2018 +0200
+
+    fix bug
+
+commit 63e729574d6353634409a38b3eceef6c2290316c
+Author: jfsanchezherrero <jfsanchezherrero@ub.edu>
+Date:   Wed Oct 10 12:29:57 2018 +0200
+
+    fix bug mapping genome
+
+commit 822282446849609eafb603e787cfcc7b389afde9
+Author: jfsanchezherrero <jfsanchezherrero@ub.edu>
+Date:   Tue Jan 23 18:27:27 2018 +0100
+
+    Fix bug avoid mapping genome
+
+commit 57aef098dafb36d8fa47977ed9bcc78d590bc5b0
+Merge: 9f88f5a 172481a
+Author: Jose Francisco Sanchez-Herrero <jfsanchezherrero@ub.edu>
+Date:   Tue Jan 23 12:50:49 2018 +0100
+
+    Merge pull request #8 from molevol-ub/developer
+    
+    Working on Fixing bug genome avoid mapping
+
+commit 172481a9d946a87814ba278e65bc4c7d2a5d91ee
+Author: jfsanchezherrero <jfsanchezherrero@gmail.com>
+Date:   Tue Jan 23 12:28:07 2018 +0100
+
+    Fixing bug genome avoid mapping
+
+commit 9f88f5a696794c4f05b9528efdb325fd72e98939
+Author: jfsanchezherrero <jfsanchezherrero@gmail.com>
+Date:   Tue Jan 23 12:16:39 2018 +0100
+
+    Update Change.log file
+
 commit 2805f244ebe4c173a5fa527eaee2583627f7135a
 Author: jfsanchezherrero <jfsanchezherrero@ub.edu>
 Date:   Tue Jan 23 12:09:10 2018 +0100

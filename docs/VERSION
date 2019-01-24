@@ -1,3 +1,6 @@
+v1.1
+- Fixed bugs and implement modules for each process
+#########
 v1.0.1
 - Fixed a bug when using -NPG option in the marker discovery step
 #########
