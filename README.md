@@ -7,7 +7,7 @@ DOMINO is a new software application specifically designed for improving the dev
 Customizable features include the length of variable and conserved regions (when requested), the minimum levels (or a preferred range) of nucleotide variation, how to manage polymorphic variants, or which taxa (or what fraction of them) should be covered by the marker. All these criteria can be easily defined in a user-friendly GUI or under a command-line version that implements some extended options and that it is particularly useful for working with large NGS data sets in high performance computers (see also the DOMINO documentation). The regions identified or selected in DOMINO can be i) directly used as markers with a particular depth of taxonomic resolution, ii) utilized for their downstream PCR amplification in a broader taxonomic scope or iii) used as suitable templates to optimized bait design for target DNA enrichment techniques.
 
 
-
+=
 2. DOCUMENTATION
 =
 Documentation and additional information can be retrieved from the DOMINO oficial website: http://www.ub.edu/softevol/domino/
