@@ -1,5 +1,5 @@
 
-DOMINO: Development Of Molecular markers In Non-model Organisms 
+DOMINO: Development Of Molecular markers In Non-model Organism
 
 
 DOMINO is a new software application specifically designed for improving the development of DNA markers in non-model organisms using either NGS data or pre-computed multiple sequence alignments (MSA) in various formats (including RAD loci). It uses Perl and C++ scripting languages to combine some popular, open-source, bioinformatics tools for NGS data with a set of new developed functions in an integrated bioinformatics pipeline for custom-made marker discovery or selection based on user-defined criteria. 
