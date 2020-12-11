@@ -104,8 +104,12 @@ foreach my $reference_identifier (sort keys %domino_mapping_files) {
 	## maximize process if > 10
 	my ($split_CPU, $subprocesses);
 	my $number_sp = $$hash_parameters{'mapping'}{'number_sp'}[0];
-	if ($num_proc_user > 10) { 	$split_CPU = int($num_proc_user/$number_sp);  $subprocesses = $number_sp; 
-	} else { 					$split_CPU = $num_proc_user; $subprocesses = 1; 			
+	if ($num_proc_user > 10) { 	
+		$split_CPU = int($num_proc_user/$number_sp);  
+		$subprocesses = $number_sp; 
+		if ($split_CPU == 0) { $split_CPU = 1;}
+	} else {
+		$split_CPU = $num_proc_user; $subprocesses = 1; 			
 	}			
 	
 	## Get files for later dump
