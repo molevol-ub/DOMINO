@@ -70,7 +70,10 @@ The bin directory will contain the DOMINO perl scripts, the directories with the
 
 If you encounter bugs that are not listed here, please send comments and bug reports via GitHub
 
+ATTENTION:
 
+*We have very limited funds for the maintenance of this software. Therefore we can not garantee a full support.*
+*Moreover, we are also working in the development of a new implementation of DOMINO (including other features). We will announce it through this (and other) channels.*
 
 ## 5. COMMUNITY
 
@@ -98,8 +101,8 @@ Evolutionary Genomics and Bioinformatics Group, Departament de Genètica, Microb
 
 ## 8. CITATION
 
-Bioinformatics first published online August 16, 2016 doi:10.1093/bioinformatics/btw534 <http://bioinformatics.oxfordjournals.org/content/early/2016/09/02/bioinformatics.btw534.full> 
-
+Cristina Frías-López, José F. Sánchez-Herrero, Sara Guirao-Rico, Elisa Mora, Miquel A. Arnedo, Alejandro Sánchez-Gracia, Julio Rozas, DOMINO: development of informative molecular markers for phylogenetic and genome-wide population genetic studies in non-model organisms, Bioinformatics, Volume 32, 
+Issue 24, 15 December 2016, Pages 3753–3759, https://doi.org/10.1093/bioinformatics/btw534
 
 ## 9. COPYRIGHT AND LICENSE
 
